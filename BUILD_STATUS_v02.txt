@@ -1,1 +1,0 @@
-Release candidate validation is performed by .github/workflows/dev-windows-build.yml before merge to main.
