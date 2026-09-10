@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - dev-v0.2
+    paths:
+      - '.dev-build-trigger'
   workflow_dispatch:
 
 permissions:
