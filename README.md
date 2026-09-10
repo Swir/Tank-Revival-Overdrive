@@ -6,7 +6,21 @@ Original top-down tank combat for Unity 6, inspired by the fast readable feel of
 
 Defend the **Orzełek stronghold** through 100 increasingly dangerous rounds. Enemy formations become faster, tougher and more aggressive as the campaign advances. Siege units prioritize the stronghold, elite tanks pressure the player, supply tanks carry special ammunition, and every tenth round ends with a boss assault.
 
-## v0.2 gameplay
+## v0.3 development milestone — Field Command
+
+The next major milestone adds a persistent campaign economy and tactical battle director on top of the v0.2 combat foundation.
+
+- **War Bonds** earned from destroyed enemies and secured rounds
+- **Field Command Center every five cleared rounds** before the next deployment
+- permanent campaign upgrades for cannon, autoloader, engine, composite armor, Eagle sentry network and logistics
+- paid field repair for Orzełek during Command Center visits
+- up to **three autonomous sentry cannons** around the stronghold with target prioritization and upgraded penetration
+- named tactical wave doctrines including Recon Patrol, Blitz Wave, Siege Column, Marksmen, Heavy Column, Supply Raid, Elite Hunters, Crossfire, Iron Storm and Boss Protocol
+- doctrine-specific reinforcement armor, coordinated extra fire, target pressure, projectile speed and salvage rewards
+- commander upgrades stack safely with normal field power-ups instead of overwriting the saved tank loadout
+- CI now reads the real project `VERSION` and writes current version/control information into each Windows build
+
+## v0.2 combat foundation
 
 - 100 progressively harder rounds
 - Orzełek stronghold with persistent health and critical-damage alarm
@@ -46,13 +60,15 @@ Use **Q / E** to cycle through ammunition currently in inventory. Destroy colore
 - **Q / E** – previous / next available ammunition
 - **1–7** – directly select ammunition type
 - **P / Escape** – pause / resume
-- **Enter / Space** – start or restart from menu screens
+- **Enter / Space** – start/restart and deploy from the Command Center
+- **1–6 while Command Center is open** – buy the corresponding permanent upgrade
+- **7 while Command Center is open** – repair Orzełek
 
 ## Windows build
 
 Windows 10/11 x64 is the primary target. GitHub Actions compiles `TankRevivalOverdrive.exe`, verifies the executable and `_Data` directory, creates a portable ZIP and publishes stable builds under GitHub Releases. Players do **not** need Unity installed.
 
-Development changes live on `dev-v0.2` and are validated by a separate Windows CI workflow before being merged into `main`.
+Stable code lives on `main`. Major development milestones are built on dedicated `dev-vX.Y` branches and validated by Windows CI before merge.
 
 ## Creative direction
 
