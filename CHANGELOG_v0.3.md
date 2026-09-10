@@ -23,6 +23,10 @@ Doctrines alter reinforcement armor, coordinated extra fire, target preference, 
 
 A new autonomous defense system protects the stronghold when purchased. Sentries acquire nearby targets, prioritize Siege/Elite/Boss threats, rotate their guns in real time and fire player-team projectiles. Higher levels increase rate of fire, range and penetration.
 
+## Battlefield atmosphere
+
+The 100-round campaign is now visually divided into five atmosphere sectors. Rounds evolve from cold battlefield dust into rain, ash, snow and a final ember storm. The effects are generated at runtime and reuse lightweight sprite primitives instead of external particle assets.
+
 ## Player combat integration
 
 Commander upgrades are separate from temporary/field power-ups, so permanent campaign improvements stack safely with cannon, rapid-fire and engine pickups without corrupting the saved loadout between rounds.
@@ -33,3 +37,5 @@ Commander upgrades are separate from temporary/field power-ups, so permanent cam
 - Added doctrine augments as runtime components instead of hard-coding every modifier into EnemyTank.
 - Added automatic enemy event hooking for War Bond salvage.
 - Added a dedicated dev-v0.3 Windows CI branch gate.
+- CI now resolves the real project VERSION instead of hard-coding 0.1.0 into every executable.
+- BUILD_INFO.txt now reflects current controls and campaign systems.
