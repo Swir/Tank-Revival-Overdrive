@@ -1,0 +1,1 @@
+Next stable release: v0.2.0
