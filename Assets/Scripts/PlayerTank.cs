@@ -23,6 +23,7 @@ namespace TankRevival
             ActiveAmmo = AmmoType.Basic;
 
             VisualFactory.BuildTankSkin(transform, new Color(0.10f, 0.58f, 0.86f), new Color(0.78f, 0.96f, 1f));
+            gameObject.AddComponent<TrackDustEmitter>();
 
             var collider = gameObject.AddComponent<BoxCollider2D>();
             collider.size = new Vector2(0.78f, 0.78f);
