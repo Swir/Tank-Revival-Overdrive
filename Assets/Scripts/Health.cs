@@ -21,12 +21,15 @@ namespace TankRevival
         public Action<Health> Died;
         public Action<Health, int> Damaged;
 
-        public void Initialize(Team team, int maxHealth)
+        public void Initialize(Team team, int maxHealth, int currentHealth = -1)
         {
             Team = team;
             Maximum = Mathf.Max(1, maxHealth);
-            Current = Maximum;
+            Current = currentHealth < 0 ? Maximum : Mathf.Clamp(currentHealth, 1, Maximum);
             IsDead = false;
+
+            if (GetComponent<DamageSmokeEmitter>() == null)
+                gameObject.AddComponent<DamageSmokeEmitter>();
         }
 
         public bool Damage(int amount, Team source)

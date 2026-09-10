@@ -8,18 +8,22 @@ namespace TankRevival
         public int ShotDamage { get; private set; } = 1;
         public float FireDelay { get; private set; } = 0.34f;
         public float MoveSpeed { get; private set; } = 4.8f;
+        public AmmoType ActiveAmmo { get; private set; } = AmmoType.Basic;
 
         private TankGame _game;
         private Rigidbody2D _body;
         private Vector2 _move;
         private Vector2 _facing = Vector2.up;
         private float _nextShot;
+        private readonly int[] _ammo = new int[AmmoDatabase.AmmoTypeCount];
 
         public void Initialize(TankGame game)
         {
             _game = game;
+            ActiveAmmo = AmmoType.Basic;
 
-            VisualFactory.BuildTankSkin(transform, new Color(0.12f, 0.72f, 0.95f), new Color(0.82f, 0.96f, 1f));
+            VisualFactory.BuildTankSkin(transform, new Color(0.10f, 0.58f, 0.86f), new Color(0.78f, 0.96f, 1f));
+            gameObject.AddComponent<TrackDustEmitter>();
 
             var collider = gameObject.AddComponent<BoxCollider2D>();
             collider.size = new Vector2(0.78f, 0.78f);
@@ -37,7 +41,11 @@ namespace TankRevival
 
         private void Update()
         {
-            if (_game == null || !_game.IsPlaying) return;
+            if (_game == null || !_game.IsPlaying)
+            {
+                BattleAudio.Instance?.SetEngineMoving(false, 0f);
+                return;
+            }
 
             float x = 0f;
             float y = 0f;
@@ -60,16 +68,58 @@ namespace TankRevival
                 ApplyFacingRotation();
             }
 
+            BattleAudio.Instance?.SetEngineMoving(_move.sqrMagnitude > 0.01f, MoveSpeed / 7.3f);
+            HandleAmmoSelection();
+
             if ((Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.LeftControl)) && Time.time >= _nextShot)
-            {
                 Fire();
-            }
         }
 
         private void FixedUpdate()
         {
             if (_game == null || !_game.IsPlaying || _body == null) return;
             _body.MovePosition(_body.position + _move * (MoveSpeed * Time.fixedDeltaTime));
+        }
+
+        private void OnDisable()
+        {
+            BattleAudio.Instance?.SetEngineMoving(false, 0f);
+        }
+
+        private void HandleAmmoSelection()
+        {
+            if (Input.GetKeyDown(KeyCode.Q)) CycleAmmo(-1);
+            if (Input.GetKeyDown(KeyCode.E)) CycleAmmo(1);
+
+            if (Input.GetKeyDown(KeyCode.Alpha1)) SelectAmmo(AmmoType.Basic);
+            if (Input.GetKeyDown(KeyCode.Alpha2)) SelectAmmo(AmmoType.ArmorPiercing);
+            if (Input.GetKeyDown(KeyCode.Alpha3)) SelectAmmo(AmmoType.Explosive);
+            if (Input.GetKeyDown(KeyCode.Alpha4)) SelectAmmo(AmmoType.Incendiary);
+            if (Input.GetKeyDown(KeyCode.Alpha5)) SelectAmmo(AmmoType.EMP);
+            if (Input.GetKeyDown(KeyCode.Alpha6)) SelectAmmo(AmmoType.Twin);
+            if (Input.GetKeyDown(KeyCode.Alpha7)) SelectAmmo(AmmoType.Plasma);
+        }
+
+        private void SelectAmmo(AmmoType type)
+        {
+            if (type == AmmoType.Basic || GetAmmoCount(type) > 0)
+                ActiveAmmo = type;
+        }
+
+        private void CycleAmmo(int direction)
+        {
+            int current = (int)ActiveAmmo;
+            for (int step = 1; step <= AmmoDatabase.AmmoTypeCount; step++)
+            {
+                int index = (current + direction * step) % AmmoDatabase.AmmoTypeCount;
+                if (index < 0) index += AmmoDatabase.AmmoTypeCount;
+                var candidate = (AmmoType)index;
+                if (candidate == AmmoType.Basic || GetAmmoCount(candidate) > 0)
+                {
+                    ActiveAmmo = candidate;
+                    return;
+                }
+            }
         }
 
         private void ApplyFacingRotation()
@@ -83,10 +133,81 @@ namespace TankRevival
 
         private void Fire()
         {
-            _nextShot = Time.time + FireDelay;
-            Vector2 muzzle = (Vector2)transform.position + _facing * 0.72f;
-            _game.SpawnProjectile(muzzle, _facing, Team.Player, ShotDamage, 10.5f, new Color(0.25f, 0.95f, 1f));
-            _game.KickCamera(0.045f, 0.035f);
+            AmmoType ammo = ActiveAmmo;
+            int damage = ShotDamage + AmmoDatabase.BonusDamage(ammo);
+            float speed = 10.5f * AmmoDatabase.SpeedMultiplier(ammo);
+            Color color = AmmoDatabase.Color(ammo);
+            Vector2 muzzle = (Vector2)transform.position + _facing * 0.82f;
+            Vector2 side = new Vector2(-_facing.y, _facing.x);
+
+            _nextShot = Time.time + FireDelay * (ammo == AmmoType.Twin ? 1.08f : 1f);
+
+            if (ammo == AmmoType.Twin)
+            {
+                _game.SpawnProjectile(muzzle + side * 0.18f, _facing, Team.Player, damage, speed, color, ammo);
+                _game.SpawnProjectile(muzzle - side * 0.18f, _facing, Team.Player, damage, speed, color, ammo);
+            }
+            else
+            {
+                _game.SpawnProjectile(muzzle, _facing, Team.Player, damage, speed, color, ammo);
+            }
+
+            VisualFactory.MuzzleFlash(muzzle, color, ammo == AmmoType.Plasma ? 1.35f : ammo == AmmoType.Explosive ? 1.15f : 0.90f);
+            _game.KickCamera(ammo == AmmoType.Plasma ? 0.085f : 0.050f, ammo == AmmoType.Plasma ? 0.060f : 0.038f);
+
+            if (ammo == AmmoType.Plasma)
+                BattleAudio.PlayGlobal(SoundCue.Plasma, 0.78f);
+            else if (ammo == AmmoType.Explosive || ammo == AmmoType.ArmorPiercing)
+                BattleAudio.PlayGlobal(SoundCue.HeavyShot, 0.72f);
+            else
+                BattleAudio.PlayGlobal(SoundCue.PlayerShot, 0.66f);
+
+            ConsumeAmmo(ammo);
+        }
+
+        private void ConsumeAmmo(AmmoType type)
+        {
+            if (type == AmmoType.Basic) return;
+            int index = (int)type;
+            _ammo[index] = Mathf.Max(0, _ammo[index] - 1);
+            if (_ammo[index] <= 0)
+                ActiveAmmo = AmmoType.Basic;
+        }
+
+        public void AddAmmo(AmmoType type, int amount)
+        {
+            if (type == AmmoType.Basic || amount <= 0) return;
+            int index = (int)type;
+            _ammo[index] = Mathf.Min(99, _ammo[index] + amount);
+            ActiveAmmo = type;
+        }
+
+        public int GetAmmoCount(AmmoType type)
+        {
+            if (type == AmmoType.Basic) return -1;
+            return _ammo[(int)type];
+        }
+
+        public int[] CopyAmmoInventory()
+        {
+            var copy = new int[_ammo.Length];
+            for (int i = 0; i < _ammo.Length; i++) copy[i] = _ammo[i];
+            return copy;
+        }
+
+        public void RestoreLoadout(int shotDamage, float fireDelay, float moveSpeed, int[] ammo, AmmoType activeAmmo)
+        {
+            ShotDamage = Mathf.Clamp(shotDamage, 1, 4);
+            FireDelay = Mathf.Clamp(fireDelay, 0.13f, 0.34f);
+            MoveSpeed = Mathf.Clamp(moveSpeed, 4.8f, 7.3f);
+
+            if (ammo != null)
+            {
+                int count = Mathf.Min(ammo.Length, _ammo.Length);
+                for (int i = 0; i < count; i++) _ammo[i] = Mathf.Clamp(ammo[i], 0, 99);
+            }
+
+            ActiveAmmo = activeAmmo == AmmoType.Basic || GetAmmoCount(activeAmmo) > 0 ? activeAmmo : AmmoType.Basic;
         }
 
         public void ApplyPowerUp(PowerUpKind kind)
@@ -95,6 +216,7 @@ namespace TankRevival
             {
                 case PowerUpKind.Repair:
                     Health.Heal(2);
+                    _game.RepairEagle(1);
                     break;
                 case PowerUpKind.RapidFire:
                     FireDelay = Mathf.Max(0.13f, FireDelay - 0.055f);
@@ -113,6 +235,17 @@ namespace TankRevival
 
         private void OnTriggerEnter2D(Collider2D other)
         {
+            var ammoPickup = other.GetComponent<AmmoPickup>();
+            if (ammoPickup != null)
+            {
+                AmmoType kind = ammoPickup.Kind;
+                int amount = ammoPickup.Amount;
+                AddAmmo(kind, amount);
+                _game.OnAmmoCollected(kind, amount);
+                Destroy(ammoPickup.gameObject);
+                return;
+            }
+
             var powerUp = other.GetComponent<PowerUp>();
             if (powerUp != null)
             {

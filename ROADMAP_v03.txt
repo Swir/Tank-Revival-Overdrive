@@ -1,0 +1,1 @@
+v0.3 target after v0.2 stability feedback: richer arena hazards, stronger biome identity, controller support, audio mix tuning, additional boss presentation and player progression.

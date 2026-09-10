@@ -1,36 +1,59 @@
-# TANK REVIVAL: OVERDRIVE
+# TANK REVIVAL: ORZEŁ OVERDRIVE
 
-Modern 2D tank combat inspired by the feel of classic 8-bit console tank games, rebuilt from scratch for Unity 6.
+Original top-down tank combat for Unity 6, inspired by the fast readable feel of classic 8-bit console tank games and rebuilt from scratch with modern effects, progression and a 100-round campaign.
 
-## Target
+## Mission
 
-- Windows 10/11 x64
+Defend the **Orzełek stronghold** through 100 increasingly dangerous rounds. Enemy formations become faster, tougher and more aggressive as the campaign advances. Siege units prioritize the stronghold, elite tanks pressure the player, supply tanks carry special ammunition, and every tenth round ends with a boss assault.
+
+## v0.2 gameplay
+
 - 100 progressively harder rounds
-- boss fight every 10 rounds
-- destructible brick walls, steel, water and base defence
-- enemy classes: basic, fast, heavy, sniper and boss
-- power-ups and score progression
-- keyboard controls, with controller support planned
+- Orzełek stronghold with persistent health and critical-damage alarm
+- automatic +1 stronghold repair between cleared rounds
+- 8 enemy classes: Basic, Fast, Heavy, Sniper, Siege, Elite, Supply and Boss
+- special glowing Supply Tanks that always drop ammunition
+- 7 ammunition modes: Standard, AP, HE, Incendiary, EMP, Twin Shot and Plasma
+- ammunition inventory persists between rounds and player respawns
+- cannon, fire-rate and engine upgrades persist through the campaign
+- 10 boss difficulty tiers with increasingly complex special salvos
+- final round 100 boss uses radial and directional multi-stage fire patterns
+- destructible brick walls, steel barriers and water obstacles
+- procedural 2.5D tank visuals with layered armor, rounded turrets, lamps and animated tracks
+- muzzle flashes, projectile trails, smoke, sparks, shock rings, explosions and screen shake
+- tread dust and track marks with performance-aware emission
+- runtime-generated combat audio: cannon shots, heavy guns, explosions, ricochets, plasma, EMP, alarms, pickups and engine loop
+- high-score saving
 
-## Current milestone
+## Special ammunition
 
-**v0.1 – playable combat core**
+| Key | Ammunition | Role | First available |
+|---|---|---|---:|
+| 1 | Standard | Unlimited general-purpose shell | Round 1 |
+| 2 | AP Piercing | Faster, harder shot with penetration | Round 3 |
+| 3 | HE Explosive | Area damage against enemies and brick cover | Round 8 |
+| 4 | Incendiary | Applies damage over time | Round 15 |
+| 5 | EMP Shock | Temporarily disables enemy movement and weapons | Round 25 |
+| 6 | Twin Shot | Fires two parallel shells | Round 35 |
+| 7 | Plasma | Fast, high-damage, multi-penetrating projectile | Round 50 |
 
-The project deliberately uses procedural placeholder art for the first playable milestone. This lets the gameplay, AI, collision, round progression and Windows build pipeline be validated before final HD/2.5D art is introduced.
+Use **Q / E** to cycle through ammunition currently in inventory. Destroy colored Supply Tanks to obtain new ammunition; their glow identifies what they carry.
 
 ## Controls
 
-- WASD / Arrow keys – move
-- Space – fire
-- P / Escape – pause
-- Enter – start from title screen
+- **WASD / Arrow keys** – move
+- **Space / Left Ctrl** – fire
+- **Q / E** – previous / next available ammunition
+- **1–7** – directly select ammunition type
+- **P / Escape** – pause / resume
+- **Enter / Space** – start or restart from menu screens
 
-## Windows releases without installing Unity locally
+## Windows build
 
-This repository contains a GitHub Actions workflow that builds `TankRevivalOverdrive.exe` on GitHub and publishes a ready-to-run Windows ZIP to GitHub Releases.
+Windows 10/11 x64 is the primary target. GitHub Actions compiles `TankRevivalOverdrive.exe`, verifies the executable and `_Data` directory, creates a portable ZIP and publishes stable builds under GitHub Releases. Players do **not** need Unity installed.
 
-Unity licensing is required by the Unity Editor running in CI. Configure repository secrets described in `.github/workflows/windows-release.yml` before running the release workflow.
+Development changes live on `dev-v0.2` and are validated by a separate Windows CI workflow before being merged into `main`.
 
-## Legal / creative direction
+## Creative direction
 
-This is an original game inspired by the broad gameplay conventions of classic top-down tank games. Do not add ripped maps, sprites, sounds, trademarks or other copyrighted assets from existing games.
+The game is an original project using its own code, procedural visuals and procedural audio. It draws on broad top-down tank-game conventions but does not use ripped maps, sprites, audio or other assets from existing games.
