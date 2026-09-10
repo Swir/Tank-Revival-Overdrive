@@ -1,0 +1,2 @@
+Tank Revival: Orzeł Overdrive v0.2.0 release candidate
+Validated gameplay target: Windows x64
