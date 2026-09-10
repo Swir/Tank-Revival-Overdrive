@@ -154,6 +154,7 @@ namespace TankRevival
             _aimBias = Mathf.Lerp(0.06f, 0.33f, progress);
 
             VisualFactory.BuildTankSkin(transform, body, accent);
+            gameObject.AddComponent<TrackDustEmitter>();
             if (Kind == EnemyKind.Supply)
                 VisualFactory.BuildSupplyMarker(transform, SupplyAmmo);
             else if (Kind == EnemyKind.Boss)
