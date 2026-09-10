@@ -1,1 +1,0 @@
-Move: WASD/Arrows. Fire: Space/Left Ctrl. Ammo cycle: Q/E. Direct ammo select: 1-7. Pause: P/Escape.
