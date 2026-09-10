@@ -3,7 +3,7 @@ name: Dev Windows Build
 on:
   push:
     branches:
-      - dev-v0.4
+      - dev-v0.6
     paths:
       - '.dev-build-trigger'
   workflow_dispatch:
