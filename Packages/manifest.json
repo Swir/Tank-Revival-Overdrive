@@ -2,7 +2,6 @@
   "dependencies": {
     "com.unity.modules.audio": "1.0.0",
     "com.unity.modules.imgui": "1.0.0",
-    "com.unity.modules.inputlegacy": "1.0.0",
     "com.unity.modules.physics2d": "1.0.0"
   }
 }
