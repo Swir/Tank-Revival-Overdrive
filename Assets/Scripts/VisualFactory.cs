@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace TankRevival
 {
-    public static class VisualFactory
+    public static partial class VisualFactory
     {
         private static Sprite _square;
         private static Sprite _circle;
@@ -133,10 +133,7 @@ namespace TankRevival
             Color metal = new Color(0.18f, 0.20f, 0.23f, 1f);
             Color trackRubber = new Color(0.055f, 0.06f, 0.07f, 1f);
 
-            // Soft 2.5D footprint shadow.
             Disc("TankShadow", parent, new Vector2(1.02f, 0.84f), new Color(0f, 0f, 0f, 0.34f), new Vector3(0.08f, -0.08f, 0f), 0);
-
-            // Tracks and animated tread plates.
             Rect("TrackBaseL", parent, new Vector2(0.25f, 0.96f), trackRubber, new Vector3(-0.39f, 0f, 0f), 2);
             Rect("TrackBaseR", parent, new Vector2(0.25f, 0.96f), trackRubber, new Vector3(0.39f, 0f, 0f), 2);
             Rect("TrackInnerL", parent, new Vector2(0.11f, 0.86f), metal, new Vector3(-0.39f, 0f, 0f), 3);
@@ -149,7 +146,6 @@ namespace TankRevival
                 Rect("TrackSegmentR_" + i, parent, new Vector2(0.22f, 0.045f), new Color(0.48f, 0.51f, 0.55f, 0.92f), new Vector3(0.39f, y, 0f), 4);
             }
 
-            // Layered hull with beveled nose and armor plates.
             Rect("HullShadow", parent, new Vector2(0.69f, 0.78f), new Color(0f, 0f, 0f, 0.30f), new Vector3(0.035f, -0.035f, 0f), 4);
             Rect("Hull", parent, new Vector2(0.66f, 0.78f), dark, Vector3.zero, 5);
             Rect("HullCenter", parent, new Vector2(0.56f, 0.65f), body, new Vector3(0f, 0.015f, 0f), 6);
@@ -161,27 +157,22 @@ namespace TankRevival
             for (int i = -1; i <= 1; i++)
                 Rect("EngineVent_" + i, parent, new Vector2(0.055f, 0.11f), new Color(0.38f, 0.42f, 0.45f), new Vector3(i * 0.095f, -0.19f, 0f), 9);
 
-            // Rounded turret, command hatch and barrel.
             Disc("TurretShadow", parent, new Vector2(0.52f, 0.48f), new Color(0f, 0f, 0f, 0.34f), new Vector3(0.035f, -0.025f, 0f), 9);
             Disc("TurretBase", parent, new Vector2(0.49f, 0.49f), dark, Vector3.zero, 10);
             Disc("Turret", parent, new Vector2(0.42f, 0.42f), accent, new Vector3(0f, 0.015f, 0f), 11);
             Disc("Hatch", parent, new Vector2(0.18f, 0.18f), Color.Lerp(accent, Color.white, 0.18f), new Vector3(-0.08f, -0.035f, 0f), 12);
             Disc("HatchCore", parent, new Vector2(0.09f, 0.09f), Color.Lerp(accent, Color.black, 0.30f), new Vector3(-0.08f, -0.035f, 0f), 13);
-
             Rect("GunMantlet", parent, new Vector2(0.28f, 0.14f), dark, new Vector3(0f, 0.20f, 0f), 12);
             Rect("BarrelShadow", parent, new Vector2(0.16f, 0.62f), new Color(0f, 0f, 0f, 0.26f), new Vector3(0.025f, 0.47f, 0f), 11);
             Rect("Barrel", parent, new Vector2(0.13f, 0.63f), Color.Lerp(accent, Color.black, 0.18f), new Vector3(0f, 0.47f, 0f), 13);
             Rect("BarrelHighlight", parent, new Vector2(0.035f, 0.54f), new Color(1f, 1f, 1f, 0.28f), new Vector3(-0.035f, 0.47f, 0f), 14);
             Rect("MuzzleBrake", parent, new Vector2(0.23f, 0.12f), Color.Lerp(accent, Color.black, 0.35f), new Vector3(0f, 0.79f, 0f), 14);
 
-            // Front lamps add a modern visual cue while preserving the classic top-down silhouette.
             Color lamp = new Color(0.78f, 0.97f, 1f, 0.95f);
             Disc("LampL", parent, new Vector2(0.105f, 0.105f), lamp, new Vector3(-0.23f, 0.31f, 0f), 15);
             Disc("LampR", parent, new Vector2(0.105f, 0.105f), lamp, new Vector3(0.23f, 0.31f, 0f), 15);
             Disc("LampGlowL", parent, new Vector2(0.20f, 0.20f), new Color(lamp.r, lamp.g, lamp.b, 0.18f), new Vector3(-0.23f, 0.31f, 0f), 14);
             Disc("LampGlowR", parent, new Vector2(0.20f, 0.20f), new Color(lamp.r, lamp.g, lamp.b, 0.18f), new Vector3(0.23f, 0.31f, 0f), 14);
-
-            // Small specular accents make the tank readable on dark maps.
             RectRotated("HullGlint", parent, new Vector2(0.23f, 0.035f), new Color(1f, 1f, 1f, 0.36f), new Vector3(-0.10f, 0.15f, 0f), -8f, 15);
             Disc("TurretGlint", parent, new Vector2(0.10f, 0.065f), new Color(1f, 1f, 1f, 0.48f), new Vector3(-0.09f, 0.10f, 0f), 15);
 
@@ -216,10 +207,7 @@ namespace TankRevival
         {
             var result = new Transform[6];
             for (int i = 0; i < result.Length; i++)
-            {
-                var child = transform.Find(prefix + i);
-                result[i] = child;
-            }
+                result[i] = transform.Find(prefix + i);
             return result;
         }
 
@@ -270,7 +258,6 @@ namespace TankRevival
             _scale = scale;
             const int sparkCount = 20;
             const int smokeCount = 8;
-
             _pieces = new Transform[sparkCount];
             _renderers = new SpriteRenderer[sparkCount];
             _velocity = new Vector2[sparkCount];
@@ -307,7 +294,6 @@ namespace TankRevival
             var flash = VisualFactory.Disc("Flash", transform, Vector2.one * (0.72f * scale), new Color(1f, 0.93f, 0.56f, 0.96f), Vector3.zero, 110);
             _flash = flash.transform;
             _flashRenderer = flash.GetComponent<SpriteRenderer>();
-
             var ring = VisualFactory.RingObject("ShockRing", transform, Vector2.one * (0.60f * scale), new Color(1f, 0.72f, 0.24f, 0.72f), Vector3.zero, 105);
             _ring = ring.transform;
             _ringRenderer = ring.GetComponent<SpriteRenderer>();
