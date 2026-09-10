@@ -6,22 +6,33 @@ namespace TankRevival
     {
         public Team OwnerTeam { get; private set; }
         public int Damage { get; private set; }
+        public AmmoType Ammo { get; private set; }
+
         private Rigidbody2D _body;
         private float _dieAt;
+        private int _penetrations;
+        private Color _color;
+        private float _nextTrail;
 
-        public void Initialize(Vector2 direction, Team ownerTeam, int damage, float speed, Color color)
+        public void Initialize(Vector2 direction, Team ownerTeam, int damage, float speed, Color color, AmmoType ammo = AmmoType.Basic)
         {
             OwnerTeam = ownerTeam;
             Damage = Mathf.Max(1, damage);
+            Ammo = ammo;
+            _color = color;
+            _penetrations = ammo == AmmoType.Plasma ? 3 : ammo == AmmoType.ArmorPiercing ? 1 : 0;
 
-            VisualFactory.Rect("Glow", transform, new Vector2(0.24f, 0.24f), new Color(color.r, color.g, color.b, 0.28f), Vector3.zero, 30);
-            VisualFactory.Rect("Core", transform, new Vector2(0.12f, 0.22f), color, Vector3.zero, 31);
+            float scale = ammo == AmmoType.Plasma ? 1.42f : ammo == AmmoType.Explosive ? 1.18f : 1f;
+            VisualFactory.Disc("ProjectileGlow", transform, new Vector2(0.30f, 0.30f) * scale, new Color(color.r, color.g, color.b, 0.25f), Vector3.zero, 34);
+            VisualFactory.Disc("ProjectileCore", transform, new Vector2(0.115f, 0.20f) * scale, color, Vector3.zero, 35);
+            if (ammo == AmmoType.Plasma || ammo == AmmoType.EMP)
+                VisualFactory.RingObject("ProjectileRing", transform, new Vector2(0.27f, 0.27f) * scale, new Color(color.r, color.g, color.b, 0.74f), Vector3.zero, 33);
 
             float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
             transform.rotation = Quaternion.Euler(0f, 0f, angle);
 
             var collider = gameObject.AddComponent<CircleCollider2D>();
-            collider.radius = 0.095f;
+            collider.radius = ammo == AmmoType.Plasma ? 0.13f : 0.095f;
             collider.isTrigger = true;
 
             _body = gameObject.AddComponent<Rigidbody2D>();
@@ -31,11 +42,22 @@ namespace TankRevival
             _body.linearVelocity = direction.normalized * speed;
 
             _dieAt = Time.time + 5f;
+            _nextTrail = Time.time;
         }
 
         private void Update()
         {
-            if (Time.time >= _dieAt) Destroy(gameObject);
+            if (Time.time >= _dieAt)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            if (Ammo != AmmoType.Basic && Time.time >= _nextTrail)
+            {
+                _nextTrail = Time.time + (Ammo == AmmoType.Plasma ? 0.025f : 0.045f);
+                VisualFactory.ProjectileAfterglow(transform.position, _color, Ammo == AmmoType.Plasma ? 0.42f : 0.28f);
+            }
         }
 
         private void OnTriggerEnter2D(Collider2D other)
@@ -44,20 +66,89 @@ namespace TankRevival
             if (health != null)
             {
                 if (health.Team == OwnerTeam && OwnerTeam != Team.Neutral) return;
-                if (health.Damage(Damage, OwnerTeam))
+                if (!health.Damage(Damage, OwnerTeam)) return;
+
+                ApplyStatus(health);
+
+                if (Ammo == AmmoType.Explosive)
+                    Detonate(health);
+                else
+                    VisualFactory.MicroBurst(transform.position, _color, Ammo == AmmoType.Plasma ? 0.72f : 0.46f);
+
+                if (CanPenetrate())
                 {
-                    VisualFactory.Explosion(transform.position, OwnerTeam == Team.Player ? new Color(0.2f, 0.95f, 1f) : new Color(1f, 0.35f, 0.16f), 0.42f);
-                    Destroy(gameObject);
+                    _penetrations--;
+                    return;
                 }
+
+                Destroy(gameObject);
                 return;
             }
 
             var obstacle = other.GetComponent<Obstacle>();
-            if (obstacle != null)
+            if (obstacle == null) return;
+            if (obstacle.Kind == ObstacleKind.Water) return;
+
+            bool steel = obstacle.Kind == ObstacleKind.Steel;
+            obstacle.Hit(Damage, transform.position);
+
+            if (Ammo == AmmoType.Explosive)
             {
-                if (obstacle.Kind == ObstacleKind.Water) return;
-                obstacle.Hit(Damage, transform.position);
+                Detonate(null);
                 Destroy(gameObject);
+                return;
+            }
+
+            if (CanPenetrate())
+            {
+                _penetrations--;
+                VisualFactory.MicroBurst(transform.position, _color, 0.36f);
+                return;
+            }
+
+            if (steel)
+                BattleAudio.PlayGlobal(SoundCue.Ricochet, 0.42f, 0.08f);
+
+            Destroy(gameObject);
+        }
+
+        private bool CanPenetrate()
+        {
+            return _penetrations > 0 && (Ammo == AmmoType.ArmorPiercing || Ammo == AmmoType.Plasma);
+        }
+
+        private void ApplyStatus(Health target)
+        {
+            if (target == null || target.IsDead) return;
+
+            if (Ammo == AmmoType.EMP || Ammo == AmmoType.Incendiary)
+            {
+                var status = target.GetComponent<CombatStatus>();
+                if (status == null) status = target.gameObject.AddComponent<CombatStatus>();
+
+                if (Ammo == AmmoType.EMP)
+                    status.ApplyEmp(2.4f);
+                else
+                    status.ApplyBurn(OwnerTeam, 3.2f, 1, 0.78f);
+            }
+        }
+
+        private void Detonate(Health primary)
+        {
+            const float radius = 1.05f;
+            VisualFactory.Explosion(transform.position, _color, 0.95f);
+            BattleAudio.PlayGlobal(SoundCue.ExplosionSmall, 0.62f, 0.05f);
+
+            var hits = Physics2D.OverlapCircleAll(transform.position, radius);
+            foreach (var hit in hits)
+            {
+                var health = hit.GetComponent<Health>();
+                if (health != null && health != primary && health.Team != OwnerTeam)
+                    health.Damage(Mathf.Max(1, Damage - 1), OwnerTeam);
+
+                var obstacle = hit.GetComponent<Obstacle>();
+                if (obstacle != null && obstacle.Kind == ObstacleKind.Brick)
+                    obstacle.Hit(Mathf.Max(1, Damage), transform.position);
             }
         }
     }
