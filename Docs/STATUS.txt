@@ -1,1 +1,0 @@
-Branch dev-v0.2 is the release-candidate branch for v0.2.0.
