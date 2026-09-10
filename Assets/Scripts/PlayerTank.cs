@@ -10,12 +10,22 @@ namespace TankRevival
         public float MoveSpeed { get; private set; } = 4.8f;
         public AmmoType ActiveAmmo { get; private set; } = AmmoType.Basic;
 
+        public int EffectiveShotDamage => Mathf.Clamp(ShotDamage + _commanderCannonLevel, 1, 8);
+        public float EffectiveFireDelay => Mathf.Max(0.075f, FireDelay * (1f - _commanderLoaderLevel * 0.085f));
+        public float EffectiveMoveSpeed => Mathf.Min(9.2f, MoveSpeed + _commanderEngineLevel * 0.34f);
+        public int CommanderArmorLevel => _commanderArmorLevel;
+
         private TankGame _game;
         private Rigidbody2D _body;
         private Vector2 _move;
         private Vector2 _facing = Vector2.up;
         private float _nextShot;
         private readonly int[] _ammo = new int[AmmoDatabase.AmmoTypeCount];
+
+        private int _commanderCannonLevel;
+        private int _commanderLoaderLevel;
+        private int _commanderEngineLevel;
+        private int _commanderArmorLevel;
 
         public void Initialize(TankGame game)
         {
@@ -68,7 +78,7 @@ namespace TankRevival
                 ApplyFacingRotation();
             }
 
-            BattleAudio.Instance?.SetEngineMoving(_move.sqrMagnitude > 0.01f, MoveSpeed / 7.3f);
+            BattleAudio.Instance?.SetEngineMoving(_move.sqrMagnitude > 0.01f, EffectiveMoveSpeed / 9.2f);
             HandleAmmoSelection();
 
             if ((Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.LeftControl)) && Time.time >= _nextShot)
@@ -78,7 +88,7 @@ namespace TankRevival
         private void FixedUpdate()
         {
             if (_game == null || !_game.IsPlaying || _body == null) return;
-            _body.MovePosition(_body.position + _move * (MoveSpeed * Time.fixedDeltaTime));
+            _body.MovePosition(_body.position + _move * (EffectiveMoveSpeed * Time.fixedDeltaTime));
         }
 
         private void OnDisable()
@@ -134,13 +144,13 @@ namespace TankRevival
         private void Fire()
         {
             AmmoType ammo = ActiveAmmo;
-            int damage = ShotDamage + AmmoDatabase.BonusDamage(ammo);
-            float speed = 10.5f * AmmoDatabase.SpeedMultiplier(ammo);
+            int damage = EffectiveShotDamage + AmmoDatabase.BonusDamage(ammo);
+            float speed = 10.5f * AmmoDatabase.SpeedMultiplier(ammo) * (1f + _commanderCannonLevel * 0.025f);
             Color color = AmmoDatabase.Color(ammo);
             Vector2 muzzle = (Vector2)transform.position + _facing * 0.82f;
             Vector2 side = new Vector2(-_facing.y, _facing.x);
 
-            _nextShot = Time.time + FireDelay * (ammo == AmmoType.Twin ? 1.08f : 1f);
+            _nextShot = Time.time + EffectiveFireDelay * (ammo == AmmoType.Twin ? 1.08f : 1f);
 
             if (ammo == AmmoType.Twin)
             {
@@ -208,6 +218,23 @@ namespace TankRevival
             }
 
             ActiveAmmo = activeAmmo == AmmoType.Basic || GetAmmoCount(activeAmmo) > 0 ? activeAmmo : AmmoType.Basic;
+        }
+
+        public void SetCommanderUpgrades(int cannonLevel, int loaderLevel, int engineLevel, int armorLevel)
+        {
+            cannonLevel = Mathf.Clamp(cannonLevel, 0, 3);
+            loaderLevel = Mathf.Clamp(loaderLevel, 0, 4);
+            engineLevel = Mathf.Clamp(engineLevel, 0, 4);
+            armorLevel = Mathf.Clamp(armorLevel, 0, 4);
+
+            int oldArmor = _commanderArmorLevel;
+            _commanderCannonLevel = cannonLevel;
+            _commanderLoaderLevel = loaderLevel;
+            _commanderEngineLevel = engineLevel;
+            _commanderArmorLevel = armorLevel;
+
+            if (Health != null)
+                Health.SetMaximum(3 + _commanderArmorLevel, _commanderArmorLevel > oldArmor);
         }
 
         public void ApplyPowerUp(PowerUpKind kind)

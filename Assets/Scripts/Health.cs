@@ -32,6 +32,21 @@ namespace TankRevival
                 gameObject.AddComponent<DamageSmokeEmitter>();
         }
 
+        public void SetMaximum(int newMaximum, bool grantAddedCapacity)
+        {
+            if (IsDead) return;
+
+            int oldMaximum = Mathf.Max(1, Maximum);
+            int target = Mathf.Max(1, newMaximum);
+            int added = Mathf.Max(0, target - oldMaximum);
+            Maximum = target;
+
+            if (grantAddedCapacity && added > 0)
+                Current += added;
+
+            Current = Mathf.Clamp(Current, 1, Maximum);
+        }
+
         public bool Damage(int amount, Team source)
         {
             if (IsDead || amount <= 0) return false;

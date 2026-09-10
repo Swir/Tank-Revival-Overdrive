@@ -20,6 +20,9 @@ namespace TankRevival.Editor
             Directory.CreateDirectory("Assets/Scenes");
             Directory.CreateDirectory(BuildFolder);
 
+            string version = ResolveVersion();
+            Debug.Log("[Tank Revival CI] Project version=" + version);
+
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var root = new GameObject("TankGame");
             root.AddComponent<TankRevival.TankGame>();
@@ -30,7 +33,7 @@ namespace TankRevival.Editor
 
             PlayerSettings.companyName = "SWIR Games";
             PlayerSettings.productName = "Tank Revival Overdrive";
-            PlayerSettings.bundleVersion = "0.1.0";
+            PlayerSettings.bundleVersion = version;
             PlayerSettings.defaultScreenWidth = 1280;
             PlayerSettings.defaultScreenHeight = 720;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
@@ -59,14 +62,26 @@ namespace TankRevival.Editor
             }
 
             string info =
-                "TANK REVIVAL: OVERDRIVE\n" +
-                "Build: v0.1 playable core\n" +
+                "TANK REVIVAL: ORZEL OVERDRIVE\n" +
+                "Build: " + version + "\n" +
                 "Unity: " + Application.unityVersion + "\n" +
                 "Target: Windows x64\n" +
-                "Controls: WASD/Arrows, Space/LeftCtrl fire, P/Esc pause\n";
+                "Controls: WASD/Arrows move, Space/LeftCtrl fire, Q/E ammo, 1-7 ammo, P/Esc pause\n" +
+                "Campaign: 100 rounds, Orzelek defense, Supply Tanks, special ammo, bosses and Field Command Center\n";
             File.WriteAllText(Path.Combine(BuildFolder, "BUILD_INFO.txt"), info);
 
             Debug.Log("[Tank Revival CI] Windows executable created at: " + ExePath);
+        }
+
+        private static string ResolveVersion()
+        {
+            const string versionFile = "VERSION";
+            if (!File.Exists(versionFile)) return "0.0.0-dev";
+
+            string raw = File.ReadAllText(versionFile).Trim();
+            if (raw.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+                raw = raw.Substring(1);
+            return string.IsNullOrWhiteSpace(raw) ? "0.0.0-dev" : raw;
         }
     }
 }
