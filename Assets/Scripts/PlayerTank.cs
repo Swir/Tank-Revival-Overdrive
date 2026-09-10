@@ -187,6 +187,28 @@ namespace TankRevival
             return _ammo[(int)type];
         }
 
+        public int[] CopyAmmoInventory()
+        {
+            var copy = new int[_ammo.Length];
+            for (int i = 0; i < _ammo.Length; i++) copy[i] = _ammo[i];
+            return copy;
+        }
+
+        public void RestoreLoadout(int shotDamage, float fireDelay, float moveSpeed, int[] ammo, AmmoType activeAmmo)
+        {
+            ShotDamage = Mathf.Clamp(shotDamage, 1, 4);
+            FireDelay = Mathf.Clamp(fireDelay, 0.13f, 0.34f);
+            MoveSpeed = Mathf.Clamp(moveSpeed, 4.8f, 7.3f);
+
+            if (ammo != null)
+            {
+                int count = Mathf.Min(ammo.Length, _ammo.Length);
+                for (int i = 0; i < count; i++) _ammo[i] = Mathf.Clamp(ammo[i], 0, 99);
+            }
+
+            ActiveAmmo = activeAmmo == AmmoType.Basic || GetAmmoCount(activeAmmo) > 0 ? activeAmmo : AmmoType.Basic;
+        }
+
         public void ApplyPowerUp(PowerUpKind kind)
         {
             switch (kind)
