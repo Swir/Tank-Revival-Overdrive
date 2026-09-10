@@ -27,6 +27,9 @@ namespace TankRevival
             Maximum = Mathf.Max(1, maxHealth);
             Current = currentHealth < 0 ? Maximum : Mathf.Clamp(currentHealth, 1, Maximum);
             IsDead = false;
+
+            if (GetComponent<DamageSmokeEmitter>() == null)
+                gameObject.AddComponent<DamageSmokeEmitter>();
         }
 
         public bool Damage(int amount, Team source)
