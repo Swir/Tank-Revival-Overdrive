@@ -154,7 +154,9 @@ namespace TankRevival
             _aimBias = Mathf.Lerp(0.06f, 0.33f, progress);
 
             VisualFactory.BuildTankSkin(transform, body, accent);
-            gameObject.AddComponent<TrackDustEmitter>();
+            if (Kind == EnemyKind.Heavy || Kind == EnemyKind.Siege || Kind == EnemyKind.Supply || Kind == EnemyKind.Boss)
+                gameObject.AddComponent<TrackDustEmitter>();
+
             if (Kind == EnemyKind.Supply)
                 VisualFactory.BuildSupplyMarker(transform, SupplyAmmo);
             else if (Kind == EnemyKind.Boss)
@@ -172,6 +174,13 @@ namespace TankRevival
             Health = gameObject.AddComponent<Health>();
             Health.Initialize(Team.Enemy, hp);
             _status = gameObject.AddComponent<CombatStatus>();
+
+            if (Kind == EnemyKind.Boss)
+            {
+                var specialWeapons = gameObject.AddComponent<BossWeaponController>();
+                specialWeapons.Initialize(_round);
+            }
+
             Health.Died += _ => _game.OnEnemyDestroyed(this, transform.position, Kind);
 
             ChooseDirection(true);
