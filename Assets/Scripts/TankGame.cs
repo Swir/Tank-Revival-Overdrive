@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using UnityEngine;
 
@@ -18,6 +17,7 @@ namespace TankRevival
         private const float ArenaHalfWidth = 12f;
         private const float ArenaHalfHeight = 7f;
         private const int FinalRound = 100;
+        private const int EagleMaxHealth = 6;
 
         private GameState _state = GameState.Menu;
         private Camera _camera;
@@ -30,12 +30,20 @@ namespace TankRevival
         private int _score;
         private int _highScore;
         private int _lives = 3;
+        private int _eagleHp = EagleMaxHealth;
         private int _aliveEnemies;
         private int _enemiesToSpawn;
         private int _maxAlive;
         private bool _bossPending;
         private float _nextSpawn;
         private float _roundClearAt = -1f;
+        private float _nextEagleAlarm;
+
+        private int _savedShotDamage = 1;
+        private float _savedFireDelay = 0.34f;
+        private float _savedMoveSpeed = 4.8f;
+        private int[] _savedAmmo = new int[AmmoDatabase.AmmoTypeCount];
+        private AmmoType _savedActiveAmmo = AmmoType.Basic;
 
         private float _shakeUntil;
         private float _shakeAmount;
@@ -48,10 +56,12 @@ namespace TankRevival
         private GUIStyle _centerStyle;
         private GUIStyle _buttonStyle;
         private GUIStyle _smallStyle;
+        private GUIStyle _warningStyle;
 
         public bool IsPlaying => _state == GameState.Playing;
         public Vector2 PlayerPosition => _player != null ? (Vector2)_player.transform.position : BasePosition;
-        public Vector2 BasePosition => _baseObject != null ? (Vector2)_baseObject.transform.position : new Vector2(0f, -6f);
+        public Vector2 BasePosition => _baseObject != null ? (Vector2)_baseObject.transform.position : new Vector2(0f, -5.95f);
+        public int CurrentRound => _round;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureGameExists()
@@ -67,6 +77,8 @@ namespace TankRevival
             QualitySettings.vSyncCount = 1;
             _highScore = PlayerPrefs.GetInt("TankRevival.HighScore", 0);
             SetupCamera();
+            if (GetComponent<BattleAudio>() == null)
+                gameObject.AddComponent<BattleAudio>();
         }
 
         private void SetupCamera()
@@ -83,7 +95,7 @@ namespace TankRevival
             _camera.orthographic = true;
             _camera.orthographicSize = 8.15f;
             _camera.transform.position = new Vector3(0f, 0f, -10f);
-            _camera.backgroundColor = new Color(0.025f, 0.035f, 0.055f);
+            _camera.backgroundColor = new Color(0.020f, 0.027f, 0.040f);
             _camera.clearFlags = CameraClearFlags.SolidColor;
         }
 
@@ -102,9 +114,7 @@ namespace TankRevival
             }
 
             if (Input.GetKeyDown(KeyCode.P) || Input.GetKeyDown(KeyCode.Escape))
-            {
                 TogglePause();
-            }
 
             if (_state != GameState.Playing) return;
 
@@ -118,6 +128,8 @@ namespace TankRevival
                     }
                     else
                     {
+                        CapturePlayerLoadout();
+                        _eagleHp = Mathf.Min(EagleMaxHealth, _eagleHp + 1);
                         _round++;
                         BeginRound(_round);
                     }
@@ -129,8 +141,9 @@ namespace TankRevival
 
             if (_enemiesToSpawn <= 0 && _aliveEnemies <= 0 && !_bossPending)
             {
-                _roundClearAt = Time.time + 1.8f;
-                ShowToast(_round == FinalRound ? "FINAL ARENA CLEARED" : $"ROUND {_round} CLEARED", 1.7f);
+                _roundClearAt = Time.time + 1.9f;
+                ShowToast(_round == FinalRound ? "FINAL ARENA CLEARED" : $"ROUND {_round} CLEARED // ORZEŁEK SAFE", 1.8f);
+                BattleAudio.PlayGlobal(SoundCue.RoundClear, 0.62f, 0f);
             }
         }
 
@@ -140,7 +153,7 @@ namespace TankRevival
             Vector3 basePosition = new Vector3(0f, 0f, -10f);
             if (Time.unscaledTime < _shakeUntil)
             {
-                Vector2 jitter = UnityEngine.Random.insideUnitCircle * _shakeAmount;
+                Vector2 jitter = Random.insideUnitCircle * _shakeAmount;
                 _camera.transform.position = basePosition + new Vector3(jitter.x, jitter.y, 0f);
             }
             else
@@ -155,6 +168,7 @@ namespace TankRevival
             {
                 _state = GameState.Paused;
                 Time.timeScale = 0f;
+                BattleAudio.Instance?.SetEngineMoving(false, 0f);
             }
             else if (_state == GameState.Paused)
             {
@@ -169,6 +183,12 @@ namespace TankRevival
             _score = 0;
             _round = 1;
             _lives = 3;
+            _eagleHp = EagleMaxHealth;
+            _savedShotDamage = 1;
+            _savedFireDelay = 0.34f;
+            _savedMoveSpeed = 4.8f;
+            _savedActiveAmmo = AmmoType.Basic;
+            _savedAmmo = new int[AmmoDatabase.AmmoTypeCount];
             _state = GameState.Playing;
             BeginRound(_round);
         }
@@ -177,18 +197,39 @@ namespace TankRevival
         {
             _roundClearAt = -1f;
             _aliveEnemies = 0;
-            _enemiesToSpawn = Mathf.Min(68, 5 + Mathf.CeilToInt(round * 0.55f));
-            _maxAlive = Mathf.Min(12, 4 + round / 12);
+            _enemiesToSpawn = Mathf.Min(62, 6 + Mathf.CeilToInt(round * 0.50f));
+            _maxAlive = Mathf.Min(14, 4 + round / 10);
             _bossPending = round % 10 == 0;
-            _nextSpawn = Time.time + 0.75f;
+            _nextSpawn = Time.time + 0.70f;
             BuildArena(round);
-            ShowToast(round % 10 == 0 ? $"ROUND {round}  //  BOSS" : $"ROUND {round}", 1.5f);
+
+            if (_bossPending)
+            {
+                ShowToast($"ROUND {round:000} // BOSS ASSAULT", 2.0f);
+                BattleAudio.PlayGlobal(SoundCue.BossAlarm, 0.72f, 0f);
+            }
+            else
+            {
+                ShowToast($"ROUND {round:000} // DEFEND THE EAGLE", 1.45f);
+            }
+        }
+
+        private void CapturePlayerLoadout()
+        {
+            if (_player == null) return;
+            _savedShotDamage = _player.ShotDamage;
+            _savedFireDelay = _player.FireDelay;
+            _savedMoveSpeed = _player.MoveSpeed;
+            _savedAmmo = _player.CopyAmmoInventory();
+            _savedActiveAmmo = _player.ActiveAmmo;
         }
 
         private void BuildArena(int round)
         {
+            CapturePlayerLoadout();
             if (_worldRoot != null) Destroy(_worldRoot.gameObject);
-            var root = new GameObject("World");
+
+            var root = new GameObject("World_Round_" + round.ToString("000"));
             _worldRoot = root.transform;
             _player = null;
             _baseObject = null;
@@ -196,33 +237,59 @@ namespace TankRevival
 
             BuildGround(round);
             BuildPerimeter();
-            BuildBase();
+            BuildEagleBase(round);
             BuildObstacles(round);
             SpawnPlayer();
         }
 
         private void BuildGround(int round)
         {
-            VisualFactory.Rect("Ground", _worldRoot, new Vector2(24.8f, 14.5f), new Color(0.055f, 0.075f, 0.090f), Vector3.zero, -60);
+            int sector = Mathf.Clamp((round - 1) / 10, 0, 9);
+            Color[] groundPalette =
+            {
+                new Color(0.050f, 0.070f, 0.082f),
+                new Color(0.060f, 0.073f, 0.068f),
+                new Color(0.075f, 0.065f, 0.055f),
+                new Color(0.052f, 0.068f, 0.075f),
+                new Color(0.072f, 0.055f, 0.060f),
+                new Color(0.046f, 0.060f, 0.082f),
+                new Color(0.064f, 0.052f, 0.078f),
+                new Color(0.068f, 0.070f, 0.050f),
+                new Color(0.048f, 0.052f, 0.060f),
+                new Color(0.060f, 0.040f, 0.045f)
+            };
+
+            Color ground = groundPalette[sector];
+            VisualFactory.Rect("Ground", _worldRoot, new Vector2(24.8f, 14.5f), ground, Vector3.zero, -60);
 
             for (int x = -12; x <= 12; x++)
             {
-                var c = x % 2 == 0 ? new Color(0.10f, 0.14f, 0.16f, 0.35f) : new Color(0.08f, 0.11f, 0.13f, 0.25f);
-                VisualFactory.Rect("GridV", _worldRoot, new Vector2(0.025f, 14f), c, new Vector3(x, 0f, 0f), -58);
+                var c = x % 2 == 0 ? new Color(0.14f, 0.18f, 0.19f, 0.25f) : new Color(0.08f, 0.11f, 0.13f, 0.18f);
+                VisualFactory.Rect("GridV", _worldRoot, new Vector2(0.018f, 14f), c, new Vector3(x, 0f, 0f), -58);
             }
+
             for (int y = -7; y <= 7; y++)
             {
-                var c = y % 2 == 0 ? new Color(0.10f, 0.14f, 0.16f, 0.35f) : new Color(0.08f, 0.11f, 0.13f, 0.25f);
-                VisualFactory.Rect("GridH", _worldRoot, new Vector2(24f, 0.025f), c, new Vector3(0f, y, 0f), -58);
+                var c = y % 2 == 0 ? new Color(0.14f, 0.18f, 0.19f, 0.25f) : new Color(0.08f, 0.11f, 0.13f, 0.18f);
+                VisualFactory.Rect("GridH", _worldRoot, new Vector2(24f, 0.018f), c, new Vector3(0f, y, 0f), -58);
             }
 
             var rng = new System.Random(round * 173 + 91);
-            for (int i = 0; i < 26; i++)
+            int craterCount = 8 + sector * 2;
+            for (int i = 0; i < craterCount; i++)
+            {
+                float x = (float)(rng.NextDouble() * 21.0 - 10.5);
+                float y = (float)(rng.NextDouble() * 10.5 - 5.25);
+                float size = (float)(0.18 + rng.NextDouble() * 0.38);
+                VisualFactory.Disc("Crater", _worldRoot, Vector2.one * size, new Color(0f, 0f, 0f, 0.14f), new Vector3(x, y, 0f), -57);
+            }
+
+            for (int i = 0; i < 30; i++)
             {
                 float x = (float)(rng.NextDouble() * 22.0 - 11.0);
                 float y = (float)(rng.NextDouble() * 12.0 - 6.0);
-                float s = (float)(0.05 + rng.NextDouble() * 0.11);
-                VisualFactory.Rect("GroundSpark", _worldRoot, new Vector2(s, s), new Color(0.20f, 0.30f, 0.32f, 0.30f), new Vector3(x, y, 0f), -57);
+                float s = (float)(0.04 + rng.NextDouble() * 0.09);
+                VisualFactory.Rect("GroundDebris", _worldRoot, new Vector2(s, s), new Color(0.22f, 0.27f, 0.28f, 0.24f), new Vector3(x, y, 0f), -56);
             }
         }
 
@@ -241,36 +308,61 @@ namespace TankRevival
             }
         }
 
-        private void BuildBase()
+        private void BuildEagleBase(int round)
         {
-            var go = new GameObject("BaseCore");
+            var go = new GameObject("ORZELEK_DEFENSE_CORE");
             go.transform.SetParent(_worldRoot, false);
             go.transform.position = new Vector3(0f, -5.95f, 0f);
             _baseObject = go;
 
-            VisualFactory.Rect("BaseShadow", go.transform, new Vector2(1.25f, 0.95f), new Color(0f, 0f, 0f, 0.38f), new Vector3(0.07f, -0.07f, 0f), 2);
-            VisualFactory.Rect("BaseBody", go.transform, new Vector2(1.10f, 0.82f), new Color(0.18f, 0.24f, 0.30f), Vector3.zero, 3);
-            VisualFactory.Rect("BaseCoreGlow", go.transform, new Vector2(0.58f, 0.50f), new Color(0.10f, 0.86f, 1f), Vector3.zero, 4);
-            VisualFactory.Rect("BaseCore", go.transform, new Vector2(0.28f, 0.28f), new Color(0.82f, 0.98f, 1f), Vector3.zero, 5);
+            VisualFactory.BuildEagleStronghold(go.transform);
 
             var collider = go.AddComponent<BoxCollider2D>();
-            collider.size = new Vector2(1.0f, 0.76f);
+            collider.size = new Vector2(1.06f, 0.78f);
 
             _baseHealth = go.AddComponent<Health>();
-            _baseHealth.Initialize(Team.Player, 4);
-            _baseHealth.Damaged += (_, __) => KickCamera(0.16f, 0.10f);
+            _baseHealth.Initialize(Team.Player, EagleMaxHealth, _eagleHp);
+            _baseHealth.Damaged += OnEagleDamaged;
             _baseHealth.Died += _ => OnBaseDestroyed(go.transform.position);
 
-            CreateObstacle(new Vector2(-1.15f, -5.85f), ObstacleKind.Brick, new Vector2(0.75f, 0.75f), 2);
-            CreateObstacle(new Vector2(1.15f, -5.85f), ObstacleKind.Brick, new Vector2(0.75f, 0.75f), 2);
-            CreateObstacle(new Vector2(-0.75f, -5.05f), ObstacleKind.Brick, new Vector2(0.75f, 0.75f), 2);
-            CreateObstacle(new Vector2(0.75f, -5.05f), ObstacleKind.Brick, new Vector2(0.75f, 0.75f), 2);
+            ObstacleKind sideKind = round >= 70 ? ObstacleKind.Steel : ObstacleKind.Brick;
+            int wallHp = round >= 45 ? 3 : 2;
+            CreateObstacle(new Vector2(-1.15f, -5.85f), sideKind, new Vector2(0.75f, 0.75f), wallHp);
+            CreateObstacle(new Vector2(1.15f, -5.85f), sideKind, new Vector2(0.75f, 0.75f), wallHp);
+            CreateObstacle(new Vector2(-0.75f, -5.05f), ObstacleKind.Brick, new Vector2(0.75f, 0.75f), wallHp);
+            CreateObstacle(new Vector2(0.75f, -5.05f), ObstacleKind.Brick, new Vector2(0.75f, 0.75f), wallHp);
+        }
+
+        private void OnEagleDamaged(Health eagle, int amount)
+        {
+            _eagleHp = eagle.Current;
+            KickCamera(0.20f, 0.12f);
+            VisualFactory.RingPulse(eagle.transform.position, new Color(1f, 0.12f, 0.08f), 1.15f);
+
+            if (_eagleHp <= 2 && Time.time >= _nextEagleAlarm)
+            {
+                _nextEagleAlarm = Time.time + 2.5f;
+                ShowToast("WARNING // ORZEŁEK CRITICAL", 1.9f);
+                BattleAudio.PlayGlobal(SoundCue.EagleAlarm, 0.72f, 0f);
+            }
+        }
+
+        public void RepairEagle(int amount)
+        {
+            if (amount <= 0) return;
+            _eagleHp = Mathf.Min(EagleMaxHealth, _eagleHp + amount);
+            if (_baseHealth != null && !_baseHealth.IsDead)
+            {
+                _baseHealth.Heal(amount);
+                _eagleHp = _baseHealth.Current;
+                VisualFactory.RingPulse(_baseHealth.transform.position, new Color(0.20f, 1f, 0.48f), 0.85f);
+            }
         }
 
         private void BuildObstacles(int round)
         {
             var rng = new System.Random(round * 7919 + 17);
-            int count = 24 + Mathf.Min(18, round / 5);
+            int count = 25 + Mathf.Min(21, round / 4);
 
             for (int i = 0; i < count; i++)
             {
@@ -283,23 +375,25 @@ namespace TankRevival
 
                 double roll = rng.NextDouble();
                 ObstacleKind kind;
-                if (round >= 6 && roll < Mathf.Min(0.18f, 0.06f + round * 0.0012f))
+                if (round >= 6 && roll < Mathf.Min(0.19f, 0.055f + round * 0.0013f))
                     kind = ObstacleKind.Water;
-                else if (round >= 18 && roll > 0.86)
+                else if (round >= 18 && roll > Mathf.Max(0.78f, 0.90f - round * 0.0011f))
                     kind = ObstacleKind.Steel;
                 else
                     kind = ObstacleKind.Brick;
 
-                int hp = kind == ObstacleKind.Brick ? 1 + (round >= 45 && rng.NextDouble() < 0.32 ? 1 : 0) : 1;
+                int hp = kind == ObstacleKind.Brick ? 1 + (round >= 35 && rng.NextDouble() < 0.38 ? 1 : 0) : 1;
                 CreateObstacle(pos, kind, new Vector2(0.88f, 0.88f), hp);
             }
 
-            int grassCount = 10 + round / 10;
+            int grassCount = 10 + round / 8;
             for (int i = 0; i < grassCount; i++)
             {
                 float x = (float)(rng.NextDouble() * 20.0 - 10.0);
                 float y = (float)(rng.NextDouble() * 9.0 - 4.0);
-                VisualFactory.Rect("Grass", _worldRoot, new Vector2(0.85f, 0.85f), new Color(0.12f, 0.32f, 0.19f, 0.60f), new Vector3(x, y, 0f), 14);
+                VisualFactory.Rect("Grass", _worldRoot, new Vector2(0.85f, 0.85f), new Color(0.10f, 0.30f, 0.17f, 0.52f), new Vector3(x, y, 0f), 14);
+                if (i % 3 == 0)
+                    VisualFactory.Rect("GrassBlade", _worldRoot, new Vector2(0.08f, 0.72f), new Color(0.20f, 0.48f, 0.24f, 0.55f), new Vector3(x + 0.12f, y, 0f), 15);
             }
         }
 
@@ -317,21 +411,25 @@ namespace TankRevival
 
             if (kind == ObstacleKind.Brick)
             {
-                VisualFactory.Rect("BrickShadow", root.transform, size * 0.98f, new Color(0.18f, 0.055f, 0.025f), new Vector3(0.05f, -0.05f, 0f), 0);
-                VisualFactory.Rect("Brick", root.transform, size * 0.90f, new Color(0.68f, 0.19f, 0.07f), Vector3.zero, 1);
-                VisualFactory.Rect("BrickTop", root.transform, new Vector2(size.x * 0.72f, size.y * 0.17f), new Color(1f, 0.43f, 0.13f), new Vector3(-0.04f, size.y * 0.20f, 0f), 2);
-                VisualFactory.Rect("Mortar", root.transform, new Vector2(size.x * 0.12f, size.y * 0.72f), new Color(0.31f, 0.075f, 0.035f), new Vector3(0.10f, 0f, 0f), 2);
+                VisualFactory.Rect("BrickShadow", root.transform, size * 0.98f, new Color(0.15f, 0.040f, 0.018f), new Vector3(0.05f, -0.05f, 0f), 0);
+                VisualFactory.Rect("Brick", root.transform, size * 0.90f, new Color(0.58f, 0.13f, 0.045f), Vector3.zero, 1);
+                VisualFactory.Rect("BrickTop", root.transform, new Vector2(size.x * 0.72f, size.y * 0.16f), new Color(0.92f, 0.34f, 0.09f), new Vector3(-0.04f, size.y * 0.20f, 0f), 2);
+                VisualFactory.Rect("Mortar", root.transform, new Vector2(size.x * 0.10f, size.y * 0.72f), new Color(0.25f, 0.052f, 0.025f), new Vector3(0.10f, 0f, 0f), 2);
+                VisualFactory.Rect("BrickEdge", root.transform, new Vector2(size.x * 0.80f, 0.035f), new Color(1f, 0.48f, 0.13f, 0.55f), new Vector3(0f, size.y * 0.34f, 0f), 3);
             }
             else if (kind == ObstacleKind.Steel)
             {
-                VisualFactory.Rect("SteelShadow", root.transform, size * 0.98f, new Color(0.07f, 0.09f, 0.12f), new Vector3(0.04f, -0.04f, 0f), 0);
-                VisualFactory.Rect("Steel", root.transform, size * 0.90f, new Color(0.38f, 0.47f, 0.57f), Vector3.zero, 1);
-                VisualFactory.Rect("SteelTop", root.transform, new Vector2(size.x * 0.70f, size.y * 0.18f), new Color(0.76f, 0.86f, 0.94f), new Vector3(-0.04f, size.y * 0.20f, 0f), 2);
+                VisualFactory.Rect("SteelShadow", root.transform, size * 0.98f, new Color(0.055f, 0.07f, 0.09f), new Vector3(0.04f, -0.04f, 0f), 0);
+                VisualFactory.Rect("Steel", root.transform, size * 0.90f, new Color(0.32f, 0.39f, 0.47f), Vector3.zero, 1);
+                VisualFactory.Rect("SteelTop", root.transform, new Vector2(size.x * 0.70f, size.y * 0.17f), new Color(0.70f, 0.80f, 0.88f), new Vector3(-0.04f, size.y * 0.20f, 0f), 2);
+                VisualFactory.Disc("SteelBoltA", root.transform, new Vector2(0.09f, 0.09f), new Color(0.82f, 0.88f, 0.92f), new Vector3(-size.x * 0.28f, -size.y * 0.26f, 0f), 3);
+                VisualFactory.Disc("SteelBoltB", root.transform, new Vector2(0.09f, 0.09f), new Color(0.82f, 0.88f, 0.92f), new Vector3(size.x * 0.28f, -size.y * 0.26f, 0f), 3);
             }
             else
             {
-                VisualFactory.Rect("Water", root.transform, size * 0.94f, new Color(0.04f, 0.32f, 0.55f), Vector3.zero, -2);
-                VisualFactory.Rect("WaterShine", root.transform, new Vector2(size.x * 0.74f, size.y * 0.12f), new Color(0.18f, 0.78f, 0.95f, 0.80f), new Vector3(0f, size.y * 0.18f, 0f), -1);
+                VisualFactory.Rect("Water", root.transform, size * 0.94f, new Color(0.025f, 0.24f, 0.45f), Vector3.zero, -2);
+                VisualFactory.Rect("WaterShine", root.transform, new Vector2(size.x * 0.74f, size.y * 0.10f), new Color(0.16f, 0.72f, 0.95f, 0.76f), new Vector3(0f, size.y * 0.18f, 0f), -1);
+                VisualFactory.Rect("WaterShine2", root.transform, new Vector2(size.x * 0.42f, size.y * 0.055f), new Color(0.55f, 0.92f, 1f, 0.42f), new Vector3(-0.12f, -size.y * 0.18f, 0f), -1);
             }
 
             return root;
@@ -342,10 +440,12 @@ namespace TankRevival
             if (_state != GameState.Playing) return;
             var go = new GameObject("PlayerTank");
             go.transform.SetParent(_worldRoot, false);
-            go.transform.position = new Vector3(0f, -4.15f, 0f);
+            go.transform.position = new Vector3(0f, -4.05f, 0f);
             _player = go.AddComponent<PlayerTank>();
             _player.Initialize(this);
-            _player.Health.InvulnerableUntil = Time.time + 1.7f;
+            _player.RestoreLoadout(_savedShotDamage, _savedFireDelay, _savedMoveSpeed, _savedAmmo, _savedActiveAmmo);
+            _player.Health.InvulnerableUntil = Time.time + 1.75f;
+            VisualFactory.RingPulse(go.transform.position, new Color(0.18f, 0.86f, 1f), 1.0f);
         }
 
         private void HandleSpawning()
@@ -356,7 +456,7 @@ namespace TankRevival
             {
                 _enemiesToSpawn--;
                 SpawnEnemy(ChooseEnemyKind(_round));
-                _nextSpawn = Time.time + Mathf.Max(0.34f, 1.15f - _round * 0.0065f);
+                _nextSpawn = Time.time + Mathf.Max(0.28f, 1.10f - _round * 0.0068f);
                 return;
             }
 
@@ -364,18 +464,36 @@ namespace TankRevival
             {
                 _bossPending = false;
                 SpawnEnemy(EnemyKind.Boss);
-                ShowToast($"BOSS // ROUND {_round}", 2.0f);
-                KickCamera(0.35f, 0.15f);
+                ShowToast($"BOSS // ROUND {_round:000}", 2.1f);
+                KickCamera(0.38f, 0.16f);
+                BattleAudio.PlayGlobal(SoundCue.BossAlarm, 0.78f, 0f);
             }
         }
 
         private EnemyKind ChooseEnemyKind(int round)
         {
-            float r = UnityEngine.Random.value;
-            if (round >= 31 && r < Mathf.Min(0.24f, 0.08f + round * 0.0012f)) return EnemyKind.Sniper;
-            if (round >= 21 && r < Mathf.Min(0.50f, 0.18f + round * 0.0021f)) return EnemyKind.Heavy;
-            if (round >= 11 && r < Mathf.Min(0.76f, 0.40f + round * 0.0023f)) return EnemyKind.Fast;
+            float r = Random.value;
+            float supplyChance = round >= 3 ? Mathf.Min(0.14f, 0.055f + round * 0.0008f) : 0f;
+            if (r < supplyChance) return EnemyKind.Supply;
+
+            float normalized = supplyChance < 0.99f ? (r - supplyChance) / (1f - supplyChance) : 1f;
+            if (round >= 65 && normalized < 0.14f) return EnemyKind.Elite;
+            if (round >= 45 && normalized < 0.29f) return EnemyKind.Siege;
+            if (round >= 31 && normalized < 0.47f) return EnemyKind.Sniper;
+            if (round >= 21 && normalized < 0.67f) return EnemyKind.Heavy;
+            if (round >= 11 && normalized < 0.85f) return EnemyKind.Fast;
             return EnemyKind.Basic;
+        }
+
+        private AmmoType ChooseSupplyAmmo(int round)
+        {
+            int max = 1;
+            if (round >= AmmoDatabase.UnlockRound(AmmoType.Explosive)) max = 2;
+            if (round >= AmmoDatabase.UnlockRound(AmmoType.Incendiary)) max = 3;
+            if (round >= AmmoDatabase.UnlockRound(AmmoType.EMP)) max = 4;
+            if (round >= AmmoDatabase.UnlockRound(AmmoType.Twin)) max = 5;
+            if (round >= AmmoDatabase.UnlockRound(AmmoType.Plasma)) max = 6;
+            return (AmmoType)Random.Range(1, max + 1);
         }
 
         private void SpawnEnemy(EnemyKind kind)
@@ -383,29 +501,32 @@ namespace TankRevival
             Vector2[] spawnPoints =
             {
                 new Vector2(-9.5f, 5.65f),
-                new Vector2(0f, 5.65f),
+                new Vector2(-3.2f, 5.65f),
+                new Vector2(3.2f, 5.65f),
                 new Vector2(9.5f, 5.65f)
             };
 
-            Vector2 pos = spawnPoints[UnityEngine.Random.Range(0, spawnPoints.Length)];
-            pos += new Vector2(UnityEngine.Random.Range(-0.28f, 0.28f), UnityEngine.Random.Range(-0.18f, 0.18f));
+            Vector2 pos = spawnPoints[Random.Range(0, spawnPoints.Length)];
+            pos += new Vector2(Random.Range(-0.25f, 0.25f), Random.Range(-0.15f, 0.15f));
+            AmmoType supplyAmmo = kind == EnemyKind.Supply ? ChooseSupplyAmmo(_round) : AmmoType.Basic;
 
-            var go = new GameObject(kind == EnemyKind.Boss ? $"Boss_R{_round}" : $"Enemy_{kind}");
+            string name = kind == EnemyKind.Boss ? $"Boss_R{_round:000}" : kind == EnemyKind.Supply ? $"SUPPLY_{supplyAmmo}" : $"Enemy_{kind}";
+            var go = new GameObject(name);
             go.transform.SetParent(_worldRoot, false);
             go.transform.position = pos;
             var enemy = go.AddComponent<EnemyTank>();
-            enemy.Initialize(this, kind, _round);
+            enemy.Initialize(this, kind, _round, supplyAmmo);
             _aliveEnemies++;
         }
 
-        public void SpawnProjectile(Vector2 position, Vector2 direction, Team team, int damage, float speed, Color color)
+        public void SpawnProjectile(Vector2 position, Vector2 direction, Team team, int damage, float speed, Color color, AmmoType ammo = AmmoType.Basic)
         {
             if (_worldRoot == null) return;
-            var go = new GameObject(team == Team.Player ? "PlayerProjectile" : "EnemyProjectile");
+            var go = new GameObject(team == Team.Player ? $"PlayerProjectile_{ammo}" : "EnemyProjectile");
             go.transform.SetParent(_worldRoot, false);
             go.transform.position = position;
             var projectile = go.AddComponent<Projectile>();
-            projectile.Initialize(direction, team, damage, speed, color);
+            projectile.Initialize(direction, team, damage, speed, color, ammo);
         }
 
         public void OnEnemyDestroyed(EnemyTank enemy, Vector3 position, EnemyKind kind)
@@ -416,20 +537,47 @@ namespace TankRevival
                 EnemyKind.Fast => 150,
                 EnemyKind.Heavy => 240,
                 EnemyKind.Sniper => 300,
-                EnemyKind.Boss => 2500 + _round * 25,
+                EnemyKind.Siege => 380,
+                EnemyKind.Elite => 520,
+                EnemyKind.Supply => 450,
+                EnemyKind.Boss => 2500 + _round * 30,
                 _ => 100
             };
             _score += points;
 
-            Color blast = kind == EnemyKind.Boss ? new Color(1f, 0.12f, 0.08f) : new Color(1f, 0.42f, 0.12f);
-            VisualFactory.Explosion(position, blast, kind == EnemyKind.Boss ? 2.2f : 1.0f);
-            KickCamera(kind == EnemyKind.Boss ? 0.42f : 0.11f, kind == EnemyKind.Boss ? 0.24f : 0.075f);
+            bool huge = kind == EnemyKind.Boss;
+            Color blast = huge ? new Color(1f, 0.09f, 0.04f) : kind == EnemyKind.Supply ? AmmoDatabase.Color(enemy.SupplyAmmo) : new Color(1f, 0.38f, 0.10f);
+            VisualFactory.Explosion(position, blast, huge ? 2.35f : kind == EnemyKind.Heavy || kind == EnemyKind.Siege ? 1.25f : 1.0f);
+            KickCamera(huge ? 0.46f : 0.12f, huge ? 0.26f : 0.075f);
+            BattleAudio.PlayGlobal(huge ? SoundCue.ExplosionLarge : SoundCue.ExplosionSmall, huge ? 0.90f : 0.40f, 0.07f);
 
-            float dropChance = Mathf.Min(0.23f, 0.11f + _round * 0.0012f);
-            if (kind == EnemyKind.Boss || UnityEngine.Random.value < dropChance)
+            if (kind == EnemyKind.Supply)
             {
-                SpawnPowerUp(position);
+                SpawnAmmoPickup(position, enemy.SupplyAmmo);
+                ShowToast($"SUPPLY TANK DOWN // {AmmoDatabase.DisplayName(enemy.SupplyAmmo)}", 1.45f);
+                return;
             }
+
+            if (kind == EnemyKind.Boss)
+            {
+                SpawnPowerUp(position + new Vector3(-0.45f, 0f, 0f));
+                SpawnAmmoPickup(position + new Vector3(0.45f, 0f, 0f), ChooseSupplyAmmo(_round));
+                return;
+            }
+
+            float dropChance = Mathf.Min(0.16f, 0.065f + _round * 0.0009f);
+            if (Random.value < dropChance)
+                SpawnPowerUp(position);
+        }
+
+        private void SpawnAmmoPickup(Vector3 position, AmmoType kind)
+        {
+            if (kind == AmmoType.Basic) kind = AmmoType.ArmorPiercing;
+            var go = new GameObject("AmmoDrop_" + kind);
+            go.transform.SetParent(_worldRoot, false);
+            go.transform.position = position;
+            var pickup = go.AddComponent<AmmoPickup>();
+            pickup.Initialize(kind, AmmoDatabase.PickupAmount(kind, _round));
         }
 
         private void SpawnPowerUp(Vector3 position)
@@ -438,7 +586,14 @@ namespace TankRevival
             go.transform.SetParent(_worldRoot, false);
             go.transform.position = position;
             var power = go.AddComponent<PowerUp>();
-            power.Initialize((PowerUpKind)UnityEngine.Random.Range(0, 5));
+            power.Initialize((PowerUpKind)Random.Range(0, 5));
+        }
+
+        public void OnAmmoCollected(AmmoType kind, int amount)
+        {
+            _score += 350;
+            ShowToast($"AMMO +{amount} // {AmmoDatabase.DisplayName(kind)}", 1.55f);
+            BattleAudio.PlayGlobal(SoundCue.AmmoPickup, 0.70f, 0f);
         }
 
         public void OnPowerUpCollected(PowerUpKind kind)
@@ -446,51 +601,59 @@ namespace TankRevival
             _score += 250;
             ShowToast(kind switch
             {
-                PowerUpKind.Repair => "REPAIR +2",
-                PowerUpKind.RapidFire => "RAPID FIRE +",
+                PowerUpKind.Repair => "FIELD REPAIR // TANK + EAGLE",
+                PowerUpKind.RapidFire => "AUTOLOADER UPGRADE",
                 PowerUpKind.PowerShot => "CANNON POWER +",
                 PowerUpKind.Speed => "ENGINE BOOST +",
                 _ => "SHIELD // 6 SEC"
-            }, 1.2f);
+            }, 1.25f);
+            BattleAudio.PlayGlobal(SoundCue.Pickup, 0.62f, 0f);
+            CapturePlayerLoadout();
         }
 
         public void OnPlayerDestroyed(Vector3 position)
         {
             if (_state != GameState.Playing) return;
+            CapturePlayerLoadout();
             _player = null;
             _lives--;
-            VisualFactory.Explosion(position, new Color(0.12f, 0.82f, 1f), 1.4f);
-            KickCamera(0.30f, 0.18f);
+            VisualFactory.Explosion(position, new Color(0.10f, 0.75f, 1f), 1.45f);
+            KickCamera(0.32f, 0.18f);
+            BattleAudio.PlayGlobal(SoundCue.ExplosionLarge, 0.60f, 0.05f);
 
             if (_lives <= 0)
             {
-                LoseCampaign("TANK DESTROYED");
+                LoseCampaign("YOUR TANK WAS DESTROYED");
             }
             else
             {
+                ShowToast($"TANK LOST // {_lives} RESERVE", 1.35f);
                 StartCoroutine(RespawnPlayerAfterDelay());
             }
         }
 
         private IEnumerator RespawnPlayerAfterDelay()
         {
-            yield return new WaitForSeconds(1.25f);
+            yield return new WaitForSeconds(1.20f);
             if (_state == GameState.Playing && _player == null) SpawnPlayer();
         }
 
         private void OnBaseDestroyed(Vector3 position)
         {
             if (_state != GameState.Playing) return;
+            _eagleHp = 0;
             _baseObject = null;
-            VisualFactory.Explosion(position, new Color(1f, 0.12f, 0.05f), 2.5f);
-            KickCamera(0.70f, 0.32f);
-            LoseCampaign("BASE DESTROYED");
+            VisualFactory.Explosion(position, new Color(1f, 0.08f, 0.04f), 2.8f);
+            KickCamera(0.78f, 0.34f);
+            BattleAudio.PlayGlobal(SoundCue.ExplosionLarge, 1f, 0f);
+            LoseCampaign("ORZEŁEK DESTROYED");
         }
 
         private void LoseCampaign(string reason)
         {
             Time.timeScale = 1f;
             _state = GameState.GameOver;
+            BattleAudio.Instance?.SetEngineMoving(false, 0f);
             SaveHighScore();
             ShowToast(reason, 2.0f);
         }
@@ -499,7 +662,9 @@ namespace TankRevival
         {
             Time.timeScale = 1f;
             _state = GameState.Victory;
-            _score += 10000;
+            _score += 20000 + _eagleHp * 2500;
+            BattleAudio.Instance?.SetEngineMoving(false, 0f);
+            BattleAudio.PlayGlobal(SoundCue.RoundClear, 1f, 0f);
             SaveHighScore();
         }
 
@@ -530,26 +695,26 @@ namespace TankRevival
             _titleStyle = new GUIStyle(GUI.skin.label)
             {
                 alignment = TextAnchor.MiddleCenter,
-                fontSize = 48,
+                fontSize = 46,
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.25f, 0.92f, 1f) }
+                normal = { textColor = new Color(0.24f, 0.90f, 1f) }
             };
             _subtitleStyle = new GUIStyle(GUI.skin.label)
             {
                 alignment = TextAnchor.MiddleCenter,
-                fontSize = 19,
+                fontSize = 18,
                 normal = { textColor = new Color(0.78f, 0.88f, 0.94f) }
             };
             _hudStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 18,
+                fontSize = 17,
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = Color.white }
             };
             _centerStyle = new GUIStyle(GUI.skin.label)
             {
                 alignment = TextAnchor.MiddleCenter,
-                fontSize = 30,
+                fontSize = 29,
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = Color.white }
             };
@@ -566,6 +731,10 @@ namespace TankRevival
                 fontSize = 14,
                 normal = { textColor = new Color(0.62f, 0.72f, 0.78f) }
             };
+            _warningStyle = new GUIStyle(_hudStyle)
+            {
+                normal = { textColor = new Color(1f, 0.24f, 0.16f) }
+            };
         }
 
         private void OnGUI()
@@ -574,13 +743,15 @@ namespace TankRevival
 
             if (_state == GameState.Menu)
             {
-                DrawPanel(new Rect(Screen.width * 0.5f - 330f, Screen.height * 0.5f - 220f, 660f, 440f));
-                GUI.Label(new Rect(0, Screen.height * 0.5f - 165f, Screen.width, 70f), "TANK REVIVAL", _titleStyle);
-                GUI.Label(new Rect(0, Screen.height * 0.5f - 105f, Screen.width, 40f), "OVERDRIVE // 100 ROUND CAMPAIGN", _subtitleStyle);
-                GUI.Label(new Rect(0, Screen.height * 0.5f - 52f, Screen.width, 32f), $"HIGH SCORE  {_highScore:N0}", _subtitleStyle);
-                if (GUI.Button(new Rect(Screen.width * 0.5f - 150f, Screen.height * 0.5f + 12f, 300f, 48f), "START CAMPAIGN", _buttonStyle)) StartCampaign();
-                GUI.Label(new Rect(0, Screen.height * 0.5f + 82f, Screen.width, 28f), "WASD / ARROWS  •  SPACE FIRE  •  P PAUSE", _smallStyle);
-                GUI.Label(new Rect(0, Screen.height * 0.5f + 112f, Screen.width, 28f), "Original prototype build — no ripped game assets", _smallStyle);
+                DrawPanel(new Rect(Screen.width * 0.5f - 350f, Screen.height * 0.5f - 235f, 700f, 470f));
+                GUI.Label(new Rect(0, Screen.height * 0.5f - 185f, Screen.width, 70f), "TANK REVIVAL", _titleStyle);
+                GUI.Label(new Rect(0, Screen.height * 0.5f - 126f, Screen.width, 38f), "ORZEŁ OVERDRIVE // 100 ROUND DEFENSE", _subtitleStyle);
+                GUI.Label(new Rect(0, Screen.height * 0.5f - 79f, Screen.width, 30f), "DEFEND THE EAGLE • HUNT SUPPLY TANKS • UPGRADE YOUR CANNON", _smallStyle);
+                GUI.Label(new Rect(0, Screen.height * 0.5f - 42f, Screen.width, 32f), $"HIGH SCORE  {_highScore:N0}", _subtitleStyle);
+                if (GUI.Button(new Rect(Screen.width * 0.5f - 155f, Screen.height * 0.5f + 18f, 310f, 48f), "START DEFENSE", _buttonStyle)) StartCampaign();
+                GUI.Label(new Rect(0, Screen.height * 0.5f + 89f, Screen.width, 27f), "WASD / ARROWS  •  SPACE FIRE  •  Q/E AMMO  •  1–7 DIRECT SELECT  •  P PAUSE", _smallStyle);
+                GUI.Label(new Rect(0, Screen.height * 0.5f + 121f, Screen.width, 27f), "Supply tanks glow in the color of the ammunition they carry", _smallStyle);
+                GUI.Label(new Rect(0, Screen.height * 0.5f + 153f, Screen.width, 27f), "Original game and procedural assets — classic top-down tank spirit", _smallStyle);
                 return;
             }
 
@@ -596,34 +767,43 @@ namespace TankRevival
                 return;
             }
 
-            DrawPanel(new Rect(Screen.width * 0.5f - 330f, Screen.height * 0.5f - 205f, 660f, 410f));
-            string headline = _state == GameState.Victory ? "100 ROUNDS CLEARED" : "MISSION FAILED";
-            GUI.Label(new Rect(0, Screen.height * 0.5f - 150f, Screen.width, 60f), headline, _titleStyle);
-            GUI.Label(new Rect(0, Screen.height * 0.5f - 78f, Screen.width, 38f), $"ROUND {_round}   •   SCORE {_score:N0}", _subtitleStyle);
-            GUI.Label(new Rect(0, Screen.height * 0.5f - 36f, Screen.width, 32f), $"HIGH SCORE {_highScore:N0}", _subtitleStyle);
-            if (GUI.Button(new Rect(Screen.width * 0.5f - 150f, Screen.height * 0.5f + 30f, 300f, 48f), "PLAY AGAIN", _buttonStyle)) StartCampaign();
-            GUI.Label(new Rect(0, Screen.height * 0.5f + 102f, Screen.width, 28f), "ENTER / SPACE also restarts", _smallStyle);
+            DrawPanel(new Rect(Screen.width * 0.5f - 350f, Screen.height * 0.5f - 215f, 700f, 430f));
+            string headline = _state == GameState.Victory ? "ORZEŁEK SURVIVED 100 ROUNDS" : "DEFENSE FAILED";
+            GUI.Label(new Rect(0, Screen.height * 0.5f - 160f, Screen.width, 64f), headline, _titleStyle);
+            GUI.Label(new Rect(0, Screen.height * 0.5f - 84f, Screen.width, 38f), $"ROUND {_round}   •   SCORE {_score:N0}", _subtitleStyle);
+            GUI.Label(new Rect(0, Screen.height * 0.5f - 42f, Screen.width, 32f), $"HIGH SCORE {_highScore:N0}", _subtitleStyle);
+            if (GUI.Button(new Rect(Screen.width * 0.5f - 155f, Screen.height * 0.5f + 28f, 310f, 48f), "DEFEND AGAIN", _buttonStyle)) StartCampaign();
+            GUI.Label(new Rect(0, Screen.height * 0.5f + 100f, Screen.width, 28f), "ENTER / SPACE also restarts", _smallStyle);
         }
 
         private void DrawHud()
         {
             int playerHp = _player != null && _player.Health != null ? _player.Health.Current : 0;
-            int baseHp = _baseHealth != null ? _baseHealth.Current : 0;
+            int eagleHp = _baseHealth != null ? _baseHealth.Current : _eagleHp;
             int remaining = _aliveEnemies + _enemiesToSpawn + (_bossPending ? 1 : 0);
+            AmmoType active = _player != null ? _player.ActiveAmmo : _savedActiveAmmo;
+            int activeCount = _player != null ? _player.GetAmmoCount(active) : (active == AmmoType.Basic ? -1 : _savedAmmo[(int)active]);
+            string ammoCount = active == AmmoType.Basic ? "∞" : activeCount.ToString();
 
-            GUI.Box(new Rect(14f, 12f, 360f, 86f), string.Empty);
-            GUI.Label(new Rect(28f, 20f, 340f, 28f), $"ROUND {_round:000}/100     SCORE {_score:N0}", _hudStyle);
-            GUI.Label(new Rect(28f, 50f, 340f, 28f), $"LIVES {_lives}   ARMOR {playerHp}   BASE {baseHp}   ENEMY {remaining}", _hudStyle);
+            GUI.Box(new Rect(14f, 12f, 480f, 108f), string.Empty);
+            GUI.Label(new Rect(28f, 19f, 455f, 27f), $"ROUND {_round:000}/100     SCORE {_score:N0}     ENEMY {remaining}", _hudStyle);
+            GUI.Label(new Rect(28f, 47f, 455f, 27f), $"LIVES {_lives}   ARMOR {playerHp}   ORZEŁEK {eagleHp}/{EagleMaxHealth}", eagleHp <= 2 ? _warningStyle : _hudStyle);
+            GUI.Label(new Rect(28f, 75f, 455f, 27f), $"AMMO {AmmoDatabase.DisplayName(active)}  [{ammoCount}]   •   Q/E switch", _hudStyle);
+
+            if (_player != null)
+            {
+                string inventory = $"1 STD ∞   2 AP {_player.GetAmmoCount(AmmoType.ArmorPiercing)}   3 HE {_player.GetAmmoCount(AmmoType.Explosive)}   4 FIRE {_player.GetAmmoCount(AmmoType.Incendiary)}   5 EMP {_player.GetAmmoCount(AmmoType.EMP)}   6 TWIN {_player.GetAmmoCount(AmmoType.Twin)}   7 PLASMA {_player.GetAmmoCount(AmmoType.Plasma)}";
+                GUI.Box(new Rect(14f, Screen.height - 48f, Mathf.Min(Screen.width - 28f, 930f), 34f), string.Empty);
+                GUI.Label(new Rect(24f, Screen.height - 43f, Mathf.Min(Screen.width - 48f, 910f), 25f), inventory, _smallStyle);
+            }
 
             if (Time.unscaledTime < _toastUntil)
-            {
-                GUI.Label(new Rect(0f, 22f, Screen.width, 46f), _toast, _centerStyle);
-            }
+                GUI.Label(new Rect(0f, 24f, Screen.width, 46f), _toast, _centerStyle);
         }
 
         private static void DrawPanel(Rect rect)
         {
-            GUI.color = new Color(0.04f, 0.06f, 0.085f, 0.96f);
+            GUI.color = new Color(0.035f, 0.050f, 0.072f, 0.97f);
             GUI.Box(rect, string.Empty);
             GUI.color = Color.white;
         }
