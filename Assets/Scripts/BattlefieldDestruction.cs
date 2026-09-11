@@ -18,6 +18,10 @@ namespace TankRevival
             VisualFactory.Disc("CraterInner", root.transform, Vector2.one * (size * 0.66f), new Color(0.07f, 0.045f, 0.025f, 0.68f), Vector3.zero, -44);
             VisualFactory.RingObject("HotEdge", root.transform, Vector2.one * (size * 0.82f), new Color(tint.r, tint.g, tint.b, 0.28f), Vector3.zero, -43);
             root.transform.rotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+
+            var presentation = root.AddComponent<ImpactScar3DPresentation>();
+            presentation.Initialize(size, tint);
+
             Scars.Enqueue(root);
             Trim();
         }
@@ -35,6 +39,10 @@ namespace TankRevival
             var collider = root.AddComponent<BoxCollider2D>();
             collider.size = new Vector2(0.72f, 0.54f) * scale;
             root.AddComponent<WreckDecay>().Initialize(kind == EnemyKind.Boss ? 42f : 20f + Random.Range(0f, 9f));
+
+            var presentation = root.AddComponent<Wreck3DPresentation>();
+            presentation.Initialize();
+
             Scars.Enqueue(root);
             Trim();
         }
