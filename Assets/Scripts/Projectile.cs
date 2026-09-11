@@ -66,8 +66,27 @@ namespace TankRevival
             if (health != null)
             {
                 if (health.Team == OwnerTeam && OwnerTeam != Team.Neutral) return;
-                if (!health.Damage(Damage, OwnerTeam)) return;
 
+                int resolvedDamage = Damage;
+                var armor = other.GetComponent<ArmorSystem>();
+                if (armor != null)
+                {
+                    Vector2 velocity = _body != null ? _body.linearVelocity : (Vector2)transform.up;
+                    resolvedDamage = armor.ResolveIncoming(Damage, Ammo, velocity, transform.position, out bool ricochet, out bool critical);
+                    if (ricochet)
+                    {
+                        Destroy(gameObject);
+                        return;
+                    }
+
+                    if (critical)
+                    {
+                        VisualFactory.MicroBurst(transform.position, new Color(1f, 0.12f, 0.04f), 1.0f);
+                        VisualFactory.RingPulse(transform.position, new Color(1f, 0.24f, 0.06f), 0.88f);
+                    }
+                }
+
+                if (!health.Damage(resolvedDamage, OwnerTeam)) return;
                 ApplyStatus(health);
 
                 if (Ammo == AmmoType.Explosive)

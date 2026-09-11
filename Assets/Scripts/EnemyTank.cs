@@ -24,7 +24,10 @@ namespace TankRevival
         private TankGame _game;
         private Rigidbody2D _body;
         private CombatStatus _status;
+        private TankTurretRig _turret;
+        private ArmorSystem _armor;
         private Vector2 _facing = Vector2.down;
+        private Vector2 _gunDirection = Vector2.down;
         private float _speed;
         private float _shotDelay;
         private float _projectileSpeed;
@@ -60,7 +63,6 @@ namespace TankRevival
                     _shotDamage = 1;
                     _baseHuntBias = 0.30f;
                     break;
-
                 case EnemyKind.Fast:
                     body = new Color(0.88f, 0.52f, 0.08f);
                     accent = new Color(1f, 0.94f, 0.48f);
@@ -72,7 +74,6 @@ namespace TankRevival
                     _baseHuntBias = 0.22f;
                     transform.localScale = Vector3.one * 0.94f;
                     break;
-
                 case EnemyKind.Heavy:
                     body = new Color(0.38f, 0.12f, 0.54f);
                     accent = new Color(0.88f, 0.50f, 1f);
@@ -84,7 +85,6 @@ namespace TankRevival
                     _baseHuntBias = 0.38f;
                     transform.localScale = Vector3.one * 1.12f;
                     break;
-
                 case EnemyKind.Sniper:
                     body = new Color(0.08f, 0.48f, 0.28f);
                     accent = new Color(0.58f, 1f, 0.74f);
@@ -95,7 +95,6 @@ namespace TankRevival
                     _shotDamage = 2;
                     _baseHuntBias = 0.26f;
                     break;
-
                 case EnemyKind.Siege:
                     body = new Color(0.22f, 0.25f, 0.31f);
                     accent = new Color(1f, 0.36f, 0.12f);
@@ -107,7 +106,6 @@ namespace TankRevival
                     _baseHuntBias = 0.80f;
                     transform.localScale = Vector3.one * 1.18f;
                     break;
-
                 case EnemyKind.Elite:
                     body = new Color(0.12f, 0.22f, 0.62f);
                     accent = new Color(0.30f, 0.90f, 1f);
@@ -119,7 +117,6 @@ namespace TankRevival
                     _baseHuntBias = 0.45f;
                     transform.localScale = Vector3.one * 1.08f;
                     break;
-
                 case EnemyKind.Supply:
                     body = Color.Lerp(AmmoDatabase.Color(supplyAmmo), Color.black, 0.42f);
                     accent = AmmoDatabase.Color(supplyAmmo);
@@ -131,7 +128,6 @@ namespace TankRevival
                     _baseHuntBias = 0.18f;
                     transform.localScale = Vector3.one * 1.04f;
                     break;
-
                 case EnemyKind.Boss:
                     body = new Color(0.58f, 0.035f, 0.055f);
                     accent = new Color(1f, 0.70f, 0.08f);
@@ -154,9 +150,11 @@ namespace TankRevival
             _aimBias = Mathf.Lerp(0.06f, 0.33f, progress);
 
             VisualFactory.BuildTankSkin(transform, body, accent);
+            _turret = gameObject.AddComponent<TankTurretRig>();
+            _turret.Initialize();
+
             if (Kind == EnemyKind.Heavy || Kind == EnemyKind.Siege || Kind == EnemyKind.Supply || Kind == EnemyKind.Boss)
                 gameObject.AddComponent<TrackDustEmitter>();
-
             if (Kind == EnemyKind.Supply)
                 VisualFactory.BuildSupplyMarker(transform, SupplyAmmo);
             else if (Kind == EnemyKind.Boss)
@@ -174,6 +172,8 @@ namespace TankRevival
             Health = gameObject.AddComponent<Health>();
             Health.Initialize(Team.Enemy, hp);
             _status = gameObject.AddComponent<CombatStatus>();
+            _armor = gameObject.AddComponent<ArmorSystem>();
+            _armor.InitializeEnemy(Kind, _round);
 
             if (Kind == EnemyKind.Boss)
             {
@@ -182,8 +182,8 @@ namespace TankRevival
             }
 
             Health.Died += _ => _game.OnEnemyDestroyed(this, transform.position, Kind);
-
             ChooseDirection(true);
+            UpdateTurretAim();
             _nextThink = Time.time + Random.Range(0.30f, 0.85f);
             _nextShot = Time.time + Random.Range(0.50f, _shotDelay + 0.70f);
         }
@@ -192,6 +192,8 @@ namespace TankRevival
         {
             if (_game == null || !_game.IsPlaying) return;
             if (_status != null && _status.IsEmpDisabled) return;
+
+            UpdateTurretAim();
 
             if (Time.time >= _nextThink)
             {
@@ -203,27 +205,46 @@ namespace TankRevival
             if (Time.time >= _nextShot)
             {
                 Fire();
-                _nextShot = Time.time + Random.Range(_shotDelay * 0.82f, _shotDelay * 1.18f);
+                float moduleReload = _armor != null ? _armor.ReloadMultiplier : 1f;
+                _nextShot = Time.time + Random.Range(_shotDelay * 0.82f, _shotDelay * 1.18f) * moduleReload;
             }
+        }
+
+        private void UpdateTurretAim()
+        {
+            Vector2 target;
+            if (Kind == EnemyKind.Siege)
+                target = _game.BasePosition;
+            else if (Kind == EnemyKind.Sniper || Kind == EnemyKind.Elite)
+                target = _game.PlayerPosition;
+            else
+                target = Random.value < _baseHuntBias ? _game.BasePosition : _game.PlayerPosition;
+
+            Vector2 delta = target - (Vector2)transform.position;
+            if (delta.sqrMagnitude > 0.05f)
+                _gunDirection = delta.normalized;
+            else
+                _gunDirection = _facing;
+
+            _turret?.SetAimDirection(_gunDirection);
         }
 
         private void FixedUpdate()
         {
             if (_game == null || !_game.IsPlaying || _body == null) return;
             if (_status != null && _status.IsEmpDisabled) return;
-            _body.MovePosition(_body.position + _facing * (_speed * Time.fixedDeltaTime));
+            float mobility = _armor != null ? _armor.MobilityMultiplier : 1f;
+            _body.MovePosition(_body.position + _facing * (_speed * mobility * Time.fixedDeltaTime));
         }
 
         private void ChooseDirection(bool forceRandom)
         {
             Vector2 desired;
-
             if (!forceRandom && Random.value < _aggression)
             {
                 bool huntBase = Random.value < Mathf.Clamp01(_baseHuntBias + _aimBias * 0.18f);
                 Vector2 target = huntBase ? _game.BasePosition : _game.PlayerPosition;
                 Vector2 delta = target - (Vector2)transform.position;
-
                 if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
                     desired = new Vector2(Mathf.Sign(delta.x), 0f);
                 else
@@ -260,11 +281,13 @@ namespace TankRevival
 
         private void Fire()
         {
+            Vector2 direction = _gunDirection.sqrMagnitude > 0.001f ? _gunDirection.normalized : _facing;
             float muzzleDistance = Kind == EnemyKind.Boss ? 1.03f : Kind == EnemyKind.Siege ? 0.86f : 0.76f;
-            Vector2 muzzle = (Vector2)transform.position + _facing * muzzleDistance;
+            Vector2 muzzle = (Vector2)transform.position + direction * muzzleDistance;
             Color shellColor = Kind == EnemyKind.Elite ? new Color(0.25f, 0.86f, 1f) : new Color(1f, 0.30f, 0.08f);
 
-            _game.SpawnProjectile(muzzle, _facing, Team.Enemy, _shotDamage, _projectileSpeed, shellColor, AmmoType.Basic);
+            _game.SpawnProjectile(muzzle, direction, Team.Enemy, _shotDamage, _projectileSpeed, shellColor, AmmoType.Basic);
+            _turret?.KickRecoil(Kind == EnemyKind.Boss ? 1.8f : Kind == EnemyKind.Siege || Kind == EnemyKind.Heavy ? 1.35f : 0.85f);
             VisualFactory.MuzzleFlash(muzzle, shellColor, Kind == EnemyKind.Boss || Kind == EnemyKind.Siege ? 1.05f : 0.65f);
 
             if (Kind == EnemyKind.Boss || Kind == EnemyKind.Siege)
@@ -272,23 +295,15 @@ namespace TankRevival
             else
                 BattleAudio.PlayGlobal(SoundCue.EnemyShot, 0.11f, 0.08f);
 
+            Vector2 side = new Vector2(-direction.y, direction.x);
             if (Kind == EnemyKind.Elite && _round >= 65 && Random.value < 0.34f)
-            {
-                Vector2 side = Perpendicular(_facing);
-                _game.SpawnProjectile(muzzle + side * 0.20f, (_facing + side * 0.12f).normalized, Team.Enemy, _shotDamage, _projectileSpeed, shellColor, AmmoType.Basic);
-            }
+                _game.SpawnProjectile(muzzle + side * 0.20f, (direction + side * 0.12f).normalized, Team.Enemy, _shotDamage, _projectileSpeed, shellColor, AmmoType.Basic);
 
             if (Kind == EnemyKind.Boss && _round >= 50 && Random.value < Mathf.Lerp(0.38f, 0.62f, (_round - 50f) / 50f))
-            {
-                Vector2 side = Perpendicular(_facing);
-                _game.SpawnProjectile(muzzle + side * 0.24f, (_facing + side * 0.18f).normalized, Team.Enemy, _shotDamage, _projectileSpeed, new Color(1f, 0.16f, 0.05f), AmmoType.Basic);
-            }
+                _game.SpawnProjectile(muzzle + side * 0.24f, (direction + side * 0.18f).normalized, Team.Enemy, _shotDamage, _projectileSpeed, new Color(1f, 0.16f, 0.05f), AmmoType.Basic);
 
             if (Kind == EnemyKind.Boss && _round >= 80 && Random.value < 0.32f)
-            {
-                Vector2 side = Perpendicular(_facing);
-                _game.SpawnProjectile(muzzle - side * 0.24f, (_facing - side * 0.18f).normalized, Team.Enemy, _shotDamage, _projectileSpeed, new Color(1f, 0.10f, 0.03f), AmmoType.Basic);
-            }
+                _game.SpawnProjectile(muzzle - side * 0.24f, (direction - side * 0.18f).normalized, Team.Enemy, _shotDamage, _projectileSpeed, new Color(1f, 0.10f, 0.03f), AmmoType.Basic);
         }
 
         private void OnCollisionEnter2D(Collision2D collision)

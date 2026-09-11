@@ -17,8 +17,11 @@ namespace TankRevival
 
         private TankGame _game;
         private Rigidbody2D _body;
+        private TankTurretRig _turret;
+        private ArmorSystem _armor;
         private Vector2 _move;
         private Vector2 _facing = Vector2.up;
+        private Vector2 _gunDirection = Vector2.up;
         private float _nextShot;
         private readonly int[] _ammo = new int[AmmoDatabase.AmmoTypeCount];
 
@@ -35,6 +38,9 @@ namespace TankRevival
             VisualFactory.BuildTankSkin(transform, new Color(0.10f, 0.58f, 0.86f), new Color(0.78f, 0.96f, 1f));
             gameObject.AddComponent<TrackDustEmitter>();
 
+            _turret = gameObject.AddComponent<TankTurretRig>();
+            _turret.Initialize();
+
             var collider = gameObject.AddComponent<BoxCollider2D>();
             collider.size = new Vector2(0.78f, 0.78f);
 
@@ -47,6 +53,9 @@ namespace TankRevival
             Health = gameObject.AddComponent<Health>();
             Health.Initialize(Team.Player, 3);
             Health.Died += _ => _game.OnPlayerDestroyed(transform.position);
+
+            _armor = gameObject.AddComponent<ArmorSystem>();
+            _armor.InitializePlayer();
         }
 
         private void Update()
@@ -78,17 +87,38 @@ namespace TankRevival
                 ApplyFacingRotation();
             }
 
-            BattleAudio.Instance?.SetEngineMoving(_move.sqrMagnitude > 0.01f, EffectiveMoveSpeed / 9.2f);
+            UpdateTurretAim();
+
+            float moduleMobility = _armor != null ? _armor.MobilityMultiplier : 1f;
+            BattleAudio.Instance?.SetEngineMoving(_move.sqrMagnitude > 0.01f, (EffectiveMoveSpeed * moduleMobility) / 9.2f);
             HandleAmmoSelection();
 
-            if ((Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.LeftControl)) && Time.time >= _nextShot)
+            if ((Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.LeftControl) || Input.GetMouseButton(0)) && Time.time >= _nextShot)
                 Fire();
+        }
+
+        private void UpdateTurretAim()
+        {
+            Vector2 desired = _facing;
+            Camera cam = Camera.main;
+            if (cam != null)
+            {
+                Vector3 mouse = cam.ScreenToWorldPoint(Input.mousePosition);
+                Vector2 delta = (Vector2)mouse - (Vector2)transform.position;
+                if (delta.sqrMagnitude > 0.10f)
+                    desired = delta.normalized;
+            }
+
+            _gunDirection = desired.normalized;
+            if (_turret != null)
+                _turret.SetAimDirection(_gunDirection);
         }
 
         private void FixedUpdate()
         {
             if (_game == null || !_game.IsPlaying || _body == null) return;
-            _body.MovePosition(_body.position + _move * (EffectiveMoveSpeed * Time.fixedDeltaTime));
+            float moduleMobility = _armor != null ? _armor.MobilityMultiplier : 1f;
+            _body.MovePosition(_body.position + _move * (EffectiveMoveSpeed * moduleMobility * Time.fixedDeltaTime));
         }
 
         private void OnDisable()
@@ -147,21 +177,24 @@ namespace TankRevival
             int damage = EffectiveShotDamage + AmmoDatabase.BonusDamage(ammo);
             float speed = 10.5f * AmmoDatabase.SpeedMultiplier(ammo) * (1f + _commanderCannonLevel * 0.025f);
             Color color = AmmoDatabase.Color(ammo);
-            Vector2 muzzle = (Vector2)transform.position + _facing * 0.82f;
-            Vector2 side = new Vector2(-_facing.y, _facing.x);
+            Vector2 direction = _gunDirection.sqrMagnitude > 0.001f ? _gunDirection.normalized : _facing;
+            Vector2 muzzle = (Vector2)transform.position + direction * 0.82f;
+            Vector2 side = new Vector2(-direction.y, direction.x);
+            float moduleReload = _armor != null ? _armor.ReloadMultiplier : 1f;
 
-            _nextShot = Time.time + EffectiveFireDelay * (ammo == AmmoType.Twin ? 1.08f : 1f);
+            _nextShot = Time.time + EffectiveFireDelay * moduleReload * (ammo == AmmoType.Twin ? 1.08f : 1f);
 
             if (ammo == AmmoType.Twin)
             {
-                _game.SpawnProjectile(muzzle + side * 0.18f, _facing, Team.Player, damage, speed, color, ammo);
-                _game.SpawnProjectile(muzzle - side * 0.18f, _facing, Team.Player, damage, speed, color, ammo);
+                _game.SpawnProjectile(muzzle + side * 0.18f, direction, Team.Player, damage, speed, color, ammo);
+                _game.SpawnProjectile(muzzle - side * 0.18f, direction, Team.Player, damage, speed, color, ammo);
             }
             else
             {
-                _game.SpawnProjectile(muzzle, _facing, Team.Player, damage, speed, color, ammo);
+                _game.SpawnProjectile(muzzle, direction, Team.Player, damage, speed, color, ammo);
             }
 
+            _turret?.KickRecoil(ammo == AmmoType.Plasma ? 1.75f : ammo == AmmoType.Explosive || ammo == AmmoType.ArmorPiercing ? 1.35f : 1f);
             VisualFactory.MuzzleFlash(muzzle, color, ammo == AmmoType.Plasma ? 1.35f : ammo == AmmoType.Explosive ? 1.15f : 0.90f);
             _game.KickCamera(ammo == AmmoType.Plasma ? 0.085f : 0.050f, ammo == AmmoType.Plasma ? 0.060f : 0.038f);
 
