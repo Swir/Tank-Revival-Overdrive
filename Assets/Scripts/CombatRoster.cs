@@ -3,8 +3,8 @@ using UnityEngine;
 namespace TankRevival
 {
     /// <summary>
-    /// v2.2 shared scene roster. Consolidates common FindObjectsByType scans used by campaign directors
-    /// into a single bounded refresh so late-game systems can query the same snapshot.
+    /// Shared scene roster for campaign systems. v2.3 extends the cache with living-enemy and
+    /// per-class counts so directors can reason about battlefield composition without extra scene scans.
     /// </summary>
     public sealed class CombatRoster : MonoBehaviour
     {
@@ -13,12 +13,26 @@ namespace TankRevival
         private static PlayerTank _player;
         private static Health _eagle;
         private static float _lastRefresh;
+        private static int _livingEnemies;
+        private static readonly int[] _kindCounts = new int[8];
 
         public static EnemyTank[] Enemies => _enemies;
         public static Health[] HealthUnits => _healthUnits;
         public static PlayerTank Player => _player;
         public static Health Eagle => _eagle;
         public static float LastRefresh => _lastRefresh;
+        public static int LivingEnemyCount => _livingEnemies;
+
+        public static int Count(EnemyKind kind)
+        {
+            int index = (int)kind;
+            return index >= 0 && index < _kindCounts.Length ? _kindCounts[index] : 0;
+        }
+
+        public static bool HasPriorityArmor()
+        {
+            return Count(EnemyKind.Heavy) + Count(EnemyKind.Siege) + Count(EnemyKind.Elite) + Count(EnemyKind.Boss) > 0;
+        }
 
         private float _nextRefresh;
 
@@ -44,6 +58,16 @@ namespace TankRevival
             _healthUnits = FindObjectsByType<Health>(FindObjectsSortMode.None);
             _player = FindAnyObjectByType<PlayerTank>();
             _eagle = null;
+            _livingEnemies = 0;
+            System.Array.Clear(_kindCounts, 0, _kindCounts.Length);
+
+            foreach (EnemyTank enemy in _enemies)
+            {
+                if (enemy == null || enemy.Health == null || enemy.Health.IsDead) continue;
+                _livingEnemies++;
+                int index = (int)enemy.Kind;
+                if (index >= 0 && index < _kindCounts.Length) _kindCounts[index]++;
+            }
 
             foreach (Health health in _healthUnits)
             {
