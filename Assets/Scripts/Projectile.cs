@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace TankRevival
@@ -7,6 +8,12 @@ namespace TankRevival
         public Team OwnerTeam { get; private set; }
         public int Damage { get; private set; }
         public AmmoType Ammo { get; private set; }
+
+        /// <summary>
+        /// Presentation-only hooks used by the v2.5 3D layer. Gameplay never depends on listeners.
+        /// </summary>
+        public static event Action<Projectile, Vector3, Vector2, Team, AmmoType> ShotSpawned3D;
+        public static event Action<Projectile, Vector3, Team, AmmoType, bool, bool> Impact3D;
 
         private Rigidbody2D _body;
         private float _dieAt;
@@ -28,7 +35,8 @@ namespace TankRevival
             if (ammo == AmmoType.Plasma || ammo == AmmoType.EMP)
                 VisualFactory.RingObject("ProjectileRing", transform, new Vector2(0.27f, 0.27f) * scale, new Color(color.r, color.g, color.b, 0.74f), Vector3.zero, 33);
 
-            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
+            Vector2 shotDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.up;
+            float angle = Mathf.Atan2(shotDirection.y, shotDirection.x) * Mathf.Rad2Deg - 90f;
             transform.rotation = Quaternion.Euler(0f, 0f, angle);
 
             var collider = gameObject.AddComponent<CircleCollider2D>();
@@ -39,10 +47,12 @@ namespace TankRevival
             _body.gravityScale = 0f;
             _body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             _body.constraints = RigidbodyConstraints2D.FreezeRotation;
-            _body.linearVelocity = direction.normalized * speed;
+            _body.linearVelocity = shotDirection * speed;
 
             _dieAt = Time.time + 5f;
             _nextTrail = Time.time;
+
+            ShotSpawned3D?.Invoke(this, transform.position, shotDirection, OwnerTeam, Ammo);
         }
 
         private void Update()
@@ -75,6 +85,7 @@ namespace TankRevival
                     resolvedDamage = armor.ResolveIncoming(Damage, Ammo, velocity, transform.position, out bool ricochet, out bool critical);
                     if (ricochet)
                     {
+                        Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, false, true);
                         Destroy(gameObject);
                         return;
                     }
@@ -89,10 +100,13 @@ namespace TankRevival
                 if (!health.Damage(resolvedDamage, OwnerTeam)) return;
                 ApplyStatus(health);
 
-                if (Ammo == AmmoType.Explosive)
+                bool explosive = Ammo == AmmoType.Explosive;
+                if (explosive)
                     Detonate(health);
                 else
                     VisualFactory.MicroBurst(transform.position, _color, Ammo == AmmoType.Plasma ? 0.72f : 0.46f);
+
+                Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, explosive, false);
 
                 if (CanPenetrate())
                 {
@@ -114,6 +128,7 @@ namespace TankRevival
             if (Ammo == AmmoType.Explosive)
             {
                 Detonate(null);
+                Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, true, false);
                 Destroy(gameObject);
                 return;
             }
@@ -122,12 +137,14 @@ namespace TankRevival
             {
                 _penetrations--;
                 VisualFactory.MicroBurst(transform.position, _color, 0.36f);
+                Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, false, false);
                 return;
             }
 
             if (steel)
                 BattleAudio.PlayGlobal(SoundCue.Ricochet, 0.42f, 0.08f);
 
+            Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, false, steel);
             Destroy(gameObject);
         }
 
