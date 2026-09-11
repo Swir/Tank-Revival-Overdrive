@@ -103,15 +103,29 @@ namespace TankRevival
             Camera cam = Camera.main;
             if (cam != null)
             {
-                Vector3 mouse = cam.ScreenToWorldPoint(Input.mousePosition);
-                Vector2 delta = (Vector2)mouse - (Vector2)transform.position;
-                if (delta.sqrMagnitude > 0.10f)
-                    desired = delta.normalized;
+                Vector3 mouse;
+                bool projected = cam.orthographic
+                    ? TryLegacyMouseProjection(cam, out mouse)
+                    : Battlefield3DDirector.TryProjectToGameplayPlane(cam, Input.mousePosition, out mouse);
+
+                if (projected)
+                {
+                    Vector2 delta = (Vector2)mouse - (Vector2)transform.position;
+                    if (delta.sqrMagnitude > 0.10f)
+                        desired = delta.normalized;
+                }
             }
 
             _gunDirection = desired.normalized;
             if (_turret != null)
                 _turret.SetAimDirection(_gunDirection);
+        }
+
+        private static bool TryLegacyMouseProjection(Camera cam, out Vector3 mouse)
+        {
+            mouse = cam.ScreenToWorldPoint(Input.mousePosition);
+            mouse.z = 0f;
+            return true;
         }
 
         private void FixedUpdate()
