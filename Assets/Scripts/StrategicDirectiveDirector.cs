@@ -54,22 +54,13 @@ namespace TankRevival
             _hooked.Clear();
             _directive = round % 5 == 0 && round % 10 != 0 ? (Directive)(1 + (round / 5) % 3) : Directive.None;
             _target = _directive == Directive.PriorityPurge ? Mathf.Clamp(2 + round / 30, 2, 5) : 1;
-            Health eagle = FindEagle();
+            Health eagle = CombatRoster.Eagle;
             _startEagleHp = eagle != null ? eagle.Current : 0;
-        }
-
-        private Health FindEagle()
-        {
-            Health[] all = FindObjectsByType<Health>(FindObjectsSortMode.None);
-            foreach (Health h in all)
-                if (h != null && h.name == "ORZELEK_DEFENSE_CORE") return h;
-            return null;
         }
 
         private void HookEnemies()
         {
-            EnemyTank[] enemies = FindObjectsByType<EnemyTank>(FindObjectsSortMode.None);
-            foreach (EnemyTank enemy in enemies)
+            foreach (EnemyTank enemy in CombatRoster.Enemies)
             {
                 if (enemy == null || enemy.Health == null) continue;
                 if (!_hooked.Add(enemy.GetInstanceID())) continue;
@@ -91,14 +82,14 @@ namespace TankRevival
             switch (_directive)
             {
                 case Directive.EagleGuard:
-                    Health eagle = FindEagle();
+                    Health eagle = CombatRoster.Eagle;
                     success = eagle != null && !eagle.IsDead && eagle.Current >= _startEagleHp;
                     break;
                 case Directive.PriorityPurge:
                     success = _progress >= _target;
                     break;
                 case Directive.ArmorHold:
-                    PlayerTank p = FindAnyObjectByType<PlayerTank>();
+                    PlayerTank p = CombatRoster.Player;
                     success = p != null && p.Health != null && p.Health.Current >= Mathf.Max(2, p.Health.Maximum / 2);
                     break;
             }
@@ -110,7 +101,7 @@ namespace TankRevival
                 return;
             }
 
-            PlayerTank player = FindAnyObjectByType<PlayerTank>();
+            PlayerTank player = CombatRoster.Player;
             if (player != null)
             {
                 player.AddAmmo(_round >= 60 ? AmmoType.Plasma : _round >= 30 ? AmmoType.EMP : AmmoType.ArmorPiercing, 4 + _round / 20);
