@@ -137,7 +137,7 @@ namespace TankRevival
             player.Health.Heal(2 + tier / 2);
             _game.RepairEagle(1 + (tier >= 3 ? 1 : 0));
             ArmorSystem armor = player.GetComponent<ArmorSystem>();
-            if (armor != null) armor.RepairModules(18f + tier * 7f);
+            if (armor != null) armor.RepairModules(18 + tier * 7);
             _banner = $"FIELD SERVICE DEPLOYED // -{cost} BONDS";
             _bannerUntil = Time.unscaledTime + 2.8f;
             VisualFactory.RingPulse(player.transform.position, new Color(0.18f, 1f, 0.48f), 1.25f);
@@ -180,7 +180,7 @@ namespace TankRevival
             _bannerUntil = Time.unscaledTime + 2.8f;
             VisualFactory.RingPulse(player.transform.position, new Color(1f, 0.82f, 0.20f), 1.45f);
             VisualFactory.RingPulse(eagle.transform.position, new Color(1f, 0.72f, 0.18f), 1.65f);
-            BattleAudio.PlayGlobal(SoundCue.Shield, 0.52f, 0.03f);
+            BattleAudio.PlayGlobal(SoundCue.Pickup, 0.52f, 0.03f);
         }
 
         private void EnsureStyles()
