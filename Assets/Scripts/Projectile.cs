@@ -10,10 +10,11 @@ namespace TankRevival
         public AmmoType Ammo { get; private set; }
 
         /// <summary>
-        /// Presentation-only hooks used by the v2.5 3D layer. Gameplay never depends on listeners.
+        /// Presentation/combat telemetry hooks. Gameplay authority remains inside Projectile/Health.
         /// </summary>
         public static event Action<Projectile, Vector3, Vector2, Team, AmmoType> ShotSpawned3D;
         public static event Action<Projectile, Vector3, Team, AmmoType, bool, bool> Impact3D;
+        public static event Action<Projectile, Health, int, bool> DamageResolved;
 
         private Rigidbody2D _body;
         private float _dieAt;
@@ -51,7 +52,6 @@ namespace TankRevival
 
             _dieAt = Time.time + 5f;
             _nextTrail = Time.time;
-
             ShotSpawned3D?.Invoke(this, transform.position, shotDirection, OwnerTeam, Ammo);
         }
 
@@ -98,6 +98,8 @@ namespace TankRevival
                 }
 
                 if (!health.Damage(resolvedDamage, OwnerTeam)) return;
+                bool killed = health.IsDead;
+                DamageResolved?.Invoke(this, health, resolvedDamage, killed);
                 ApplyStatus(health);
 
                 bool explosive = Ammo == AmmoType.Explosive;
@@ -180,7 +182,11 @@ namespace TankRevival
             {
                 var health = hit.GetComponent<Health>();
                 if (health != null && health != primary && health.Team != OwnerTeam)
-                    health.Damage(Mathf.Max(1, Damage - 1), OwnerTeam);
+                {
+                    int splash = Mathf.Max(1, Damage - 1);
+                    if (health.Damage(splash, OwnerTeam))
+                        DamageResolved?.Invoke(this, health, splash, health.IsDead);
+                }
 
                 var obstacle = hit.GetComponent<Obstacle>();
                 if (obstacle != null && obstacle.Kind == ObstacleKind.Brick)
