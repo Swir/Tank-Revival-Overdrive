@@ -5,7 +5,7 @@ namespace TankRevival
 {
     /// <summary>
     /// v2.0 TOTAL OVERDRIVE campaign spine.
-    /// Groups 100 rounds into five acts and turns sustained combat performance into a playable surge system.
+    /// v2.2: enemy/player lookups share CombatRoster to reduce repeated late-game scene scans.
     /// </summary>
     public sealed class TotalOverdriveCampaignDirector : MonoBehaviour
     {
@@ -91,7 +91,7 @@ namespace TankRevival
 
         private void GrantActResupply()
         {
-            PlayerTank player = FindAnyObjectByType<PlayerTank>();
+            PlayerTank player = CombatRoster.Player;
             if (player == null) return;
 
             player.ApplyPowerUp(PowerUpKind.Repair);
@@ -104,8 +104,7 @@ namespace TankRevival
 
         private void HookEnemies()
         {
-            EnemyTank[] enemies = FindObjectsByType<EnemyTank>(FindObjectsSortMode.None);
-            foreach (EnemyTank enemy in enemies)
+            foreach (EnemyTank enemy in CombatRoster.Enemies)
             {
                 if (enemy == null || enemy.Health == null) continue;
                 int id = enemy.GetInstanceID();
@@ -138,7 +137,7 @@ namespace TankRevival
         {
             _charge = 0;
             _surges++;
-            PlayerTank player = FindAnyObjectByType<PlayerTank>();
+            PlayerTank player = CombatRoster.Player;
             if (player == null || player.Health == null) return;
 
             player.Health.InvulnerableUntil = Mathf.Max(player.Health.InvulnerableUntil, Time.time + 3.5f);
