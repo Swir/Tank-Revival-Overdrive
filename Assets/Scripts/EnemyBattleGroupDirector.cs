@@ -14,7 +14,8 @@ namespace TankRevival
         FightingWithdrawal
     }
 
-    public enum EnemyBattleRole
+    // Deliberately distinct from the older EnemyBattleRole used by EnemyFactionDirector.
+    public enum EnemySquadRole
     {
         Vanguard,
         LeftFlank,
@@ -28,10 +29,9 @@ namespace TankRevival
 
     /// <summary>
     /// v2.7 ENEMY TACTICS & BATTLE GROUPS.
-    /// Builds persistent enemy squads from the real combat roster and gives them coordinated
-    /// battlefield objectives. The existing EnemyTank component remains responsible for shooting,
-    /// armor, status and collision authority; this layer overwrites only the final movement intent
-    /// and adds bounded synchronized volleys so the feature is fully reversible.
+    /// Converts individual enemies into persistent armored groups with composition-aware doctrine,
+    /// role-based movement, commander leadership and bounded coordinated volleys. Existing EnemyTank,
+    /// Health, ArmorSystem, projectile and Rigidbody2D systems remain gameplay authority.
     /// </summary>
     public sealed class EnemyBattleGroupDirector : MonoBehaviour
     {
@@ -42,29 +42,27 @@ namespace TankRevival
             public EnemyBattleDoctrine Doctrine;
             public EnemyTank Leader;
             public int StartingStrength;
+            public int Sector;
             public float CreatedAt;
             public float NextVolley;
-            public float NextDoctrineReview;
-            public float RallyUntil;
-            public string Callsign;
-            public int Sector;
+            public float NextReview;
         }
 
         public static EnemyBattleGroupDirector Instance { get; private set; }
         public int ActiveGroups { get; private set; }
-        public string ActiveDoctrineSummary { get; private set; } = "NO CONTACT";
         public int CoordinatedUnits { get; private set; }
+        public string ActiveDoctrineSummary { get; private set; } = "NO CONTACT";
 
         private readonly List<BattleGroup> _groups = new List<BattleGroup>(12);
         private readonly HashSet<int> _assigned = new HashSet<int>();
         private TankGame _game;
+        private int _nextGroupId = 1;
+        private int _lastRound = -1;
         private float _nextRosterPass;
         private float _nextOrderPass;
-        private int _nextGroupId = 1;
-        private int _lastRound;
-        private GUIStyle _titleStyle;
-        private GUIStyle _bodyStyle;
-        private GUIStyle _alertStyle;
+        private GUIStyle _title;
+        private GUIStyle _body;
+        private GUIStyle _danger;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -95,14 +93,14 @@ namespace TankRevival
 
             if (!_game.IsPlaying)
             {
-                if (_groups.Count > 0) ResetGroups();
+                ResetGroups();
                 return;
             }
 
             if (_lastRound != _game.CurrentRound)
             {
                 _lastRound = _game.CurrentRound;
-                ReviewAllDoctrines(true);
+                ReviewAll(true);
             }
 
             if (Time.time >= _nextRosterPass)
@@ -120,6 +118,7 @@ namespace TankRevival
 
         private void ResetGroups()
         {
+            if (_groups.Count == 0 && _assigned.Count == 0) return;
             _groups.Clear();
             _assigned.Clear();
             ActiveGroups = 0;
@@ -129,8 +128,7 @@ namespace TankRevival
 
         private void RebuildGroups()
         {
-            CleanupDeadMembers();
-
+            Cleanup();
             EnemyTank[] enemies = CombatRoster.Enemies;
             if (enemies == null || enemies.Length == 0)
                 enemies = FindObjectsByType<EnemyTank>(FindObjectsSortMode.None);
@@ -138,15 +136,9 @@ namespace TankRevival
             for (int i = 0; i < enemies.Length; i++)
             {
                 EnemyTank enemy = enemies[i];
-                if (!IsCombatReady(enemy)) continue;
-                int id = enemy.GetInstanceID();
-                if (_assigned.Contains(id)) continue;
-
-                BattleGroup group = FindGroupFor(enemy);
-                if (group == null)
-                    group = CreateGroup(enemy);
-
-                AddToGroup(group, enemy);
+                if (!Ready(enemy) || _assigned.Contains(enemy.GetInstanceID())) continue;
+                BattleGroup group = FindBestGroup(enemy) ?? CreateGroup(enemy);
+                AddMember(group, enemy);
             }
 
             ActiveGroups = 0;
@@ -158,14 +150,12 @@ namespace TankRevival
                 if (alive <= 0) continue;
                 ActiveGroups++;
                 CoordinatedUnits += alive;
-                if (Time.time >= group.NextDoctrineReview)
-                    ReviewDoctrine(group, false);
+                if (Time.time >= group.NextReview) Review(group, false);
             }
-
-            BuildDoctrineSummary();
+            BuildSummary();
         }
 
-        private void CleanupDeadMembers()
+        private void Cleanup()
         {
             for (int g = _groups.Count - 1; g >= 0; g--)
             {
@@ -173,7 +163,7 @@ namespace TankRevival
                 for (int i = group.Members.Count - 1; i >= 0; i--)
                 {
                     EnemyTank member = group.Members[i];
-                    if (IsCombatReady(member)) continue;
+                    if (Ready(member)) continue;
                     if (member != null) _assigned.Remove(member.GetInstanceID());
                     group.Members.RemoveAt(i);
                 }
@@ -183,40 +173,31 @@ namespace TankRevival
                     _groups.RemoveAt(g);
                     continue;
                 }
-
-                if (!IsCombatReady(group.Leader))
-                    group.Leader = SelectLeader(group);
+                if (!Ready(group.Leader)) group.Leader = SelectLeader(group);
             }
         }
 
-        private BattleGroup FindGroupFor(EnemyTank enemy)
+        private BattleGroup FindBestGroup(EnemyTank enemy)
         {
+            int max = _game.CurrentRound >= 70 ? 6 : _game.CurrentRound >= 35 ? 5 : 4;
             BattleGroup best = null;
             float bestScore = float.MinValue;
-            int maxSize = _game.CurrentRound >= 70 ? 6 : _game.CurrentRound >= 35 ? 5 : 4;
-
             for (int i = 0; i < _groups.Count; i++)
             {
                 BattleGroup group = _groups[i];
                 int alive = CountAlive(group);
-                if (alive >= maxSize) continue;
-
-                float score = 0f;
-                if (Time.time - group.CreatedAt < 6f) score += 3f;
-                if (group.Sector == CurrentSector()) score += 1f;
+                if (alive >= max) continue;
+                float score = Time.time - group.CreatedAt < 6f ? 3f : 0f;
+                if (group.Sector == Sector()) score += 1f;
                 if (enemy.Kind == EnemyKind.Siege && group.Doctrine == EnemyBattleDoctrine.SiegeColumn) score += 8f;
                 if (enemy.Kind == EnemyKind.Sniper && group.Doctrine == EnemyBattleDoctrine.FireSupport) score += 6f;
                 if (enemy.Kind == EnemyKind.Fast && group.Doctrine == EnemyBattleDoctrine.Pincer) score += 5f;
                 if ((enemy.Kind == EnemyKind.Heavy || enemy.Kind == EnemyKind.Elite) && group.Doctrine == EnemyBattleDoctrine.Breakthrough) score += 5f;
                 score -= alive * 0.5f;
-
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    best = group;
-                }
+                if (score <= bestScore) continue;
+                bestScore = score;
+                best = group;
             }
-
             return best;
         }
 
@@ -225,43 +206,38 @@ namespace TankRevival
             var group = new BattleGroup
             {
                 Id = _nextGroupId++,
+                Sector = Sector(),
                 CreatedAt = Time.time,
-                StartingStrength = 0,
-                Sector = CurrentSector(),
-                Callsign = BuildCallsign(_nextGroupId - 1),
                 NextVolley = Time.time + Random.Range(3.8f, 7.2f),
-                NextDoctrineReview = Time.time + Random.Range(2.5f, 4.5f)
+                NextReview = Time.time + Random.Range(2.5f, 4.5f),
+                Doctrine = InitialDoctrine(seed.Kind, Sector())
             };
             _groups.Add(group);
-            group.Doctrine = InitialDoctrine(seed.Kind, group.Sector);
             return group;
         }
 
-        private void AddToGroup(BattleGroup group, EnemyTank enemy)
+        private void AddMember(BattleGroup group, EnemyTank enemy)
         {
             group.Members.Add(enemy);
             group.StartingStrength = Mathf.Max(group.StartingStrength, group.Members.Count);
             _assigned.Add(enemy.GetInstanceID());
-
             EnemyTacticalAgent agent = enemy.GetComponent<EnemyTacticalAgent>();
             if (agent == null) agent = enemy.gameObject.AddComponent<EnemyTacticalAgent>();
             agent.Bind(_game, group.Id);
-
             group.Leader = SelectLeader(group);
-            ReviewDoctrine(group, true);
+            Review(group, true);
         }
 
-        private void ReviewAllDoctrines(bool force)
+        private void ReviewAll(bool force)
         {
-            for (int i = 0; i < _groups.Count; i++)
-                ReviewDoctrine(_groups[i], force);
+            for (int i = 0; i < _groups.Count; i++) Review(_groups[i], force);
         }
 
-        private void ReviewDoctrine(BattleGroup group, bool force)
+        private void Review(BattleGroup group, bool force)
         {
             if (group == null || group.Members.Count == 0) return;
-            if (!force && Time.time < group.NextDoctrineReview) return;
-            group.NextDoctrineReview = Time.time + Random.Range(3.5f, 6.5f);
+            if (!force && Time.time < group.NextReview) return;
+            group.NextReview = Time.time + Random.Range(3.5f, 6.5f);
 
             int alive = CountAlive(group);
             int siege = CountKind(group, EnemyKind.Siege);
@@ -272,33 +248,21 @@ namespace TankRevival
             bool commander = HasCommander(group);
 
             if (morale <= 0.45f && !commander && _game.CurrentRound >= 20)
-            {
                 group.Doctrine = EnemyBattleDoctrine.FightingWithdrawal;
-                group.RallyUntil = Time.time + Random.Range(2.2f, 4.1f);
-            }
             else if (siege > 0)
-            {
                 group.Doctrine = EnemyBattleDoctrine.SiegeColumn;
-            }
             else if (sniper >= 2 || (sniper >= 1 && alive >= 4))
-            {
                 group.Doctrine = EnemyBattleDoctrine.FireSupport;
-            }
             else if (fast >= 2)
-            {
                 group.Doctrine = EnemyBattleDoctrine.Pincer;
-            }
             else if (heavy >= 2 || commander)
-            {
                 group.Doctrine = EnemyBattleDoctrine.Breakthrough;
-            }
+            else if (Sector() == 6 || Sector() == 9)
+                group.Doctrine = EnemyBattleDoctrine.EagleRaid;
+            else if (Sector() == 2 || Sector() == 5)
+                group.Doctrine = EnemyBattleDoctrine.Pincer;
             else
-            {
-                int sector = CurrentSector();
-                if (sector == 2 || sector == 5) group.Doctrine = EnemyBattleDoctrine.Pincer;
-                else if (sector == 6 || sector == 9) group.Doctrine = EnemyBattleDoctrine.EagleRaid;
-                else group.Doctrine = EnemyBattleDoctrine.Assault;
-            }
+                group.Doctrine = EnemyBattleDoctrine.Assault;
 
             group.Leader = SelectLeader(group);
         }
@@ -306,7 +270,6 @@ namespace TankRevival
         private void IssueOrders()
         {
             if (_groups.Count == 0) return;
-
             Vector2 player = _game.PlayerPosition;
             Vector2 eagle = _game.BasePosition;
             int round = _game.CurrentRound;
@@ -316,141 +279,106 @@ namespace TankRevival
                 BattleGroup group = _groups[g];
                 int alive = CountAlive(group);
                 if (alive <= 0) continue;
-
                 Vector2 center = GroupCenter(group);
-                Vector2 objective = ObjectiveFor(group, player, eagle);
-                bool commander = HasCommander(group);
-                float intensity = Mathf.Lerp(0.92f, 1.20f, (round - 1f) / 99f) * (commander ? 1.08f : 1f);
+                Vector2 objective = Objective(group, player, eagle);
+                float intensity = Mathf.Lerp(0.92f, 1.20f, Mathf.Clamp01((round - 1f) / 99f));
+                if (HasCommander(group)) intensity *= 1.08f;
 
-                int aliveIndex = 0;
+                int index = 0;
                 for (int i = 0; i < group.Members.Count; i++)
                 {
                     EnemyTank enemy = group.Members[i];
-                    if (!IsCombatReady(enemy)) continue;
+                    if (!Ready(enemy)) continue;
                     EnemyTacticalAgent agent = enemy.GetComponent<EnemyTacticalAgent>();
                     if (agent == null) continue;
-
-                    EnemyBattleRole role = ResolveRole(group, enemy, aliveIndex, alive);
-                    Vector2 memberTarget = BuildMemberTarget(group, role, objective, center, aliveIndex, alive);
-                    agent.SetOrder(group.Doctrine, role, memberTarget, center, intensity, Time.time + 0.65f);
-                    aliveIndex++;
+                    EnemySquadRole role = ResolveRole(group, enemy, index, alive);
+                    agent.SetOrder(group.Doctrine, role, FormationTarget(group, role, objective, center, index, alive), center, intensity, Time.time + 0.65f);
+                    index++;
                 }
 
                 if (round >= 12 && Time.time >= group.NextVolley)
-                    ExecuteCoordinatedVolley(group, objective);
+                    CoordinatedVolley(group, objective);
             }
         }
 
-        private Vector2 ObjectiveFor(BattleGroup group, Vector2 player, Vector2 eagle)
+        private static Vector2 Objective(BattleGroup group, Vector2 player, Vector2 eagle)
         {
             switch (group.Doctrine)
             {
                 case EnemyBattleDoctrine.SiegeColumn:
                 case EnemyBattleDoctrine.EagleRaid:
-                case EnemyBattleDoctrine.Breakthrough:
-                    return eagle;
+                case EnemyBattleDoctrine.Breakthrough: return eagle;
                 case EnemyBattleDoctrine.FireSupport:
                 case EnemyBattleDoctrine.Pincer:
-                    return player;
-                case EnemyBattleDoctrine.FightingWithdrawal:
-                    return player;
-                default:
-                    return Vector2.Lerp(player, eagle, 0.32f);
+                case EnemyBattleDoctrine.FightingWithdrawal: return player;
+                default: return Vector2.Lerp(player, eagle, 0.32f);
             }
         }
 
-        private Vector2 BuildMemberTarget(BattleGroup group, EnemyBattleRole role, Vector2 objective, Vector2 center, int index, int count)
+        private static Vector2 FormationTarget(BattleGroup group, EnemySquadRole role, Vector2 objective, Vector2 center, int index, int count)
         {
-            Vector2 toObjective = objective - center;
-            Vector2 forward = toObjective.sqrMagnitude > 0.01f ? toObjective.normalized : Vector2.down;
+            Vector2 forward = objective - center;
+            forward = forward.sqrMagnitude > 0.01f ? forward.normalized : Vector2.down;
             Vector2 side = new Vector2(-forward.y, forward.x);
             float lane = count <= 1 ? 0f : Mathf.Lerp(-1f, 1f, index / (float)(count - 1));
-
             switch (role)
             {
-                case EnemyBattleRole.LeftFlank:
-                    return objective - forward * 1.8f - side * 3.4f;
-                case EnemyBattleRole.RightFlank:
-                    return objective - forward * 1.8f + side * 3.4f;
-                case EnemyBattleRole.SiegeEscort:
-                    return (group.Leader != null ? (Vector2)group.Leader.transform.position : center) + side * (lane * 1.5f) - forward * 0.8f;
-                case EnemyBattleRole.FireSupport:
-                    return objective - forward * 6.2f + side * (lane * 3.0f);
-                case EnemyBattleRole.Raider:
-                    return objective + side * (lane * 2.2f);
-                case EnemyBattleRole.Reserve:
-                    return center - forward * 1.8f + side * (lane * 1.3f);
-                case EnemyBattleRole.Commander:
-                    return center - forward * 0.9f;
-                default:
-                    return objective - forward * (0.55f + Mathf.Abs(lane) * 0.35f) + side * (lane * 1.15f);
+                case EnemySquadRole.LeftFlank: return objective - forward * 1.8f - side * 3.4f;
+                case EnemySquadRole.RightFlank: return objective - forward * 1.8f + side * 3.4f;
+                case EnemySquadRole.SiegeEscort: return (group.Leader != null ? (Vector2)group.Leader.transform.position : center) + side * lane * 1.5f - forward * 0.8f;
+                case EnemySquadRole.FireSupport: return objective - forward * 6.2f + side * lane * 3f;
+                case EnemySquadRole.Raider: return objective + side * lane * 2.2f;
+                case EnemySquadRole.Reserve: return center - forward * 1.8f + side * lane * 1.3f;
+                case EnemySquadRole.Commander: return center - forward * 0.9f;
+                default: return objective - forward * (0.55f + Mathf.Abs(lane) * 0.35f) + side * lane * 1.15f;
             }
         }
 
-        private EnemyBattleRole ResolveRole(BattleGroup group, EnemyTank enemy, int index, int alive)
+        private static EnemySquadRole ResolveRole(BattleGroup group, EnemyTank enemy, int index, int alive)
         {
-            if (enemy == group.Leader && HasCommander(group)) return EnemyBattleRole.Commander;
-            if (enemy.Kind == EnemyKind.Siege) return EnemyBattleRole.Vanguard;
-            if (enemy.Kind == EnemyKind.Sniper) return EnemyBattleRole.FireSupport;
-            if (group.Doctrine == EnemyBattleDoctrine.SiegeColumn && enemy.Kind != EnemyKind.Siege) return EnemyBattleRole.SiegeEscort;
-            if (group.Doctrine == EnemyBattleDoctrine.EagleRaid && (enemy.Kind == EnemyKind.Fast || enemy.Kind == EnemyKind.Basic)) return EnemyBattleRole.Raider;
-            if (group.Doctrine == EnemyBattleDoctrine.Pincer)
-                return index % 2 == 0 ? EnemyBattleRole.LeftFlank : EnemyBattleRole.RightFlank;
-            if (enemy.Kind == EnemyKind.Fast)
-                return index % 2 == 0 ? EnemyBattleRole.LeftFlank : EnemyBattleRole.RightFlank;
-            if (index == alive - 1 && alive >= 4) return EnemyBattleRole.Reserve;
-            return EnemyBattleRole.Vanguard;
+            if (enemy == group.Leader && HasCommander(group)) return EnemySquadRole.Commander;
+            if (enemy.Kind == EnemyKind.Siege) return EnemySquadRole.Vanguard;
+            if (enemy.Kind == EnemyKind.Sniper) return EnemySquadRole.FireSupport;
+            if (group.Doctrine == EnemyBattleDoctrine.SiegeColumn) return EnemySquadRole.SiegeEscort;
+            if (group.Doctrine == EnemyBattleDoctrine.EagleRaid && (enemy.Kind == EnemyKind.Fast || enemy.Kind == EnemyKind.Basic)) return EnemySquadRole.Raider;
+            if (group.Doctrine == EnemyBattleDoctrine.Pincer || enemy.Kind == EnemyKind.Fast)
+                return index % 2 == 0 ? EnemySquadRole.LeftFlank : EnemySquadRole.RightFlank;
+            if (index == alive - 1 && alive >= 4) return EnemySquadRole.Reserve;
+            return EnemySquadRole.Vanguard;
         }
 
-        private void ExecuteCoordinatedVolley(BattleGroup group, Vector2 objective)
+        private void CoordinatedVolley(BattleGroup group, Vector2 objective)
         {
             int round = _game.CurrentRound;
-            int shooters = 0;
             int maxShooters = round >= 70 ? 4 : round >= 35 ? 3 : 2;
-            float cadence = Mathf.Lerp(8.4f, 5.2f, (round - 1f) / 99f);
-
-            if (group.Doctrine == EnemyBattleDoctrine.FightingWithdrawal)
-                cadence *= 1.35f;
-            else if (group.Doctrine == EnemyBattleDoctrine.FireSupport || group.Doctrine == EnemyBattleDoctrine.SiegeColumn)
-                cadence *= 0.82f;
-
+            float cadence = Mathf.Lerp(8.4f, 5.2f, Mathf.Clamp01((round - 1f) / 99f));
+            if (group.Doctrine == EnemyBattleDoctrine.FightingWithdrawal) cadence *= 1.35f;
+            else if (group.Doctrine == EnemyBattleDoctrine.FireSupport || group.Doctrine == EnemyBattleDoctrine.SiegeColumn) cadence *= 0.82f;
             group.NextVolley = Time.time + Random.Range(cadence * 0.84f, cadence * 1.18f);
 
+            int shooters = 0;
             for (int i = 0; i < group.Members.Count && shooters < maxShooters; i++)
             {
                 EnemyTank enemy = group.Members[i];
-                if (!IsCombatReady(enemy)) continue;
-                if (enemy.Kind == EnemyKind.Supply) continue;
-
+                if (!Ready(enemy) || enemy.Kind == EnemyKind.Supply) continue;
                 Vector2 from = enemy.transform.position;
                 Vector2 delta = objective - from;
                 if (delta.sqrMagnitude < 1.2f || delta.sqrMagnitude > 115f) continue;
-
                 Vector2 dir = delta.normalized;
                 Vector2 side = new Vector2(-dir.y, dir.x);
                 float spread = (shooters - (maxShooters - 1) * 0.5f) * 0.055f;
                 dir = (dir + side * spread).normalized;
-
-                float muzzleDistance = enemy.Kind == EnemyKind.Boss ? 1.0f : enemy.Kind == EnemyKind.Siege ? 0.84f : 0.73f;
+                float muzzleDistance = enemy.Kind == EnemyKind.Boss ? 1f : enemy.Kind == EnemyKind.Siege ? 0.84f : 0.73f;
                 Vector2 muzzle = from + dir * muzzleDistance;
-                Color color = group.Doctrine == EnemyBattleDoctrine.FireSupport
-                    ? new Color(1f, 0.48f, 0.12f)
-                    : new Color(1f, 0.20f, 0.06f);
-                float speed = 8.8f + round * 0.018f;
+                Color color = group.Doctrine == EnemyBattleDoctrine.FireSupport ? new Color(1f, 0.48f, 0.12f) : new Color(1f, 0.20f, 0.06f);
                 int damage = round >= 80 && (enemy.Kind == EnemyKind.Heavy || enemy.Kind == EnemyKind.Siege || enemy.Kind == EnemyKind.Boss) ? 2 : 1;
-
-                _game.SpawnProjectile(muzzle, dir, Team.Enemy, damage, speed, color, AmmoType.Basic);
+                _game.SpawnProjectile(muzzle, dir, Team.Enemy, damage, 8.8f + round * 0.018f, color, AmmoType.Basic);
                 VisualFactory.MuzzleFlash(muzzle, color, enemy.Kind == EnemyKind.Siege || enemy.Kind == EnemyKind.Boss ? 0.92f : 0.58f);
                 shooters++;
             }
 
             if (shooters > 0)
-            {
-                if (group.Doctrine == EnemyBattleDoctrine.SiegeColumn || group.Doctrine == EnemyBattleDoctrine.Breakthrough)
-                    BattleAudio.PlayGlobal(SoundCue.HeavyShot, 0.18f, 0.08f);
-                else
-                    BattleAudio.PlayGlobal(SoundCue.EnemyShot, 0.13f, 0.08f);
-            }
+                BattleAudio.PlayGlobal(group.Doctrine == EnemyBattleDoctrine.SiegeColumn || group.Doctrine == EnemyBattleDoctrine.Breakthrough ? SoundCue.HeavyShot : SoundCue.EnemyShot, 0.16f, 0.08f);
         }
 
         private EnemyBattleDoctrine InitialDoctrine(EnemyKind kind, int sector)
@@ -463,60 +391,42 @@ namespace TankRevival
             return EnemyBattleDoctrine.Assault;
         }
 
-        private int CurrentSector()
-        {
-            return _game == null ? 0 : Mathf.Clamp((_game.CurrentRound - 1) / 10, 0, 9);
-        }
+        private int Sector() => _game == null ? 0 : Mathf.Clamp((_game.CurrentRound - 1) / 10, 0, 9);
 
-        private static bool IsCombatReady(EnemyTank enemy)
-        {
-            return enemy != null && enemy.Health != null && !enemy.Health.IsDead && enemy.gameObject.activeInHierarchy;
-        }
+        private static bool Ready(EnemyTank enemy) => enemy != null && enemy.Health != null && !enemy.Health.IsDead && enemy.gameObject.activeInHierarchy;
 
         private static int CountAlive(BattleGroup group)
         {
             int count = 0;
-            for (int i = 0; i < group.Members.Count; i++)
-                if (IsCombatReady(group.Members[i])) count++;
+            for (int i = 0; i < group.Members.Count; i++) if (Ready(group.Members[i])) count++;
             return count;
         }
 
         private static int CountKind(BattleGroup group, EnemyKind kind)
         {
             int count = 0;
-            for (int i = 0; i < group.Members.Count; i++)
-            {
-                EnemyTank enemy = group.Members[i];
-                if (IsCombatReady(enemy) && enemy.Kind == kind) count++;
-            }
+            for (int i = 0; i < group.Members.Count; i++) if (Ready(group.Members[i]) && group.Members[i].Kind == kind) count++;
             return count;
         }
 
         private static bool HasCommander(BattleGroup group)
         {
-            for (int i = 0; i < group.Members.Count; i++)
-            {
-                EnemyTank enemy = group.Members[i];
-                if (IsCombatReady(enemy) && enemy.GetComponent<WarCommander>() != null) return true;
-            }
+            for (int i = 0; i < group.Members.Count; i++) if (Ready(group.Members[i]) && group.Members[i].GetComponent<WarCommander>() != null) return true;
             return false;
         }
 
         private static EnemyTank SelectLeader(BattleGroup group)
         {
             EnemyTank best = null;
-            float bestScore = float.MinValue;
+            float score = float.MinValue;
             for (int i = 0; i < group.Members.Count; i++)
             {
                 EnemyTank enemy = group.Members[i];
-                if (!IsCombatReady(enemy)) continue;
-                float score = TacticalThreatDirector.KindWeight(enemy.Kind);
-                if (enemy.GetComponent<WarCommander>() != null) score += 20f;
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    best = enemy;
-                }
+                if (!Ready(enemy)) continue;
+                float candidate = TacticalThreatDirector.KindWeight(enemy.Kind) + (enemy.GetComponent<WarCommander>() != null ? 20f : 0f);
+                if (candidate <= score) continue;
+                score = candidate;
+                best = enemy;
             }
             return best;
         }
@@ -527,33 +437,17 @@ namespace TankRevival
             int count = 0;
             for (int i = 0; i < group.Members.Count; i++)
             {
-                EnemyTank enemy = group.Members[i];
-                if (!IsCombatReady(enemy)) continue;
-                sum += (Vector2)enemy.transform.position;
+                if (!Ready(group.Members[i])) continue;
+                sum += (Vector2)group.Members[i].transform.position;
                 count++;
             }
             return count > 0 ? sum / count : Vector2.zero;
         }
 
-        private static string BuildCallsign(int id)
+        private void BuildSummary()
         {
-            string[] names = { "IRON", "COBRA", "WOLF", "HAMMER", "VIPER", "RAVEN", "ANVIL", "REAPER" };
-            return names[(id - 1) % names.Length] + "-" + (((id - 1) / names.Length) + 1).ToString("00");
-        }
-
-        private void BuildDoctrineSummary()
-        {
-            if (ActiveGroups <= 0)
-            {
-                ActiveDoctrineSummary = "NO CONTACT";
-                return;
-            }
-
-            int siege = 0;
-            int pincer = 0;
-            int breakthrough = 0;
-            int raid = 0;
-            int support = 0;
+            if (ActiveGroups <= 0) { ActiveDoctrineSummary = "NO CONTACT"; return; }
+            int siege = 0, pincer = 0, breakthrough = 0, raid = 0, support = 0;
             for (int i = 0; i < _groups.Count; i++)
             {
                 if (CountAlive(_groups[i]) <= 0) continue;
@@ -566,59 +460,29 @@ namespace TankRevival
                     case EnemyBattleDoctrine.FireSupport: support++; break;
                 }
             }
-
-            if (siege > 0) ActiveDoctrineSummary = "SIEGE COLUMNS";
-            else if (raid > 0) ActiveDoctrineSummary = "EAGLE RAID";
-            else if (breakthrough > 0) ActiveDoctrineSummary = "ARMORED BREAKTHROUGH";
-            else if (pincer > 0) ActiveDoctrineSummary = "PINCER ATTACK";
-            else if (support > 0) ActiveDoctrineSummary = "FIRE SUPPORT";
-            else ActiveDoctrineSummary = "COORDINATED ASSAULT";
-        }
-
-        private void EnsureStyles()
-        {
-            if (_titleStyle != null) return;
-            _titleStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 12,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(1f, 0.40f, 0.12f) }
-            };
-            _bodyStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 10,
-                normal = { textColor = new Color(0.86f, 0.88f, 0.92f) }
-            };
-            _alertStyle = new GUIStyle(_titleStyle)
-            {
-                normal = { textColor = new Color(1f, 0.12f, 0.06f) }
-            };
+            ActiveDoctrineSummary = siege > 0 ? "SIEGE COLUMNS" : raid > 0 ? "EAGLE RAID" : breakthrough > 0 ? "ARMORED BREAKTHROUGH" : pincer > 0 ? "PINCER ATTACK" : support > 0 ? "FIRE SUPPORT" : "COORDINATED ASSAULT";
         }
 
         private void OnGUI()
         {
             if (_game == null || !_game.IsPlaying || ActiveGroups <= 0) return;
-            EnsureStyles();
-
-            float width = 286f;
-            float x = 14f;
+            if (_title == null)
+            {
+                _title = new GUIStyle(GUI.skin.label) { fontSize = 12, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, 0.40f, 0.12f) } };
+                _body = new GUIStyle(GUI.skin.label) { fontSize = 10, normal = { textColor = new Color(0.86f, 0.88f, 0.92f) } };
+                _danger = new GUIStyle(_title) { normal = { textColor = new Color(1f, 0.12f, 0.06f) } };
+            }
             float y = Screen.height - 92f;
             GUI.color = new Color(0.035f, 0.025f, 0.022f, 0.90f);
-            GUI.Box(new Rect(x, y, width, 76f), string.Empty);
+            GUI.Box(new Rect(14f, y, 286f, 76f), string.Empty);
             GUI.color = Color.white;
-
-            bool dangerous = ActiveDoctrineSummary.Contains("SIEGE") || ActiveDoctrineSummary.Contains("EAGLE");
-            GUI.Label(new Rect(x + 10f, y + 7f, width - 20f, 18f), "ENEMY BATTLE NET // " + ActiveDoctrineSummary, dangerous ? _alertStyle : _titleStyle);
-            GUI.Label(new Rect(x + 10f, y + 28f, width - 20f, 17f), $"GROUPS {ActiveGroups:00}   COORDINATED UNITS {CoordinatedUnits:00}", _bodyStyle);
-            GUI.Label(new Rect(x + 10f, y + 47f, width - 20f, 17f), "Flanks, escorts and synchronized volleys active", _bodyStyle);
+            bool danger = ActiveDoctrineSummary.Contains("SIEGE") || ActiveDoctrineSummary.Contains("EAGLE");
+            GUI.Label(new Rect(24f, y + 7f, 266f, 18f), "ENEMY BATTLE NET // " + ActiveDoctrineSummary, danger ? _danger : _title);
+            GUI.Label(new Rect(24f, y + 28f, 266f, 17f), $"GROUPS {ActiveGroups:00}   COORDINATED UNITS {CoordinatedUnits:00}", _body);
+            GUI.Label(new Rect(24f, y + 47f, 266f, 17f), "Flanks, escorts and synchronized volleys active", _body);
         }
     }
 
-    /// <summary>
-    /// Per-enemy movement executor. Runs after EnemyTank.FixedUpdate and therefore replaces only
-    /// the movement destination selected by the legacy individual AI while preserving Rigidbody2D
-    /// collision handling and every combat subsystem on EnemyTank.
-    /// </summary>
     [DefaultExecutionOrder(800)]
     public sealed class EnemyTacticalAgent : MonoBehaviour
     {
@@ -629,7 +493,7 @@ namespace TankRevival
         private Health _health;
         private int _groupId;
         private EnemyBattleDoctrine _doctrine;
-        private EnemyBattleRole _role;
+        private EnemySquadRole _role;
         private Vector2 _target;
         private Vector2 _groupCenter;
         private float _intensity = 1f;
@@ -641,7 +505,7 @@ namespace TankRevival
         private Vector2 _unstickDirection;
 
         public int GroupId => _groupId;
-        public EnemyBattleRole Role => _role;
+        public EnemySquadRole Role => _role;
         public EnemyBattleDoctrine Doctrine => _doctrine;
 
         public void Bind(TankGame game, int groupId)
@@ -656,12 +520,12 @@ namespace TankRevival
             _stuckSince = Time.time;
         }
 
-        public void SetOrder(EnemyBattleDoctrine doctrine, EnemyBattleRole role, Vector2 target, Vector2 groupCenter, float intensity, float expires)
+        public void SetOrder(EnemyBattleDoctrine doctrine, EnemySquadRole role, Vector2 target, Vector2 center, float intensity, float expires)
         {
             _doctrine = doctrine;
             _role = role;
             _target = target;
-            _groupCenter = groupCenter;
+            _groupCenter = center;
             _intensity = Mathf.Clamp(intensity, 0.78f, 1.34f);
             _orderExpires = expires;
         }
@@ -672,7 +536,6 @@ namespace TankRevival
             if (_body == null) _body = GetComponent<Rigidbody2D>();
             if (_health == null) _health = GetComponent<Health>();
             if (_armor == null) _armor = GetComponent<ArmorSystem>();
-
             if (_health == null || _health.IsDead) return;
 
             float moved = Vector2.Distance(_lastPosition, transform.position);
@@ -685,108 +548,73 @@ namespace TankRevival
             {
                 Vector2 toward = _target - (Vector2)transform.position;
                 if (toward.sqrMagnitude < 0.01f) toward = Random.insideUnitCircle.normalized;
-                _unstickDirection = Random.value < 0.5f
-                    ? new Vector2(-toward.y, toward.x).normalized
-                    : new Vector2(toward.y, -toward.x).normalized;
+                _unstickDirection = Random.value < 0.5f ? new Vector2(-toward.y, toward.x).normalized : new Vector2(toward.y, -toward.x).normalized;
                 _unstickUntil = Time.time + Random.Range(0.36f, 0.62f);
                 _stuckSince = Time.time;
             }
 
-            if (_health.Maximum > 1 && _health.Current <= Mathf.Max(1, Mathf.FloorToInt(_health.Maximum * 0.24f)) && _enemy != null && _enemy.Kind != EnemyKind.Boss && _enemy.Kind != EnemyKind.Siege)
+            if (_health.Maximum > 1 && _health.Current <= Mathf.Max(1, Mathf.FloorToInt(_health.Maximum * 0.24f)) && _enemy.Kind != EnemyKind.Boss && _enemy.Kind != EnemyKind.Siege)
                 _retreatUntil = Mathf.Max(_retreatUntil, Time.time + 0.45f);
         }
 
         private void FixedUpdate()
         {
-            if (_game == null || !_game.IsPlaying || _body == null || _enemy == null || _health == null || _health.IsDead) return;
-            if (Time.time > _orderExpires) return;
-
+            if (_game == null || !_game.IsPlaying || _body == null || _enemy == null || _health == null || _health.IsDead || Time.time > _orderExpires) return;
             Vector2 position = _body.position;
             Vector2 desired;
 
             if (Time.time < _unstickUntil)
-            {
                 desired = _unstickDirection;
-            }
             else if (Time.time < _retreatUntil || _doctrine == EnemyBattleDoctrine.FightingWithdrawal)
             {
-                Vector2 threat = _game.PlayerPosition;
-                desired = position - threat;
+                desired = position - _game.PlayerPosition;
                 if (desired.sqrMagnitude < 0.01f) desired = Vector2.up;
-                desired.Normalize();
-                desired = (desired + Separation(position) * 0.85f).normalized;
+                desired = (desired.normalized + Separation(position) * 0.85f).normalized;
             }
             else
-            {
-                desired = BuildRoleDirection(position);
-            }
+                desired = RoleDirection(position);
 
             if (desired.sqrMagnitude < 0.01f) return;
             desired.Normalize();
-
             float mobility = _armor != null ? _armor.MobilityMultiplier : 1f;
             float speed = TacticalSpeed(_enemy.Kind, _game.CurrentRound) * mobility * _intensity;
-            if (_role == EnemyBattleRole.FireSupport && Vector2.Distance(position, _target) < 1.15f) speed *= 0.38f;
-            if (_role == EnemyBattleRole.Commander) speed *= 0.88f;
+            if (_role == EnemySquadRole.FireSupport && Vector2.Distance(position, _target) < 1.15f) speed *= 0.38f;
+            if (_role == EnemySquadRole.Commander) speed *= 0.88f;
             if (Time.time < _retreatUntil) speed *= 1.10f;
-
-            Vector2 next = position + desired * (speed * Time.fixedDeltaTime);
+            Vector2 next = position + desired * speed * Time.fixedDeltaTime;
             next.x = Mathf.Clamp(next.x, -11.25f, 11.25f);
             next.y = Mathf.Clamp(next.y, -6.35f, 6.35f);
             _body.MovePosition(next);
         }
 
-        private Vector2 BuildRoleDirection(Vector2 position)
+        private Vector2 RoleDirection(Vector2 position)
         {
             Vector2 toTarget = _target - position;
             float distance = toTarget.magnitude;
             Vector2 direct = distance > 0.01f ? toTarget / distance : Vector2.zero;
             Vector2 separation = Separation(position);
 
-            switch (_role)
+            if (_role == EnemySquadRole.FireSupport && distance < 0.75f)
+                return ((position - _game.PlayerPosition).normalized + separation * 0.55f).normalized;
+            if (_role == EnemySquadRole.FireSupport && distance < 1.45f)
             {
-                case EnemyBattleRole.FireSupport:
-                    if (distance < 0.75f)
-                    {
-                        Vector2 away = position - _game.PlayerPosition;
-                        return (away.normalized + separation * 0.55f).normalized;
-                    }
-                    if (distance < 1.45f)
-                    {
-                        Vector2 side = new Vector2(-direct.y, direct.x);
-                        if ((_groupId & 1) == 0) side = -side;
-                        return (side + separation * 0.45f).normalized;
-                    }
-                    break;
-
-                case EnemyBattleRole.SiegeEscort:
-                    if (distance < 0.45f)
-                    {
-                        Vector2 around = position - _groupCenter;
-                        if (around.sqrMagnitude < 0.01f) around = new Vector2((_groupId & 1) == 0 ? 1f : -1f, 0f);
-                        return (around.normalized + separation * 0.60f).normalized;
-                    }
-                    break;
-
-                case EnemyBattleRole.LeftFlank:
-                case EnemyBattleRole.RightFlank:
-                    if (distance < 0.65f)
-                    {
-                        Vector2 collapse = _game.PlayerPosition - position;
-                        return (collapse.normalized + separation * 0.35f).normalized;
-                    }
-                    break;
-
-                case EnemyBattleRole.Reserve:
-                    if (distance < 0.55f)
-                    {
-                        Vector2 towardGroup = _groupCenter - position;
-                        Vector2 side = new Vector2(-towardGroup.y, towardGroup.x);
-                        return (side.normalized + separation * 0.7f).normalized;
-                    }
-                    break;
+                Vector2 side = new Vector2(-direct.y, direct.x);
+                if ((_groupId & 1) == 0) side = -side;
+                return (side + separation * 0.45f).normalized;
             }
-
+            if (_role == EnemySquadRole.SiegeEscort && distance < 0.45f)
+            {
+                Vector2 around = position - _groupCenter;
+                if (around.sqrMagnitude < 0.01f) around = new Vector2((_groupId & 1) == 0 ? 1f : -1f, 0f);
+                return (around.normalized + separation * 0.60f).normalized;
+            }
+            if ((_role == EnemySquadRole.LeftFlank || _role == EnemySquadRole.RightFlank) && distance < 0.65f)
+                return ((_game.PlayerPosition - position).normalized + separation * 0.35f).normalized;
+            if (_role == EnemySquadRole.Reserve && distance < 0.55f)
+            {
+                Vector2 toward = _groupCenter - position;
+                return (new Vector2(-toward.y, toward.x).normalized + separation * 0.70f).normalized;
+            }
             return (direct + separation * 0.58f).normalized;
         }
 
@@ -794,7 +622,6 @@ namespace TankRevival
         {
             EnemyTank[] enemies = CombatRoster.Enemies;
             if (enemies == null) return Vector2.zero;
-
             Vector2 sum = Vector2.zero;
             int count = 0;
             for (int i = 0; i < enemies.Length; i++)
@@ -812,19 +639,19 @@ namespace TankRevival
 
         private static float TacticalSpeed(EnemyKind kind, int round)
         {
-            float baseSpeed;
+            float speed;
             switch (kind)
             {
-                case EnemyKind.Fast: baseSpeed = 3.45f; break;
-                case EnemyKind.Heavy: baseSpeed = 1.70f; break;
-                case EnemyKind.Sniper: baseSpeed = 1.86f; break;
-                case EnemyKind.Siege: baseSpeed = 1.48f; break;
-                case EnemyKind.Elite: baseSpeed = 2.50f; break;
-                case EnemyKind.Supply: baseSpeed = 2.68f; break;
-                case EnemyKind.Boss: baseSpeed = 1.72f; break;
-                default: baseSpeed = 2.24f; break;
+                case EnemyKind.Fast: speed = 3.45f; break;
+                case EnemyKind.Heavy: speed = 1.70f; break;
+                case EnemyKind.Sniper: speed = 1.86f; break;
+                case EnemyKind.Siege: speed = 1.48f; break;
+                case EnemyKind.Elite: speed = 2.50f; break;
+                case EnemyKind.Supply: speed = 2.68f; break;
+                case EnemyKind.Boss: speed = 1.72f; break;
+                default: speed = 2.24f; break;
             }
-            return baseSpeed * Mathf.Lerp(1f, 1.20f, Mathf.Clamp01((round - 1f) / 99f));
+            return speed * Mathf.Lerp(1f, 1.20f, Mathf.Clamp01((round - 1f) / 99f));
         }
     }
 }
