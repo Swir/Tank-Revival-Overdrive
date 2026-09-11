@@ -3,9 +3,9 @@ using UnityEngine;
 namespace TankRevival
 {
     /// <summary>
-    /// v2.3 persistent war economy. Surviving rounds earns War Bonds, while the player can spend
-    /// them during combat on repairs, ordnance and emergency protection. Career rank improves
-    /// prices and package quality, tying the economy directly into v2.2 meta progression.
+    /// Persistent war economy. Surviving rounds earns War Bonds, while the player can spend
+    /// them during combat on repairs, ordnance and emergency protection. Career rank and the
+    /// v3.4 Logistics Command perk tree improve prices and reward yield.
     /// </summary>
     public sealed class WarEconomyDirector : MonoBehaviour
     {
@@ -76,7 +76,7 @@ namespace TankRevival
 
         private int Discounted(int baseCost)
         {
-            return Mathf.Max(6, baseCost - LogisticsTier() * 2);
+            return Mathf.Max(5, baseCost - LogisticsTier() * 2 - CommanderCareerDirector.EconomyDiscount);
         }
 
         private void AwardRoundSurvival(int completedRound)
@@ -89,12 +89,15 @@ namespace TankRevival
             if (completedRound % 10 == 0) baseReward += 4;
             if (completedRound % 20 == 0) baseReward += 4;
             float risk = CampaignVariantDirector.ActiveRewardMultiplier;
-            int reward = Mathf.Max(1, Mathf.RoundToInt(baseReward * risk));
+            float career = CommanderCareerDirector.WarBondRewardMultiplier;
+            int reward = Mathf.Max(1, Mathf.RoundToInt(baseReward * risk * career));
             AddBonds(reward);
 
-            _banner = risk > 1.01f
-                ? $"WAR BONDS +{reward} // RISK BONUS x{risk:0.0}"
-                : $"WAR BONDS +{reward} // SUPPLY ACCOUNT {_bonds}";
+            _banner = career > 1.01f
+                ? $"WAR BONDS +{reward} // COMMAND LOGISTICS x{career:0.00}"
+                : risk > 1.01f
+                    ? $"WAR BONDS +{reward} // RISK BONUS x{risk:0.0}"
+                    : $"WAR BONDS +{reward} // SUPPLY ACCOUNT {_bonds}";
             _bannerUntil = Time.unscaledTime + 2.8f;
         }
 
@@ -204,7 +207,7 @@ namespace TankRevival
             GUI.color = Color.white;
             GUI.Label(new Rect(28f, y + 7f, 420f, 20f), $"WAR ECONOMY // {_bonds} BONDS // LOGISTICS {tier + 1}", _header);
             GUI.Label(new Rect(28f, y + 31f, 420f, 18f), $"F1 SERVICE {Discounted(12)}   F2 ORDNANCE {Discounted(14)}   F3 INSURANCE {Discounted(18)}", _body);
-            GUI.Label(new Rect(28f, y + 54f, 420f, 30f), "Survive rounds and high-risk sectors to fund battlefield support.", _small);
+            GUI.Label(new Rect(28f, y + 54f, 420f, 30f), $"Career logistics: -{CommanderCareerDirector.EconomyDiscount} cost // x{CommanderCareerDirector.WarBondRewardMultiplier:0.00} survival payout.", _small);
 
             if (Time.unscaledTime < _bannerUntil)
             {
