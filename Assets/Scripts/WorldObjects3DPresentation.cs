@@ -151,13 +151,13 @@ namespace TankRevival
 
         private EnemyTank FindClosestEnemy()
         {
-            CombatRoster roster = CombatRoster.Instance;
-            if (roster == null || roster.Enemies == null) return null;
+            EnemyTank[] enemies = CombatRoster.Enemies;
+            if (enemies == null) return null;
             EnemyTank best = null;
             float bestDistance = 100f;
-            for (int i = 0; i < roster.Enemies.Count; i++)
+            for (int i = 0; i < enemies.Length; i++)
             {
-                EnemyTank enemy = roster.Enemies[i];
+                EnemyTank enemy = enemies[i];
                 if (enemy == null || enemy.Health == null || enemy.Health.IsDead) continue;
                 float distance = ((Vector2)enemy.transform.position - (Vector2)transform.position).sqrMagnitude;
                 if (distance < bestDistance)
