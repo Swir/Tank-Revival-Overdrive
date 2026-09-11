@@ -112,7 +112,8 @@ namespace TankRevival
 
         private int SpentMarks()
         {
-            return SpendFor(_cannon) + SpendFor(_loader) + SpendFor(_engine) + SpendFor(_armor);
+            return SpendFor(_cannon) + SpendFor(_loader) + SpendFor(_engine) + SpendFor(_armor)
+                + GarageLoadoutDirector.PersistentSpentMarks;
         }
 
         private static int SpendFor(int level)
@@ -291,7 +292,7 @@ namespace TankRevival
 
             GUI.Label(new Rect(x + 18f, y + 12f, 460f, 28f), "WAR GARAGE // PERSISTENT ARMORY", _title);
             GUI.Label(new Rect(x + 18f, y + 42f, 460f, 20f), $"GARAGE MARKS: {AvailableMarks} AVAILABLE / {LifetimeMarks()} EARNED", _body);
-            GUI.Label(new Rect(x + 18f, y + 63f, 460f, 18f), "Earn marks from contracts, sector progress and defeated Boss Legends.", _small);
+            GUI.Label(new Rect(x + 18f, y + 63f, 460f, 18f), "Marks are shared by stat upgrades and v3.1 loadout module unlocks.", _small);
 
             float rowY = y + 92f;
             for (int i = 0; i < 4; i++)
