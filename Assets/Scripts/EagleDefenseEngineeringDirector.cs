@@ -4,13 +4,13 @@ using UnityEngine;
 namespace TankRevival
 {
     /// <summary>
-    /// v1.6 SIEGE ENGINEERING — active player-side battlefield construction.
-    /// The player earns Defense Parts as rounds advance and spends them during combat on
-    /// minefields, barricades and anti-siege turrets around Orzelek.
+    /// Active battlefield construction around Orzelek. v2.9 integrates Defense Parts with
+    /// Eagle Fortress Command so Recovery/Bastion doctrines can reinforce the engineering loop.
     /// </summary>
     public sealed class EagleDefenseEngineeringDirector : MonoBehaviour
     {
         public static EagleDefenseEngineeringDirector Instance { get; private set; }
+        public int Parts => _parts;
 
         private TankGame _game;
         private int _round = -1;
@@ -42,13 +42,13 @@ namespace TankRevival
                 _game = FindAnyObjectByType<TankGame>();
                 return;
             }
-
             if (!_game.IsPlaying) return;
 
             if (_round != _game.CurrentRound)
             {
                 _round = _game.CurrentRound;
-                _parts = Mathf.Min(12, _parts + 2 + (_round >= 40 ? 1 : 0) + (_round >= 75 ? 1 : 0));
+                int doctrineBonus = EagleFortressCommandDirector.Instance != null ? EagleFortressCommandDirector.Instance.EngineeringPartsBonus : 0;
+                _parts = Mathf.Min(16, _parts + 2 + (_round >= 40 ? 1 : 0) + (_round >= 75 ? 1 : 0) + doctrineBonus);
                 CleanupDeadConstructs();
                 Announce($"DEFENSE PARTS + // STOCK {_parts}");
             }
@@ -58,6 +58,13 @@ namespace TankRevival
             if (Input.GetKeyDown(KeyCode.X)) BuildBarricade();
             if (Input.GetKeyDown(KeyCode.C)) BuildAntiSiegeTurret();
             if (Input.GetKeyDown(KeyCode.V)) EmergencyRepair();
+        }
+
+        public void GrantParts(int amount)
+        {
+            if (amount <= 0) return;
+            _parts = Mathf.Clamp(_parts + amount, 0, 16);
+            Announce($"FORTRESS LOGISTICS // +{amount} PARTS // STOCK {_parts}");
         }
 
         private void Spend(int amount, float cooldown)
@@ -75,15 +82,17 @@ namespace TankRevival
 
         private void BuildMinefield()
         {
-            const int cost = 2;
+            int cost = EagleFortressCommandDirector.Instance != null && EagleFortressCommandDirector.Instance.Doctrine == FortressDoctrine.Bastion ? 1 : 2;
             if (!CanSpend(cost, "MINEFIELD")) return;
             Spend(cost, 0.45f);
 
             Vector2 core = _game.BasePosition;
             var root = new GameObject("PLAYER_MINEFIELD_R" + _round.ToString("000"));
             _constructs.Add(root);
+            int commandLevel = EagleFortressCommandDirector.Instance != null ? EagleFortressCommandDirector.Instance.DoctrineLevel : 1;
             int count = _round >= 55 ? 5 : 3;
-            float span = count <= 3 ? 1.5f : 1.25f;
+            if (commandLevel >= 4) count += 2;
+            float span = count <= 3 ? 1.5f : 1.1f;
             for (int i = 0; i < count; i++)
             {
                 float offset = (i - (count - 1) * 0.5f) * span;
@@ -95,8 +104,7 @@ namespace TankRevival
                 var trigger = mine.AddComponent<CircleCollider2D>();
                 trigger.radius = 0.40f;
                 trigger.isTrigger = true;
-                var script = mine.AddComponent<DefenseMine>();
-                script.Initialize(_round);
+                mine.AddComponent<DefenseMine>().Initialize(_round, commandLevel);
             }
             Announce("MINEFIELD DEPLOYED // ORZELEK APPROACH COVERED");
         }
@@ -109,17 +117,16 @@ namespace TankRevival
 
             Vector2 core = _game.BasePosition;
             float side = CountAliveNamed("PLAYER_BARRICADE") % 2 == 0 ? -1f : 1f;
-            Vector2 position = core + new Vector2(side * 1.35f, 1.55f);
             var go = new GameObject("PLAYER_BARRICADE");
-            go.transform.position = position;
+            go.transform.position = core + new Vector2(side * 1.35f, 1.55f);
             _constructs.Add(go);
-            var col = go.AddComponent<BoxCollider2D>();
-            col.size = new Vector2(1.75f, 0.52f);
+            go.AddComponent<BoxCollider2D>().size = new Vector2(1.75f, 0.52f);
             VisualFactory.Rect("BarricadeShadow", go.transform, new Vector2(1.90f, 0.62f), new Color(0f, 0f, 0f, 0.45f), new Vector3(0.05f, -0.05f, 0f), 4);
             VisualFactory.Rect("BarricadeBody", go.transform, new Vector2(1.75f, 0.52f), new Color(0.17f, 0.34f, 0.42f), Vector3.zero, 5);
             VisualFactory.Rect("BarricadeStripe", go.transform, new Vector2(1.48f, 0.09f), new Color(0.36f, 0.92f, 1f), new Vector3(0f, 0.13f, 0f), 6);
+            int bonus = EagleFortressCommandDirector.Instance != null ? EagleFortressCommandDirector.Instance.FortressModuleBonus : 0;
+            int durability = Mathf.Clamp(4 + _round / 22 + bonus, 4, 12);
             var hp = go.AddComponent<Health>();
-            int durability = Mathf.Clamp(4 + _round / 22, 4, 8);
             hp.Initialize(Team.Player, durability);
             hp.Died += h =>
             {
@@ -133,27 +140,29 @@ namespace TankRevival
         {
             const int cost = 5;
             if (!CanSpend(cost, "ANTI-SIEGE TURRET")) return;
-            if (CountAliveNamed("PLAYER_ANTI_SIEGE") >= 2)
+            int max = EagleFortressCommandDirector.Instance != null && EagleFortressCommandDirector.Instance.Doctrine == FortressDoctrine.HunterGrid ? 3 : 2;
+            if (CountAliveNamed("PLAYER_ANTI_SIEGE") >= max)
             {
-                Announce("ANTI-SIEGE NETWORK // MAX 2 ACTIVE");
+                Announce($"ANTI-SIEGE NETWORK // MAX {max} ACTIVE");
                 return;
             }
             Spend(cost, 0.70f);
 
             Vector2 core = _game.BasePosition;
-            float side = CountAliveNamed("PLAYER_ANTI_SIEGE") == 0 ? -1f : 1f;
+            int index = CountAliveNamed("PLAYER_ANTI_SIEGE");
+            float side = index % 2 == 0 ? -1f : 1f;
+            float spread = 3.15f + (index / 2) * 0.75f;
             var go = new GameObject("PLAYER_ANTI_SIEGE");
-            go.transform.position = core + new Vector2(side * 3.15f, 1.2f);
+            go.transform.position = core + new Vector2(side * spread, 1.2f);
             _constructs.Add(go);
-            var col = go.AddComponent<CircleCollider2D>();
-            col.radius = 0.42f;
+            go.AddComponent<CircleCollider2D>().radius = 0.42f;
             VisualFactory.Disc("TurretBase", go.transform, new Vector2(0.82f, 0.82f), new Color(0.12f, 0.26f, 0.34f), Vector3.zero, 8);
             VisualFactory.Disc("TurretCore", go.transform, new Vector2(0.46f, 0.46f), new Color(0.26f, 0.92f, 1f), Vector3.zero, 9);
             VisualFactory.Rect("TurretBarrel", go.transform, new Vector2(0.13f, 0.70f), new Color(0.68f, 0.92f, 1f), new Vector3(0f, 0.35f, 0f), 10);
             var hp = go.AddComponent<Health>();
-            hp.Initialize(Team.Player, Mathf.Clamp(3 + _round / 28, 3, 6));
-            var turret = go.AddComponent<AntiSiegeTurret>();
-            turret.Initialize(_game, _round);
+            int bonus = EagleFortressCommandDirector.Instance != null ? EagleFortressCommandDirector.Instance.FortressModuleBonus : 0;
+            hp.Initialize(Team.Player, Mathf.Clamp(3 + _round / 28 + bonus, 3, 10));
+            go.AddComponent<AntiSiegeTurret>().Initialize(_game, _round);
             Announce("ANTI-SIEGE TURRET ONLINE // PRIORITY HEAVY TARGETS");
         }
 
@@ -162,14 +171,15 @@ namespace TankRevival
             const int cost = 4;
             if (!CanSpend(cost, "FORTRESS REPAIR")) return;
             Spend(cost, 0.80f);
+            int bonus = EagleFortressCommandDirector.Instance != null ? EagleFortressCommandDirector.Instance.RepairBonus : 0;
             _game.RepairEagle(1);
-            EagleFortressDirector.Instance?.RepairFortress(2);
+            EagleFortressDirector.Instance?.RepairFortress(2 + bonus);
             for (int i = 0; i < _constructs.Count; i++)
             {
                 GameObject go = _constructs[i];
                 if (go == null) continue;
                 Health h = go.GetComponent<Health>();
-                if (h != null && !h.IsDead) h.Heal(2);
+                if (h != null && !h.IsDead) h.Heal(2 + bonus);
             }
             VisualFactory.RingPulse(_game.BasePosition, new Color(0.32f, 1f, 0.56f), 2.0f);
             Announce("ENGINEER SURGE // ORZELEK + FORTRESS REPAIRED");
@@ -215,7 +225,7 @@ namespace TankRevival
             GUI.Box(new Rect(14f, y, 470f, 64f), string.Empty);
             GUI.color = Color.white;
             GUI.Label(new Rect(26f, y + 7f, 440f, 19f), $"FIELD ENGINEERS // PARTS {_parts}", _header);
-            GUI.Label(new Rect(26f, y + 27f, 440f, 18f), "Z Mines [2]   X Barricade [3]   C Anti-Siege [5]   V Repair [4]", _body);
+            GUI.Label(new Rect(26f, y + 27f, 440f, 18f), "Z Mines   X Barricade   C Anti-Siege   V Repair", _body);
             if (Time.unscaledTime < _toastUntil)
                 GUI.Label(new Rect(26f, y + 45f, 440f, 18f), _toast, _warn);
         }
@@ -224,19 +234,26 @@ namespace TankRevival
     public sealed class DefenseMine : MonoBehaviour
     {
         private int _round;
+        private int _commandLevel;
         private bool _used;
-        public void Initialize(int round) => _round = Mathf.Clamp(round, 1, 100);
+
+        public void Initialize(int round, int commandLevel = 1)
+        {
+            _round = Mathf.Clamp(round, 1, 100);
+            _commandLevel = Mathf.Clamp(commandLevel, 1, 4);
+        }
+
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (_used) return;
             Health h = other.GetComponent<Health>();
             if (h == null || h.IsDead || h.Team != Team.Enemy) return;
             _used = true;
-            int damage = _round >= 70 ? 4 : _round >= 35 ? 3 : 2;
+            int damage = (_round >= 70 ? 4 : _round >= 35 ? 3 : 2) + (_commandLevel >= 4 ? 1 : 0);
             h.Damage(damage, Team.Player);
             CombatStatus status = h.GetComponent<CombatStatus>();
             if (status == null) status = h.gameObject.AddComponent<CombatStatus>();
-            status.ApplyEmp(1.25f);
+            status.ApplyEmp(1.25f + (_commandLevel - 1) * 0.12f);
             VisualFactory.Explosion(transform.position, new Color(1f, 0.52f, 0.08f), 1.15f);
             BattleAudio.PlayGlobal(SoundCue.ExplosionSmall, 0.58f, 0.04f);
             Destroy(gameObject);
@@ -248,6 +265,7 @@ namespace TankRevival
         private TankGame _game;
         private int _round;
         private float _nextShot;
+
         public void Initialize(TankGame game, int round)
         {
             _game = game;
@@ -259,11 +277,13 @@ namespace TankRevival
         {
             if (_game == null || !_game.IsPlaying || Time.time < _nextShot) return;
             EnemyTank target = FindPriority();
-            _nextShot = Time.time + Mathf.Max(0.85f, 1.55f - _round * 0.0045f);
+            float rate = EagleFortressCommandDirector.Instance != null ? EagleFortressCommandDirector.Instance.SentryFireRateMultiplier : 1f;
+            _nextShot = Time.time + Mathf.Max(0.62f, (1.55f - _round * 0.0045f) * rate);
             if (target == null) return;
             Vector2 dir = ((Vector2)target.transform.position - (Vector2)transform.position).normalized;
             Vector2 muzzle = (Vector2)transform.position + dir * 0.55f;
-            int damage = target.Kind == EnemyKind.Siege || target.Kind == EnemyKind.Heavy || target.Kind == EnemyKind.Boss ? 3 : 2;
+            int bonus = EagleFortressCommandDirector.Instance != null ? EagleFortressCommandDirector.Instance.SentryDamageBonus : 0;
+            int damage = (target.Kind == EnemyKind.Siege || target.Kind == EnemyKind.Heavy || target.Kind == EnemyKind.Boss ? 3 : 2) + bonus;
             _game.SpawnProjectile(muzzle, dir, Team.Player, damage, 13.5f, new Color(0.36f, 0.96f, 1f), AmmoType.ArmorPiercing);
             VisualFactory.MuzzleFlash(muzzle, new Color(0.36f, 0.96f, 1f), 0.88f);
             BattleAudio.PlayGlobal(SoundCue.HeavyShot, 0.16f, 0.08f);
@@ -274,12 +294,13 @@ namespace TankRevival
             EnemyTank[] enemies = FindObjectsByType<EnemyTank>(FindObjectsSortMode.None);
             EnemyTank best = null;
             float bestScore = float.MinValue;
+            float rangeBonus = EagleFortressCommandDirector.Instance != null ? EagleFortressCommandDirector.Instance.SentryRangeBonus : 0f;
             for (int i = 0; i < enemies.Length; i++)
             {
                 EnemyTank e = enemies[i];
                 if (e == null || e.Health == null || e.Health.IsDead) continue;
                 float distance = Vector2.Distance(transform.position, e.transform.position);
-                if (distance > 10.5f) continue;
+                if (distance > 10.5f + rangeBonus) continue;
                 float priority = -distance;
                 if (e.Kind == EnemyKind.Siege) priority += 8f;
                 if (e.Kind == EnemyKind.Heavy) priority += 5f;
