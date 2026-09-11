@@ -5,8 +5,8 @@ using UnityEngine;
 namespace TankRevival
 {
     /// <summary>
-    /// Runtime tactical layer for v0.6. It upgrades existing enemies without replacing
-    /// the proven EnemyTank core, so the system remains compatible with older rounds.
+    /// Runtime tactical layer for v0.6+. It upgrades existing enemies without replacing
+    /// the proven EnemyTank core, so later milestone systems remain composable.
     /// </summary>
     public sealed class TacticalWarDirector : MonoBehaviour
     {
@@ -67,10 +67,19 @@ namespace TankRevival
                     agent.Initialize(_game, enemy, round);
                 }
 
-                if (enemy.Kind == EnemyKind.Boss && enemy.GetComponent<MultiPhaseBossController>() == null)
+                if (enemy.Kind == EnemyKind.Boss)
                 {
-                    var boss = enemy.gameObject.AddComponent<MultiPhaseBossController>();
-                    boss.Initialize(_game, enemy, round);
+                    if (enemy.GetComponent<MultiPhaseBossController>() == null)
+                    {
+                        var boss = enemy.gameObject.AddComponent<MultiPhaseBossController>();
+                        boss.Initialize(_game, enemy, round);
+                    }
+
+                    if (enemy.GetComponent<BossLegendController>() == null)
+                    {
+                        var legend = enemy.gameObject.AddComponent<BossLegendController>();
+                        legend.Initialize(_game, enemy, round);
+                    }
                 }
 
                 if (round >= 55 && (enemy.Kind == EnemyKind.Siege || enemy.Kind == EnemyKind.Heavy) && enemy.GetComponent<FormationPressureAura>() == null)
