@@ -72,6 +72,22 @@ namespace TankRevival
 
         private void OnTriggerEnter2D(Collider2D other)
         {
+            var weakPoint = other.GetComponent<BossWeakPoint>();
+            if (weakPoint != null && OwnerTeam == Team.Player)
+            {
+                if (!weakPoint.IsAvailable) return;
+                if (weakPoint.ResolveHit(Damage, OwnerTeam, out int weakDamage))
+                {
+                    Health target = weakPoint.TargetHealth;
+                    if (target != null)
+                        DamageResolved?.Invoke(this, target, weakDamage, target.IsDead);
+                    VisualFactory.MicroBurst(transform.position, Color.Lerp(_color, Color.white, 0.48f), 0.92f);
+                    Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, Ammo == AmmoType.Explosive, false);
+                    Destroy(gameObject);
+                }
+                return;
+            }
+
             var health = other.GetComponent<Health>();
             if (health != null)
             {
