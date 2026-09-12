@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v5-2"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-91.4%25-2ea043?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-32%2F35-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V5.2%20COMPLETE-7c3aed?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v5-3"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-84.2%25-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-32%2F38-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V5.3%20IN%20PROGRESS-7c3aed?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-██████████████████░░ 91.4%
+█████████████████░░░ 84.2%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **32** | **3** | **35** | **91.4%** |
+| **32** | **6** | **38** | **84.2%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -72,8 +72,13 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] New production presentation obeys FULL/BALANCED/SURVIVAL performance budgets and degrades cleanly under mass-battle pressure.
 - [x] Production presentation has automated runtime verification for required audio resources and class-signature installation.
 
+## v5.3 — Expanded Campaign, Boss Contracts & Challenge Modes — IN PROGRESS
+- [ ] Sector operations add new replayable combat pressure packages across the 100-round campaign without replacing existing campaign authority.
+- [ ] Challenge contracts create optional high-risk objectives with real success/failure tracking and War Bond rewards.
+- [ ] Boss rounds receive additional contract modifiers that materially alter endurance, pressure and weak-point combat while preserving Boss Legend authority.
+- [ ] A Windows runtime verification gate proves sector operations, challenge contracts and boss-contract installation in the packaged development EXE.
+
 ## v5.3+ — Post-demo expansion
-- [ ] Expanded campaign variants and additional boss/challenge mode package.
 - [ ] Achievement/distribution integration after profile format is stable.
 - [ ] Player feedback-driven difficulty/balance pass after public telemetry and playtesting.
 
