@@ -11,26 +11,27 @@ This roadmap tracks large playable milestones. Small cosmetic-only releases are 
 - Development-only late-round stress harness: direct round 80/90/100 jumps, pressure-wave injection and pool/GC/FPS telemetry.
 - Goal achieved: the heaviest campaign combat can be profiled repeatedly.
 
-### v4.8 — Demo Stability & Runtime Hardening — CURRENT MILESTONE
+### v4.8 — Demo Stability & Runtime Hardening — COMPLETE
 - Projectile pool lifecycle validation, stale-reference pruning and bounded integrity telemetry.
 - Persistent Runtime Stability Director watching authoritative campaign, registry and pool state.
 - Conservative self-healing for repeated stale registry references and orphaned active projectiles after gameplay ends.
 - Development-only automated F5 soak gate covering rounds 80/90/100 with injected heavy pressure waves.
 - Soak summary records FPS, managed-memory pressure, pool reuse and runtime repair/warning deltas.
-- Goal: stable 100-round gameplay foundation suitable for a demo candidate.
+- Goal achieved: stable 100-round gameplay foundation suitable for a demo candidate.
 
-### v4.9 — Demo UX, Settings & First-Run Polish — NEXT
-- Final main menu / pause / settings flow.
-- Graphics quality presets tied to WarfarePerformanceGovernor budgets.
-- Audio volume controls, display mode/resolution, controls reference and accessibility/readability pass.
-- Demo-facing HUD cleanup and clear version/build identity.
-- First-run flow requiring no developer keys or knowledge.
-- Goal: game can be handed to a player as a normal Windows game.
+### v4.9 — Demo UX, Settings & First-Run Polish — CURRENT MILESTONE
+- Full player-facing main menu, pause overlay, replay/end screen and Windows exit path.
+- First-run onboarding explaining the objective, supply tanks, ammunition and essential controls.
+- Persistent graphics presets, fullscreen/windowed mode, resolution selection, V-Sync, FPS cap and master volume.
+- Graphics presets are integrated with WarfarePerformanceGovernor budget floors while dynamic load protection remains active.
+- Dedicated controls reference and clear pre-demo build identity.
+- Goal: game can be handed to a player as a normal Windows game without developer knowledge.
 
-### v5.0 — PUBLIC DEMO CANDIDATE
+### v5.0 — PUBLIC DEMO CANDIDATE — NEXT
 - Full Windows x64 development/release CI validation.
-- Clean launch -> play -> pause/settings -> campaign -> restart/exit smoke path.
-- Late-round stress/soak acceptance pass.
+- Add a demo smoke gate covering clean launch -> first-run -> menu -> play -> pause/settings -> resume -> restart/end -> exit paths.
+- Run the late-round 80/90/100 stress/soak acceptance pass against the demo-candidate branch.
+- Final demo-facing HUD/readability cleanup only where it removes genuine usability blockers.
 - Package as a normal Windows ZIP containing the executable and Unity runtime data.
 - Publish only after green CI and release-candidate validation.
 
