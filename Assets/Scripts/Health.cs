@@ -15,6 +15,7 @@ namespace TankRevival
         public Team Team { get; private set; }
         public int Current { get; private set; }
         public int Maximum { get; private set; }
+        public int Max => Maximum;
         public float InvulnerableUntil { get; set; }
         public bool IsDead { get; private set; }
 
