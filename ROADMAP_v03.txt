@@ -1,1 +1,15 @@
-v0.3 target after v0.2 stability feedback: richer arena hazards, stronger biome identity, controller support, audio mix tuning, additional boss presentation and player progression.
+Tank Revival: Orzeł Overdrive — legacy v0.3 roadmap
+
+Current project roadmap: ROADMAP.md
+
+Legacy v0.3 target progress: 5 / 6 complete — 83.3%
+[█████████████████░░░] 83.3%
+
+[x] richer arena hazards
+[x] stronger biome identity foundation
+[ ] controller/gamepad support
+[x] audio mix tuning foundation
+[x] additional boss presentation
+[x] player progression
+
+This file is retained as historical v0.3 scope. Ongoing project progress is tracked in ROADMAP.md.
