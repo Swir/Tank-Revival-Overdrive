@@ -5,7 +5,7 @@ namespace TankRevival
 {
     /// <summary>
     /// Production hardening layer. Converts measured frame pressure into shared runtime budgets.
-    /// v4.6 also publishes budget transitions and exposes registry/FX telemetry for mass-battle tuning.
+    /// v4.9 also honours the player-selected demo graphics floor while preserving adaptive escalation.
     /// It never changes combat damage, AI decisions, spawn authority or campaign state.
     /// </summary>
     [DefaultExecutionOrder(-9000)]
@@ -48,7 +48,7 @@ namespace TankRevival
         private static void Install()
         {
             if (FindAnyObjectByType<WarfarePerformanceGovernor>() != null) return;
-            var go = new GameObject("WarfarePerformanceGovernor_v4_6");
+            var go = new GameObject("WarfarePerformanceGovernor_v4_9");
             DontDestroyOnLoad(go);
             go.AddComponent<WarfarePerformanceGovernor>();
         }
@@ -102,7 +102,9 @@ namespace TankRevival
             bool criticalLoad = _smoothedFps < 34f || _smoothedMs > 31f || enemies >= 38 || units >= 60;
             bool healthy = _smoothedFps > 57f && _smoothedMs < 18.5f && enemies < 24 && units < 40;
 
-            BudgetTier desired = criticalLoad ? BudgetTier.Survival : highLoad ? BudgetTier.Balanced : BudgetTier.Full;
+            BudgetTier dynamicTier = criticalLoad ? BudgetTier.Survival : highLoad ? BudgetTier.Balanced : BudgetTier.Full;
+            BudgetTier presetFloor = DemoPlayerSettings.MinimumBudgetTier;
+            BudgetTier desired = (BudgetTier)Mathf.Max((int)dynamicTier, (int)presetFloor);
 
             if ((int)desired > (int)_tier)
             {
@@ -111,15 +113,17 @@ namespace TankRevival
                 return;
             }
 
-            if (!healthy)
+            // A player-selected budget floor is authoritative for presentation density, but the
+            // governor may always escalate further when frame pressure becomes critical.
+            if ((int)_tier > (int)desired && (int)_tier > (int)presetFloor && healthy && now - _stableSince >= 5.5f && now - _lastTierChange >= 4f)
             {
-                _stableSince = now;
+                BudgetTier recovery = _tier == BudgetTier.Survival ? BudgetTier.Balanced : BudgetTier.Full;
+                if ((int)recovery < (int)presetFloor) recovery = presetFloor;
+                SetTier(recovery, now);
                 return;
             }
 
-            if (now - _stableSince < 5.5f || now - _lastTierChange < 4f) return;
-            if (_tier == BudgetTier.Survival) SetTier(BudgetTier.Balanced, now);
-            else if (_tier == BudgetTier.Balanced) SetTier(BudgetTier.Full, now);
+            if (!healthy) _stableSince = now;
         }
 
         private void SetTier(BudgetTier tier, float now)
@@ -134,15 +138,16 @@ namespace TankRevival
         {
             if (!_showTelemetry) return;
 
-            float width = 336f;
-            float height = 158f;
+            float width = 360f;
+            float height = 176f;
             Rect panel = new Rect(Screen.width - width - 18f, 18f, width, height);
             GUI.Box(panel, string.Empty);
 
             GUILayout.BeginArea(new Rect(panel.x + 12f, panel.y + 9f, width - 24f, height - 18f));
-            GUILayout.Label("v4.6 MASS-BATTLE TELEMETRY  [F3]");
+            GUILayout.Label("v4.9 MASS-BATTLE TELEMETRY  [F3]");
             GUILayout.Label("FPS  " + _smoothedFps.ToString("0.0") + "   FRAME  " + _smoothedMs.ToString("0.0") + " ms");
             GUILayout.Label("BUDGET  " + _tier.ToString().ToUpperInvariant() + "   FX  " + FxDensityMultiplier.ToString("0.00"));
+            GUILayout.Label("PLAYER PRESET  " + DemoPlayerSettings.QualityName + "   FLOOR  " + DemoPlayerSettings.MinimumBudgetTier.ToString().ToUpperInvariant());
             GUILayout.Label("REGISTRY  " + RuntimeBattleRegistry.RegisteredHealthCount + " units / " + RuntimeBattleRegistry.RegisteredEnemyCount + " enemies   REV " + RuntimeBattleRegistry.Revision);
             GUILayout.Label("ROSTER  " + CombatRoster.LivingEnemyCount + " alive   TRACK CAP  " + TrackMarkCap);
             GUILayout.Label("FX TRAILS  +" + MassBattleFxBudget.TrailsAccepted + " / -" + MassBattleFxBudget.TrailsRejected +
