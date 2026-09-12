@@ -7,13 +7,16 @@ namespace TankRevival
     {
         private Rigidbody2D _body;
         private Health _health;
+        private EnemyTank _enemy;
         private Vector2 _lastPosition;
         private bool _primed;
+        private TankGame _game;
 
         private void Awake()
         {
             _body = GetComponent<Rigidbody2D>();
             _health = GetComponent<Health>();
+            _enemy = GetComponent<EnemyTank>();
         }
 
         private void OnEnable()
@@ -33,12 +36,20 @@ namespace TankRevival
                 return;
             }
 
-            float multiplier = TacticalTerrainMap.MobilityMultiplierAt(now, _health.Team);
             Vector2 delta = now - _lastPosition;
-            if (multiplier < 0.999f && delta.sqrMagnitude > 0.000001f)
+            if (_enemy != null && delta.sqrMagnitude > 0.000001f)
+            {
+                if (_game == null) _game = FindAnyObjectByType<TankGame>();
+                if (_game != null && _game.IsPlaying)
+                    delta = EnemyTerrainIntelligence.SteerDelta(_enemy, _lastPosition, delta, _game.PlayerPosition, _game.BasePosition);
+            }
+
+            float multiplier = TacticalTerrainMap.MobilityMultiplierAt(now, _health.Team);
+            if (delta.sqrMagnitude > 0.000001f)
             {
                 Vector2 corrected = _lastPosition + delta * multiplier;
-                _body.position = corrected;
+                if ((corrected - now).sqrMagnitude > 0.0000001f)
+                    _body.position = corrected;
                 now = corrected;
             }
 
