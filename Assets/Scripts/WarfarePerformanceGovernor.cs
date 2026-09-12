@@ -1,11 +1,12 @@
+using System;
 using UnityEngine;
 
 namespace TankRevival
 {
     /// <summary>
-    /// v4.5 production hardening layer. Converts measured frame pressure into shared runtime budgets
-    /// consumed by presentation/caching systems. It never changes combat damage, AI decisions, spawn
-    /// authority or campaign state.
+    /// Production hardening layer. Converts measured frame pressure into shared runtime budgets.
+    /// v4.6 also publishes budget transitions and exposes registry/FX telemetry for mass-battle tuning.
+    /// It never changes combat damage, AI decisions, spawn authority or campaign state.
     /// </summary>
     [DefaultExecutionOrder(-9000)]
     public sealed class WarfarePerformanceGovernor : MonoBehaviour
@@ -19,12 +20,13 @@ namespace TankRevival
 
         public static WarfarePerformanceGovernor Instance { get; private set; }
         public static BudgetTier Tier => Instance != null ? Instance._tier : BudgetTier.Full;
-        public static float RosterRefreshInterval => Tier == BudgetTier.Survival ? 0.62f : Tier == BudgetTier.Balanced ? 0.42f : 0.30f;
         public static int TrackMarkCap => Tier == BudgetTier.Survival ? 64 : Tier == BudgetTier.Balanced ? 108 : 180;
         public static float TrackMarkDistance => Tier == BudgetTier.Survival ? 0.74f : Tier == BudgetTier.Balanced ? 0.50f : 0.36f;
         public static float TrackMarkInterval => Tier == BudgetTier.Survival ? 0.13f : Tier == BudgetTier.Balanced ? 0.085f : 0.055f;
         public static float WearSparkMultiplier => Tier == BudgetTier.Survival ? 0.45f : Tier == BudgetTier.Balanced ? 0.72f : 1f;
         public static bool AllowAmbientWear => Tier != BudgetTier.Survival;
+        public static float FxDensityMultiplier => Tier == BudgetTier.Survival ? 0.42f : Tier == BudgetTier.Balanced ? 0.68f : 1f;
+        public static event Action<BudgetTier> BudgetChanged;
 
         private const float WindowSeconds = 1.35f;
         private BudgetTier _tier = BudgetTier.Full;
@@ -46,7 +48,7 @@ namespace TankRevival
         private static void Install()
         {
             if (FindAnyObjectByType<WarfarePerformanceGovernor>() != null) return;
-            var go = new GameObject("WarfarePerformanceGovernor_v4_5");
+            var go = new GameObject("WarfarePerformanceGovernor_v4_6");
             DontDestroyOnLoad(go);
             go.AddComponent<WarfarePerformanceGovernor>();
         }
@@ -95,13 +97,13 @@ namespace TankRevival
         {
             float now = Time.unscaledTime;
             int enemies = CombatRoster.LivingEnemyCount;
-            bool highLoad = _smoothedFps < 48f || _smoothedMs > 22f || enemies >= 26;
-            bool criticalLoad = _smoothedFps < 34f || _smoothedMs > 31f || enemies >= 38;
-            bool healthy = _smoothedFps > 57f && _smoothedMs < 18.5f && enemies < 24;
+            int units = RuntimeBattleRegistry.RegisteredHealthCount;
+            bool highLoad = _smoothedFps < 48f || _smoothedMs > 22f || enemies >= 26 || units >= 44;
+            bool criticalLoad = _smoothedFps < 34f || _smoothedMs > 31f || enemies >= 38 || units >= 60;
+            bool healthy = _smoothedFps > 57f && _smoothedMs < 18.5f && enemies < 24 && units < 40;
 
             BudgetTier desired = criticalLoad ? BudgetTier.Survival : highLoad ? BudgetTier.Balanced : BudgetTier.Full;
 
-            // Downshift fast under pressure. Upshift only after sustained recovery to avoid budget flapping.
             if ((int)desired > (int)_tier)
             {
                 SetTier(desired, now);
@@ -125,23 +127,26 @@ namespace TankRevival
             if (_tier == tier) return;
             _tier = tier;
             _lastTierChange = now;
+            BudgetChanged?.Invoke(_tier);
         }
 
         private void OnGUI()
         {
             if (!_showTelemetry) return;
 
-            float width = 306f;
-            float height = 132f;
+            float width = 336f;
+            float height = 158f;
             Rect panel = new Rect(Screen.width - width - 18f, 18f, width, height);
             GUI.Box(panel, string.Empty);
 
             GUILayout.BeginArea(new Rect(panel.x + 12f, panel.y + 9f, width - 24f, height - 18f));
-            GUILayout.Label("v4.5 WARFARE TELEMETRY  [F3]");
+            GUILayout.Label("v4.6 MASS-BATTLE TELEMETRY  [F3]");
             GUILayout.Label("FPS  " + _smoothedFps.ToString("0.0") + "   FRAME  " + _smoothedMs.ToString("0.0") + " ms");
-            GUILayout.Label("BUDGET  " + _tier.ToString().ToUpperInvariant());
-            GUILayout.Label("ENEMIES  " + CombatRoster.LivingEnemyCount + "   HEALTH UNITS  " + CombatRoster.HealthUnits.Length);
-            GUILayout.Label("ROSTER SCAN  " + RosterRefreshInterval.ToString("0.00") + " s   TRACK CAP  " + TrackMarkCap);
+            GUILayout.Label("BUDGET  " + _tier.ToString().ToUpperInvariant() + "   FX  " + FxDensityMultiplier.ToString("0.00"));
+            GUILayout.Label("REGISTRY  " + RuntimeBattleRegistry.RegisteredHealthCount + " units / " + RuntimeBattleRegistry.RegisteredEnemyCount + " enemies   REV " + RuntimeBattleRegistry.Revision);
+            GUILayout.Label("ROSTER  " + CombatRoster.LivingEnemyCount + " alive   TRACK CAP  " + TrackMarkCap);
+            GUILayout.Label("FX TRAILS  +" + MassBattleFxBudget.TrailsAccepted + " / -" + MassBattleFxBudget.TrailsRejected +
+                            "   MICRO  +" + MassBattleFxBudget.MicroAccepted + " / -" + MassBattleFxBudget.MicroRejected);
             GUILayout.EndArea();
         }
     }
