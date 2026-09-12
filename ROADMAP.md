@@ -86,7 +86,7 @@ When this gate is fully reached, release reporting must explicitly state:
 
 ## v5.5 — Combat Balance, Difficulty & Telemetry — IN PROGRESS
 - [ ] Deterministic 1–100 difficulty curve smooths enemy endurance across early/mid/late campaign and prevents late-round HP cliffs while preserving class identity.
-- [ ] Runtime balance telemetry records round band, enemy pressure, player/Eagle health pressure and completion/failure signals without replacing gameplay authority.
+- [ ] Runtime balance telemetry records round band, enemy pressure, player/Eagle health pressure and bounded-relief events without replacing gameplay authority.
 - [ ] Anti-spike safety policy provides tightly bounded Eagle recovery only after measurable pressure thresholds, never free invulnerability or enemy deletion.
 - [ ] Packaged Windows balance gate verifies tuning bounds, telemetry service installation and representative round 1/25/50/75/100 curve samples in the exact EXE.
 
