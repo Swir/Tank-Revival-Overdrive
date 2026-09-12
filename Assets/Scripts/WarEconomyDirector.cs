@@ -6,6 +6,7 @@ namespace TankRevival
     /// Persistent war economy. Surviving rounds earns War Bonds, while the player can spend
     /// them during combat on repairs, ordnance and emergency protection. Career rank and the
     /// v3.4 Logistics Command perk tree improve prices and reward yield.
+    /// v3.6 exposes a single authoritative reward path for battlefield mission directives.
     /// </summary>
     public sealed class WarEconomyDirector : MonoBehaviour
     {
@@ -22,6 +23,25 @@ namespace TankRevival
         private GUIStyle _header, _body, _small, _bannerStyle;
 
         public static int CurrentBonds => Mathf.Max(0, PlayerPrefs.GetInt(BondsKey, 0));
+
+        public static void AwardMissionBonds(int amount, string reason)
+        {
+            if (amount <= 0) return;
+            WarEconomyDirector director = FindAnyObjectByType<WarEconomyDirector>();
+            if (director != null)
+            {
+                director.AddBonds(amount);
+                director._banner = $"MISSION REWARD +{amount} BONDS // {reason}";
+                director._bannerUntil = Time.unscaledTime + 3.1f;
+                return;
+            }
+
+            int bonds = Mathf.Clamp(PlayerPrefs.GetInt(BondsKey, 0) + amount, 0, 9999);
+            int lifetime = Mathf.Clamp(PlayerPrefs.GetInt(LifetimeKey, 0) + amount, 0, 999999);
+            PlayerPrefs.SetInt(BondsKey, bonds);
+            PlayerPrefs.SetInt(LifetimeKey, lifetime);
+            PlayerPrefs.Save();
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
