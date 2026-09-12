@@ -36,14 +36,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(tr -d '\r\n' < VERSION)" = "v5.0.0-rc1"
+          test "$(tr -d '\r\n' < VERSION)" = "v5.0.0-rc2"
           test -f Assets/Scripts/DemoExperienceDirector.cs
           test -f Assets/Scripts/DemoAcceptanceGate.cs
+          test -f Assets/Scripts/DemoCISmokeProbe.cs
           test -f Assets/Scripts/RuntimeStabilityDirector.cs
           test -f Assets/Scripts/LateRoundStressHarness.cs
           test -f Assets/Scripts/ProjectilePool.cs
           grep -q "PUBLIC DEMO CANDIDATE" Assets/Editor/CIBuild.cs
           grep -q "BuildDemoCandidate" Assets/Editor/CIBuild.cs
+          grep -q -- "-demo-ci-smoke" Assets/Scripts/DemoCISmokeProbe.cs
           echo "Demo source gate passed."
 
       - name: Cache Unity Library
@@ -80,8 +82,8 @@ jobs:
           test -f "$root/DEMO_MANIFEST.txt"
           test -f "$root/README_DEMO.txt"
           grep -q "PUBLIC DEMO CANDIDATE" "$root/BUILD_INFO.txt"
-          grep -q "Build: 5.0.0-rc1" "$root/BUILD_INFO.txt"
-          grep -q "Demo candidate: 5.0.0-rc1" "$root/DEMO_MANIFEST.txt"
+          grep -q "Build: 5.0.0-rc2" "$root/BUILD_INFO.txt"
+          grep -q "Demo candidate: 5.0.0-rc2" "$root/DEMO_MANIFEST.txt"
           grep -q "Commit: $GITHUB_SHA" "$root/DEMO_MANIFEST.txt"
           test -s "$root/TankRevivalOverdrive.exe"
           echo "Windows demo candidate runtime gate passed."
@@ -90,7 +92,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          archive=TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc1-Windows-x64.zip
+          archive=TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-Windows-x64.zip
           cd build/StandaloneWindows64
           zip -r "../../$archive" .
           cd ../..
@@ -100,9 +102,77 @@ jobs:
       - name: Upload demo candidate artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc1-Windows-x64
+          name: TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-Windows-x64
           path: |
-            TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc1-Windows-x64.zip
-            TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc1-Windows-x64.zip.sha256
+            TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-Windows-x64.zip
+            TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-Windows-x64.zip.sha256
           if-no-files-found: error
+          retention-days: 14
+
+  windows-runtime-smoke:
+    name: Boot packaged EXE on Windows
+    needs: build-demo-candidate
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Download packaged candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-Windows-x64
+          path: candidate
+
+      - name: Verify checksum and extract
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          $zip = 'TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-Windows-x64.zip'
+          $expected = (Get-Content "$zip.sha256").Split(' ')[0].Trim()
+          $actual = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($expected.ToLowerInvariant() -ne $actual) { throw "Checksum mismatch: $expected != $actual" }
+          Expand-Archive $zip -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data directory missing after extraction' }
+
+      - name: Launch real standalone runtime smoke probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item DEMO_SMOKE_PASS.txt, DEMO_SMOKE_FAIL.txt, Player.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-demo-ci-smoke','-logFile','Player.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Standalone smoke probe timed out after 60 seconds'
+          }
+          if (Test-Path 'DEMO_SMOKE_FAIL.txt') {
+            Get-Content DEMO_SMOKE_FAIL.txt
+            if (Test-Path Player.log) { Get-Content Player.log -Tail 160 }
+            throw 'Runtime smoke probe reported FAIL'
+          }
+          if (!(Test-Path 'DEMO_SMOKE_PASS.txt')) {
+            if (Test-Path Player.log) { Get-Content Player.log -Tail 160 }
+            throw "Runtime exited without PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content DEMO_SMOKE_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Test-Path Player.log) {
+            if (Select-String -Path Player.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException' -Quiet) {
+              Get-Content Player.log -Tail 200
+              throw 'Blocking exception signature found in Player.log'
+            }
+          }
+          Write-Host 'Packaged Windows EXE boot/runtime smoke gate passed.'
+
+      - name: Upload runtime smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-smoke-diagnostics
+          path: |
+            candidate/runtime/DEMO_SMOKE_PASS.txt
+            candidate/runtime/DEMO_SMOKE_FAIL.txt
+            candidate/runtime/Player.log
+          if-no-files-found: ignore
           retention-days: 14
