@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v5-2"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-80.0%25-2ea043?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-28%2F35-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-IN%20PROGRESS-7c3aed?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-91.4%25-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-32%2F35-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V5.2%20COMPLETE-7c3aed?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████░░░░ 80.0%
+██████████████████░░ 91.4%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **28** | **7** | **35** | **80.0%** |
+| **32** | **3** | **35** | **91.4%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -66,11 +66,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Legacy high-score migration plus durable run/furthest-round profile statistics.
 - [x] Lifecycle-safe autosave on round transitions, focus loss, pause and application exit.
 
-## v5.2 — Production Art & Audio Overdrive Pass — IN PROGRESS
-- [ ] Authored runtime-loaded production audio assets replace/augment purely synthesized combat layers.
-- [ ] Enemy classes receive immediately readable silhouette/detail packages without changing combat colliders or authority.
-- [ ] New production presentation obeys FULL/BALANCED/SURVIVAL performance budgets and degrades cleanly under mass-battle pressure.
-- [ ] Production presentation has automated runtime verification for required audio resources and class-signature installation.
+## v5.2 — Production Art & Audio Overdrive Pass — COMPLETE
+- [x] Authored runtime-loaded production audio assets replace/augment purely synthesized combat layers.
+- [x] Enemy classes receive immediately readable silhouette/detail packages without changing combat colliders or authority.
+- [x] New production presentation obeys FULL/BALANCED/SURVIVAL performance budgets and degrades cleanly under mass-battle pressure.
+- [x] Production presentation has automated runtime verification for required audio resources and class-signature installation.
 
 ## v5.3+ — Post-demo expansion
 - [ ] Expanded campaign variants and additional boss/challenge mode package.
