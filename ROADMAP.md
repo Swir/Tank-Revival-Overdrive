@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v5-4"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.6%25-2ea043?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-40%2F41-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V5.4%20COMPLETE-2ea043?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v5-5"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-90.9%25-d29922?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-40%2F44-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V5.5%20IN%20PROGRESS-d29922?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-███████████████████░ 97.6%
+██████████████████░░ 90.9%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **40** | **1** | **41** | **97.6%** |
+| **40** | **4** | **44** | **90.9%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -84,8 +84,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Player-facing career/achievement overlay exposes progress, unlocked medals and lifetime records without interrupting combat.
 - [x] Packaged Windows runtime gate verifies career persistence, achievement unlocks and catalog integrity in the exact development EXE.
 
-## v5.4+ — Post-demo expansion
-- [ ] Player feedback-driven difficulty/balance pass after public telemetry and playtesting.
+## v5.5 — Combat Balance, Difficulty & Telemetry — IN PROGRESS
+- [ ] Deterministic 1–100 difficulty curve smooths enemy endurance across early/mid/late campaign and prevents late-round HP cliffs while preserving class identity.
+- [ ] Runtime balance telemetry records round band, enemy pressure, player/Eagle health pressure and completion/failure signals without replacing gameplay authority.
+- [ ] Anti-spike safety policy provides tightly bounded Eagle recovery only after measurable pressure thresholds, never free invulnerability or enemy deletion.
+- [ ] Packaged Windows balance gate verifies tuning bounds, telemetry service installation and representative round 1/25/50/75/100 curve samples in the exact EXE.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
