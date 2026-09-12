@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v5-6"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-91.7%25-d29922?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-44%2F48-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V5.6%20IN%20PROGRESS-d29922?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-48%2F48-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V5.6%20COMPLETE-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-██████████████████░░ 91.7%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **44** | **4** | **48** | **91.7%** |
+| **48** | **0** | **48** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -90,11 +90,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Anti-spike safety policy provides tightly bounded Eagle recovery only after measurable pressure thresholds, never free invulnerability or enemy deletion.
 - [x] Packaged Windows balance gate verifies tuning bounds, telemetry service installation and representative round 1/25/50/75/100 curve samples in the exact EXE.
 
-## v5.6 — Ace Commanders & Live Bounty Hunts — IN PROGRESS
-- [ ] Deterministic Ace promotion injects rare named elite threats across the 100-round campaign with bounded endurance scaling and immediately readable battlefield identity.
-- [ ] Ace archetypes add distinct live tactical pressure through precision, breaker, blitz and siege command attacks without replacing EnemyTank or Projectile authority.
-- [ ] Live bounty tracking exposes the active Ace objective, time pressure and War Bond payout through the existing war economy instead of a parallel reward currency.
-- [ ] Packaged Windows Ace gate boots the exact development EXE and verifies archetype catalog, promotion health mutation, tactical configuration and runtime service installation.
+## v5.6 — Ace Commanders & Live Bounty Hunts — COMPLETE
+- [x] Deterministic Ace promotion injects rare named elite threats across the 100-round campaign with bounded endurance scaling and immediately readable battlefield identity.
+- [x] Ace archetypes add distinct live tactical pressure through precision, breaker, blitz and siege command attacks without replacing EnemyTank or Projectile authority.
+- [x] Live bounty tracking exposes the active Ace objective, time pressure and War Bond payout through the existing war economy instead of a parallel reward currency.
+- [x] Packaged Windows Ace gate boots the exact development EXE and verifies archetype catalog, promotion health mutation, tactical configuration and runtime service installation.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
