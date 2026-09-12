@@ -1,13 +1,25 @@
 # Tank Revival: Orzeł Overdrive — Roadmap
 
+<!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
-## Overall progress
+<p align="center">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/windows-release.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/windows-release.yml/badge.svg"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-75.0%25-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-18%2F24-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-IN%20PROGRESS-7c3aed?style=for-the-badge">
+</p>
 
-**18 / 24 tracked roadmap deliverables complete — 75.0%**
+## 📊 Overall progress
 
-`███████████████░░░░░ 75.0%`
+```text
+███████████████░░░░░ 75.0%
+```
 
-This is an equal-weight, evidence-based tracker for the current project. An item is checked only when the capability is present in the repository or current documented build. Future polish and release goals stay unchecked until they are actually implemented and verified. Whenever a checkbox changes, recalculate this block.
+| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
+|---:|---:|---:|---:|
+| **18** | **6** | **24** | **75.0%** |
+
+> **Progress rule:** this is an equal-weight, evidence-based tracker. Update `[x]/[ ]` first, then update badges, numbers, percentage and the 20-segment bar. New major scope must be added as unchecked roadmap items before it can count toward completion.
 <!-- ROADMAP-PROGRESS:END -->
 
 ## Core campaign and combat
