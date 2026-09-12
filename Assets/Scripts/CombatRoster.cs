@@ -1,15 +1,17 @@
+using System;
 using UnityEngine;
 
 namespace TankRevival
 {
     /// <summary>
-    /// Shared scene roster for campaign systems. v2.3 extends the cache with living-enemy and
-    /// per-class counts so directors can reason about battlefield composition without extra scene scans.
+    /// Shared scene roster for campaign systems. v4.5 keeps the full-scene discovery centralized,
+    /// adapts refresh cadence to measured load and publishes one cache refresh event so presentation
+    /// systems no longer perform their own duplicate FindObjectsByType scans.
     /// </summary>
     public sealed class CombatRoster : MonoBehaviour
     {
-        private static EnemyTank[] _enemies = System.Array.Empty<EnemyTank>();
-        private static Health[] _healthUnits = System.Array.Empty<Health>();
+        private static EnemyTank[] _enemies = Array.Empty<EnemyTank>();
+        private static Health[] _healthUnits = Array.Empty<Health>();
         private static PlayerTank _player;
         private static Health _eagle;
         private static float _lastRefresh;
@@ -22,6 +24,7 @@ namespace TankRevival
         public static Health Eagle => _eagle;
         public static float LastRefresh => _lastRefresh;
         public static int LivingEnemyCount => _livingEnemies;
+        public static event Action Refreshed;
 
         public static int Count(EnemyKind kind)
         {
@@ -45,10 +48,16 @@ namespace TankRevival
             go.AddComponent<CombatRoster>();
         }
 
+        private void Start()
+        {
+            Refresh();
+            _nextRefresh = Time.unscaledTime + WarfarePerformanceGovernor.RosterRefreshInterval;
+        }
+
         private void Update()
         {
             if (Time.unscaledTime < _nextRefresh) return;
-            _nextRefresh = Time.unscaledTime + 0.30f;
+            _nextRefresh = Time.unscaledTime + WarfarePerformanceGovernor.RosterRefreshInterval;
             Refresh();
         }
 
@@ -56,21 +65,26 @@ namespace TankRevival
         {
             _enemies = FindObjectsByType<EnemyTank>(FindObjectsSortMode.None);
             _healthUnits = FindObjectsByType<Health>(FindObjectsSortMode.None);
+
+            // Resolve singleton-like scene actors from the already collected health/enemy graph first.
+            // Player lookup remains one inexpensive single-object query instead of another full array scan.
             _player = FindAnyObjectByType<PlayerTank>();
             _eagle = null;
             _livingEnemies = 0;
-            System.Array.Clear(_kindCounts, 0, _kindCounts.Length);
+            Array.Clear(_kindCounts, 0, _kindCounts.Length);
 
-            foreach (EnemyTank enemy in _enemies)
+            for (int i = 0; i < _enemies.Length; i++)
             {
+                EnemyTank enemy = _enemies[i];
                 if (enemy == null || enemy.Health == null || enemy.Health.IsDead) continue;
                 _livingEnemies++;
                 int index = (int)enemy.Kind;
                 if (index >= 0 && index < _kindCounts.Length) _kindCounts[index]++;
             }
 
-            foreach (Health health in _healthUnits)
+            for (int i = 0; i < _healthUnits.Length; i++)
             {
+                Health health = _healthUnits[i];
                 if (health != null && health.name == "ORZELEK_DEFENSE_CORE")
                 {
                     _eagle = health;
@@ -79,6 +93,7 @@ namespace TankRevival
             }
 
             _lastRefresh = Time.unscaledTime;
+            Refreshed?.Invoke();
         }
     }
 }
