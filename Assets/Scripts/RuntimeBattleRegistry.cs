@@ -5,9 +5,9 @@ using UnityEngine;
 namespace TankRevival
 {
     /// <summary>
-    /// Event-driven runtime registry for living combat actors. v4.6 removes the need for repeated
-    /// scene-wide discovery in the normal combat loop. Components register on initialization and
-    /// unregister on teardown; snapshots are rebuilt only when membership actually changes.
+    /// Event-driven runtime registry for living combat actors. v4.6 removes repeated scene-wide
+    /// discovery from the normal combat loop. Health is the universal lifecycle hook: when a unit
+    /// initializes, its EnemyTank/PlayerTank role is captured automatically; teardown unregisters it.
     /// </summary>
     public static class RuntimeBattleRegistry
     {
@@ -26,7 +26,6 @@ namespace TankRevival
         public static Health Eagle => _eagle;
         public static int RegisteredHealthCount => HealthSet.Count;
         public static int RegisteredEnemyCount => EnemySet.Count;
-
         public static event Action Changed;
 
         public static Health[] HealthSnapshot
@@ -50,56 +49,47 @@ namespace TankRevival
         public static void RegisterHealth(Health health)
         {
             if (health == null || !HealthSet.Add(health)) return;
+
             if (health.name == "ORZELEK_DEFENSE_CORE") _eagle = health;
+
+            EnemyTank enemy = health.GetComponent<EnemyTank>();
+            if (enemy != null && EnemySet.Add(enemy)) _enemyDirty = true;
+
+            PlayerTank player = health.GetComponent<PlayerTank>();
+            if (player != null) _player = player;
+
             _healthDirty = true;
             Bump();
         }
 
         public static void UnregisterHealth(Health health)
         {
-            if (health == null || !HealthSet.Remove(health)) return;
+            if (health == null) return;
+            bool changed = HealthSet.Remove(health);
             if (_eagle == health) _eagle = null;
+
+            EnemyTank enemy = health.GetComponent<EnemyTank>();
+            if (enemy != null && EnemySet.Remove(enemy))
+            {
+                _enemyDirty = true;
+                changed = true;
+            }
+
+            PlayerTank player = health.GetComponent<PlayerTank>();
+            if (_player == player) _player = null;
+
+            if (!changed) return;
             _healthDirty = true;
-            Bump();
-        }
-
-        public static void RegisterEnemy(EnemyTank enemy)
-        {
-            if (enemy == null || !EnemySet.Add(enemy)) return;
-            _enemyDirty = true;
-            Bump();
-        }
-
-        public static void UnregisterEnemy(EnemyTank enemy)
-        {
-            if (enemy == null || !EnemySet.Remove(enemy)) return;
-            _enemyDirty = true;
-            Bump();
-        }
-
-        public static void RegisterPlayer(PlayerTank player)
-        {
-            if (_player == player) return;
-            _player = player;
-            Bump();
-        }
-
-        public static void UnregisterPlayer(PlayerTank player)
-        {
-            if (_player != player) return;
-            _player = null;
             Bump();
         }
 
         public static void ReconcileOnce()
         {
-            // Safety bootstrap for legacy/scene-authored actors. Normal runtime membership is event-driven.
+            // One safety bootstrap for scene-authored/legacy actors. Normal runtime updates are event-driven.
             Health[] health = UnityEngine.Object.FindObjectsByType<Health>(FindObjectsSortMode.None);
-            EnemyTank[] enemies = UnityEngine.Object.FindObjectsByType<EnemyTank>(FindObjectsSortMode.None);
-            PlayerTank player = UnityEngine.Object.FindAnyObjectByType<PlayerTank>();
-
             HealthSet.Clear();
             EnemySet.Clear();
+            _player = null;
             _eagle = null;
 
             for (int i = 0; i < health.Length; i++)
@@ -108,15 +98,14 @@ namespace TankRevival
                 if (h == null) continue;
                 HealthSet.Add(h);
                 if (h.name == "ORZELEK_DEFENSE_CORE") _eagle = h;
-            }
 
-            for (int i = 0; i < enemies.Length; i++)
-            {
-                EnemyTank enemy = enemies[i];
+                EnemyTank enemy = h.GetComponent<EnemyTank>();
                 if (enemy != null) EnemySet.Add(enemy);
+
+                PlayerTank player = h.GetComponent<PlayerTank>();
+                if (player != null) _player = player;
             }
 
-            _player = player;
             _healthDirty = true;
             _enemyDirty = true;
             Bump();
