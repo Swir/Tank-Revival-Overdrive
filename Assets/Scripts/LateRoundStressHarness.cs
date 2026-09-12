@@ -6,11 +6,6 @@ using System.Reflection;
 
 namespace TankRevival
 {
-    /// <summary>
-    /// Development-only late-campaign stress harness. It never ships gameplay authority into a
-    /// release build; it drives the real TankGame private round/spawn pipeline through reflection so
-    /// developers can jump directly to the expensive rounds and inspect live pool/runtime pressure.
-    /// </summary>
     public sealed class LateRoundStressHarness : MonoBehaviour
     {
         private const BindingFlags InstancePrivate = BindingFlags.Instance | BindingFlags.NonPublic;
@@ -37,7 +32,6 @@ namespace TankRevival
         {
             float fps = Time.unscaledDeltaTime > 0.0001f ? 1f / Time.unscaledDeltaTime : 120f;
             _smoothedFps = Mathf.Lerp(_smoothedFps, fps, 0.08f);
-
             if (Input.GetKeyDown(KeyCode.F4)) _show = !_show;
             if (Input.GetKeyDown(KeyCode.F6)) JumpToRound(80);
             if (Input.GetKeyDown(KeyCode.F7)) JumpToRound(90);
@@ -107,7 +101,7 @@ namespace TankRevival
             float mb = GC.GetTotalMemory(false) / (1024f * 1024f);
             string line1 = $"v4.7 STRESS  FPS {_smoothedFps:0}  FRAME {(1000f / Mathf.Max(1f, _smoothedFps)):0.0}ms  GC {mb:0.0}MB";
             string line2 = $"POOL active {ProjectilePool.ActiveCount} / idle {ProjectilePool.InactiveCount} / made {ProjectilePool.CreatedCount} / reused {ProjectilePool.ReusedCount}";
-            string line3 = $"ROUTED {ProjectilePool.RoutedLegacySpawns}  REGISTRY {RuntimeBattleRegistry.Count}  ENEMY {CombatRoster.LivingEnemyCount}  FX {WarfarePerformanceGovernor.Tier}";
+            string line3 = $"ROUTED {ProjectilePool.RoutedLegacySpawns}  REGISTRY {RuntimeBattleRegistry.RegisteredHealthCount}  ENEMY {CombatRoster.LivingEnemyCount}  FX {WarfarePerformanceGovernor.Tier}";
             GUI.Box(new Rect(Screen.width - 480f, 10f, 470f, 106f), string.Empty);
             GUI.Label(new Rect(Screen.width - 468f, 18f, 450f, 22f), line1);
             GUI.Label(new Rect(Screen.width - 468f, 42f, 450f, 22f), line2);
