@@ -1,8 +1,8 @@
-# Tank Revival: Orzeł Overdrive — v5.0.0-rc1
+# Tank Revival: Orzeł Overdrive — v5.0.0-rc2
 
-## PUBLIC DEMO CANDIDATE
+## PUBLIC DEMO CANDIDATE — RUNTIME QUALIFICATION
 
-This milestone converts the previous development build pipeline into a verifiable Windows demo-candidate pipeline.
+RC2 upgrades the demo gate from file/package validation to an actual packaged Windows runtime boot test.
 
 ### Added
 - Dedicated non-development Windows x64 build entry point: `CIBuild.BuildDemoCandidate`.
@@ -11,12 +11,16 @@ This milestone converts the previous development build pipeline into a verifiabl
 - Runtime package validation for EXE, Unity data directory, build information, demo README and candidate manifest.
 - Exact GitHub commit embedded into `DEMO_MANIFEST.txt`.
 - SHA-256 checksum generated alongside the final Windows ZIP.
-- Development-only `DemoAcceptanceGate` on F10 that passively observes authoritative game states and records menu/play/pause/long-enough-play coverage without altering gameplay authority.
+- `DemoCISmokeProbe`: opt-in standalone runtime probe activated only by `-demo-ci-smoke`.
+- A second `windows-latest` CI job that downloads the exact packaged ZIP, validates its checksum, extracts it and launches the real `TankRevivalOverdrive.exe`.
+- Runtime smoke PASS requires authoritative `TankGame`, the player-facing `DemoExperienceDirector` shell and `RuntimeStabilityDirector` to exist in the packaged non-development build.
+- The Windows smoke job captures `Player.log`, rejects blocking crash/exception signatures and uploads diagnostics for failed qualification.
+- Development-only `DemoAcceptanceGate` on F10 remains available for longer interactive menu/play/pause/resume/soak acceptance.
 
 ### Packaging
 Expected artifact name:
 
-`TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc1-Windows-x64`
+`TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-Windows-x64`
 
 The ZIP must contain:
 - `TankRevivalOverdrive.exe`
@@ -27,9 +31,11 @@ The ZIP must contain:
 
 ### Release gate
 The candidate is not called a public demo until:
-1. Windows demo-candidate CI is green.
-2. The produced package passes a real Windows launch/menu/play/pause/settings/resume/end-or-soak smoke test.
-3. Late-round 80/90/100 stress/soak does not expose a blocking runtime defect.
+1. Linux Unity compile/package gate is green.
+2. The exact produced ZIP passes SHA-256 verification on a fresh Windows runner.
+3. The packaged EXE boots and produces `DEMO_SMOKE_PASS.txt` from the real standalone runtime.
+4. No blocking runtime exception signature is present in the captured Windows `Player.log`.
+5. Late-round 80/90/100 stress/soak does not expose a blocking runtime defect.
 
 Only after those conditions are satisfied should reporting state:
 
