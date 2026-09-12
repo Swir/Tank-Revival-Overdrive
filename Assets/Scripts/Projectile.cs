@@ -14,13 +14,53 @@ namespace TankRevival
         public static event Action<Projectile, Health, int, bool> DamageResolved;
 
         private Rigidbody2D _body;
+        private CircleCollider2D _collider;
+        private SpriteRenderer _glow;
+        private SpriteRenderer _core;
+        private SpriteRenderer _ring;
         private float _dieAt;
         private int _penetrations;
         private Color _color;
         private float _nextTrail;
+        private bool _initialized;
+        private bool _releasing;
+
+        private void Awake()
+        {
+            EnsureRuntimeParts();
+        }
+
+        private void EnsureRuntimeParts()
+        {
+            if (_collider == null)
+            {
+                _collider = GetComponent<CircleCollider2D>();
+                if (_collider == null) _collider = gameObject.AddComponent<CircleCollider2D>();
+                _collider.isTrigger = true;
+            }
+
+            if (_body == null)
+            {
+                _body = GetComponent<Rigidbody2D>();
+                if (_body == null) _body = gameObject.AddComponent<Rigidbody2D>();
+                _body.gravityScale = 0f;
+                _body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+                _body.constraints = RigidbodyConstraints2D.FreezeRotation;
+            }
+
+            if (_glow == null)
+                _glow = VisualFactory.Disc("ProjectileGlow", transform, new Vector2(0.30f, 0.30f), Color.white, Vector3.zero, 34).GetComponent<SpriteRenderer>();
+            if (_core == null)
+                _core = VisualFactory.Disc("ProjectileCore", transform, new Vector2(0.115f, 0.20f), Color.white, Vector3.zero, 35).GetComponent<SpriteRenderer>();
+            if (_ring == null)
+                _ring = VisualFactory.RingObject("ProjectileRing", transform, new Vector2(0.27f, 0.27f), Color.white, Vector3.zero, 33).GetComponent<SpriteRenderer>();
+        }
 
         public void Initialize(Vector2 direction, Team ownerTeam, int damage, float speed, Color color, AmmoType ammo = AmmoType.Basic)
         {
+            EnsureRuntimeParts();
+            _releasing = false;
+            _initialized = true;
             OwnerTeam = ownerTeam;
             Damage = Mathf.Max(1, damage);
             Ammo = ammo;
@@ -28,35 +68,49 @@ namespace TankRevival
             _penetrations = ammo == AmmoType.Plasma ? 3 : ammo == AmmoType.ArmorPiercing ? 1 : 0;
 
             float scale = ammo == AmmoType.Plasma ? 1.42f : ammo == AmmoType.Explosive ? 1.18f : 1f;
-            VisualFactory.Disc("ProjectileGlow", transform, new Vector2(0.30f, 0.30f) * scale, new Color(color.r, color.g, color.b, 0.25f), Vector3.zero, 34);
-            VisualFactory.Disc("ProjectileCore", transform, new Vector2(0.115f, 0.20f) * scale, color, Vector3.zero, 35);
-            if (ammo == AmmoType.Plasma || ammo == AmmoType.EMP)
-                VisualFactory.RingObject("ProjectileRing", transform, new Vector2(0.27f, 0.27f) * scale, new Color(color.r, color.g, color.b, 0.74f), Vector3.zero, 33);
+            _glow.transform.localScale = new Vector3(0.30f * scale, 0.30f * scale, 1f);
+            _core.transform.localScale = new Vector3(0.115f * scale, 0.20f * scale, 1f);
+            _ring.transform.localScale = new Vector3(0.27f * scale, 0.27f * scale, 1f);
+            _glow.color = new Color(color.r, color.g, color.b, 0.25f);
+            _core.color = color;
+            _ring.color = new Color(color.r, color.g, color.b, 0.74f);
+            _ring.gameObject.SetActive(ammo == AmmoType.Plasma || ammo == AmmoType.EMP);
+
+            _collider.radius = ammo == AmmoType.Plasma ? 0.13f : 0.095f;
+            _collider.enabled = true;
+            _body.simulated = true;
 
             Vector2 shotDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.up;
             float angle = Mathf.Atan2(shotDirection.y, shotDirection.x) * Mathf.Rad2Deg - 90f;
             transform.rotation = Quaternion.Euler(0f, 0f, angle);
-
-            var collider = gameObject.AddComponent<CircleCollider2D>();
-            collider.radius = ammo == AmmoType.Plasma ? 0.13f : 0.095f;
-            collider.isTrigger = true;
-
-            _body = gameObject.AddComponent<Rigidbody2D>();
-            _body.gravityScale = 0f;
-            _body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            _body.constraints = RigidbodyConstraints2D.FreezeRotation;
             _body.linearVelocity = shotDirection * speed;
+            _body.angularVelocity = 0f;
 
             _dieAt = Time.time + 5f;
             _nextTrail = Time.time;
             ShotSpawned3D?.Invoke(this, transform.position, shotDirection, OwnerTeam, Ammo);
         }
 
+        public void PrepareForPool()
+        {
+            _initialized = false;
+            _releasing = true;
+            if (_body != null)
+            {
+                _body.linearVelocity = Vector2.zero;
+                _body.angularVelocity = 0f;
+                _body.simulated = false;
+            }
+            if (_collider != null) _collider.enabled = false;
+            if (_ring != null) _ring.gameObject.SetActive(false);
+        }
+
         private void Update()
         {
+            if (!_initialized) return;
             if (Time.time >= _dieAt)
             {
-                Destroy(gameObject);
+                Recycle();
                 return;
             }
 
@@ -75,6 +129,8 @@ namespace TankRevival
 
         private void OnTriggerEnter2D(Collider2D other)
         {
+            if (!_initialized || _releasing) return;
+
             var weakPoint = other.GetComponent<BossWeakPoint>();
             if (weakPoint != null && OwnerTeam == Team.Player)
             {
@@ -87,7 +143,7 @@ namespace TankRevival
                     if (MassBattleFxBudget.TryConsumeMicroFx(true))
                         VisualFactory.MicroBurst(transform.position, Color.Lerp(_color, Color.white, 0.48f), 0.92f);
                     Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, Ammo == AmmoType.Explosive, false);
-                    Destroy(gameObject);
+                    Recycle();
                 }
                 return;
             }
@@ -106,7 +162,7 @@ namespace TankRevival
                     if (ricochet)
                     {
                         Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, false, true);
-                        Destroy(gameObject);
+                        Recycle();
                         return;
                     }
 
@@ -136,7 +192,7 @@ namespace TankRevival
                     return;
                 }
 
-                Destroy(gameObject);
+                Recycle();
                 return;
             }
 
@@ -151,7 +207,7 @@ namespace TankRevival
             {
                 Detonate(null);
                 Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, true, false);
-                Destroy(gameObject);
+                Recycle();
                 return;
             }
 
@@ -168,7 +224,14 @@ namespace TankRevival
                 BattleAudio.PlayGlobal(SoundCue.Ricochet, 0.42f, 0.08f);
 
             Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, false, steel);
-            Destroy(gameObject);
+            Recycle();
+        }
+
+        private void Recycle()
+        {
+            if (_releasing) return;
+            _releasing = true;
+            ProjectilePool.Release(this);
         }
 
         private bool CanPenetrate()
@@ -198,8 +261,8 @@ namespace TankRevival
             VisualFactory.Explosion(transform.position, _color, 0.95f);
             BattleAudio.PlayGlobal(SoundCue.ExplosionSmall, 0.62f, 0.05f);
 
-            var hits = Physics2D.OverlapCircleAll(transform.position, radius);
-            foreach (var hit in hits)
+            Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, radius);
+            foreach (Collider2D hit in hits)
             {
                 var health = hit.GetComponent<Health>();
                 if (health != null && health != primary && health.Team != OwnerTeam)
@@ -213,6 +276,11 @@ namespace TankRevival
                 if (obstacle != null && obstacle.Kind == ObstacleKind.Brick)
                     obstacle.Hit(Mathf.Max(1, Damage), transform.position);
             }
+        }
+
+        private void OnDestroy()
+        {
+            ProjectilePool.Forget(this);
         }
     }
 }
