@@ -22,6 +22,11 @@ namespace TankRevival
             var presentation = root.AddComponent<ImpactScar3DPresentation>();
             presentation.Initialize(size, tint);
 
+            // v3.8: artillery and mine scars are now persistent tactical terrain.
+            // The visual scar remains the lifetime owner, so the mobility field disappears
+            // naturally when the existing bounded destruction queue trims old impacts.
+            root.AddComponent<TacticalTerrainField>().Initialize(TacticalTerrainKind.Crater, size * 0.52f, 0.82f, 0f, 0.97f);
+
             Scars.Enqueue(root);
             Trim();
         }
