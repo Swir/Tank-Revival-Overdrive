@@ -27,18 +27,21 @@ This roadmap tracks large playable milestones. Small cosmetic-only releases are 
 - Dedicated controls reference and clear pre-demo build identity.
 - Goal achieved: game can be handed to a player as a normal Windows game without developer knowledge.
 
-### v5.0 — PUBLIC DEMO CANDIDATE — CURRENT (RC2)
+### v5.0 — PUBLIC DEMO CANDIDATE — CURRENT (RC3)
 - Dedicated non-development Windows x64 candidate build path in CIBuild.
 - Separate Demo Candidate Windows workflow, independent from ordinary development artifact packaging.
 - Source gate validates required demo/stability/pooling systems and exact RC version before Unity build starts.
 - Package gate validates executable, Unity data directory, BUILD_INFO, README_DEMO and DEMO_MANIFEST.
 - Candidate manifest records the exact GitHub commit used to produce the ZIP.
 - ZIP receives a SHA-256 checksum and a demo-specific artifact name.
-- RC2 adds a packaged Windows runtime qualification stage: the exact ZIP is downloaded on `windows-latest`, checksum-verified, extracted and the real standalone EXE is launched.
+- RC2 added a packaged Windows runtime qualification stage: the exact ZIP is downloaded on `windows-latest`, checksum-verified, extracted and the real standalone EXE is launched.
 - `DemoCISmokeProbe` is enabled only with `-demo-ci-smoke` and requires live `TankGame`, player-facing demo shell and Runtime Stability Director before writing a PASS marker and exiting cleanly.
-- Windows qualification also captures Player.log and rejects blocking crash/exception signatures.
-- Development-only F10 acceptance overlay remains available for longer interactive menu -> play -> pause -> resume/soak confirmation.
-- Final acceptance remains: green compile/package CI + green packaged Windows boot gate + no blocker from late-round 80/90/100 soak.
+- RC3 adds `DemoCISoakProbe`, enabled only with `-demo-ci-soak`, which drives the same packaged standalone through rounds 80/90/100 and injects Heavy/Siege/Sniper/Elite pressure at every stage.
+- The RC3 soak gate validates authoritative campaign continuity, projectile-pool integrity, Runtime Stability health, and zero new warning/repair/pool-fault deltas.
+- FPS and managed-memory peaks are recorded as diagnostics but are not used as hard CI thresholds because hosted Windows runners are not stable performance-reference machines.
+- Both standalone runtime jobs capture Player.log and reject blocking crash/exception signatures.
+- Development-only F10 acceptance overlay remains available for longer interactive menu -> play -> pause -> resume confirmation.
+- Final acceptance is now: green compile/package CI + green packaged Windows boot gate + green packaged late-round 80/90/100 soak gate.
 
 When this gate is fully reached, release reporting must explicitly state:
 
@@ -60,3 +63,4 @@ When this gate is fully reached, release reporting must explicitly state:
 6. Demo-facing releases must pass both compile/package CI and explicit runtime stability/smoke gates.
 7. A public demo ZIP must be reproducibly attributable to its exact commit and checksum.
 8. A demo candidate is not release-ready until the packaged EXE itself boots on a fresh Windows runner.
+9. A public demo is not release-ready until that same packaged EXE also passes automated late-round 80/90/100 runtime qualification.
