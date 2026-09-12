@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v5-4"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-87.8%25-2ea043?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-36%2F41-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V5.4%20IN%20PROGRESS-7c3aed?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.6%25-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-40%2F41-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V5.4%20COMPLETE-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-██████████████████░░ 87.8%
+███████████████████░ 97.6%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **36** | **5** | **41** | **87.8%** |
+| **40** | **1** | **41** | **97.6%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -78,11 +78,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Boss rounds receive additional contract modifiers that materially alter endurance, pressure and weak-point combat while preserving Boss Legend authority.
 - [x] A Windows runtime verification gate proves sector operations, challenge contracts and boss-contract installation in the packaged development EXE.
 
-## v5.4 — Career Records & Achievements — IN PROGRESS
-- [ ] Durable career journal tracks real enemy kills, boss kills, runs, round milestones and lifetime combat records without replacing PlayerProfileDirector authority.
-- [ ] Achievement catalog unlocks from authoritative gameplay observations and persists unlock state across sessions.
-- [ ] Player-facing career/achievement overlay exposes progress, unlocked medals and lifetime records without interrupting combat.
-- [ ] Packaged Windows runtime gate verifies career persistence, achievement unlocks and catalog integrity in the exact development EXE.
+## v5.4 — Career Records & Achievements — COMPLETE
+- [x] Durable career journal tracks real enemy kills, boss kills, runs, round milestones and lifetime combat records without replacing PlayerProfileDirector authority.
+- [x] Achievement catalog unlocks from authoritative gameplay observations and persists unlock state across sessions.
+- [x] Player-facing career/achievement overlay exposes progress, unlocked medals and lifetime records without interrupting combat.
+- [x] Packaged Windows runtime gate verifies career persistence, achievement unlocks and catalog integrity in the exact development EXE.
 
 ## v5.4+ — Post-demo expansion
 - [ ] Player feedback-driven difficulty/balance pass after public telemetry and playtesting.
