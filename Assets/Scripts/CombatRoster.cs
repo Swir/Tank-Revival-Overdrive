@@ -4,9 +4,9 @@ using UnityEngine;
 namespace TankRevival
 {
     /// <summary>
-    /// Shared scene roster for campaign systems. v4.5 keeps the full-scene discovery centralized,
-    /// adapts refresh cadence to measured load and publishes one cache refresh event so presentation
-    /// systems no longer perform their own duplicate FindObjectsByType scans.
+    /// Shared combat snapshot. v4.6 consumes RuntimeBattleRegistry membership instead of repeatedly
+    /// scanning the Unity scene. Arrays are rebuilt only when units spawn/despawn; per-kind counters
+    /// are recalculated from the cached snapshot.
     /// </summary>
     public sealed class CombatRoster : MonoBehaviour
     {
@@ -17,6 +17,8 @@ namespace TankRevival
         private static float _lastRefresh;
         private static int _livingEnemies;
         private static readonly int[] _kindCounts = new int[8];
+        private bool _pendingRefresh;
+        private int _lastRevision = -1;
 
         public static EnemyTank[] Enemies => _enemies;
         public static Health[] HealthUnits => _healthUnits;
@@ -24,6 +26,7 @@ namespace TankRevival
         public static Health Eagle => _eagle;
         public static float LastRefresh => _lastRefresh;
         public static int LivingEnemyCount => _livingEnemies;
+        public static int RegistryRevision => RuntimeBattleRegistry.Revision;
         public static event Action Refreshed;
 
         public static int Count(EnemyKind kind)
@@ -37,8 +40,6 @@ namespace TankRevival
             return Count(EnemyKind.Heavy) + Count(EnemyKind.Siege) + Count(EnemyKind.Elite) + Count(EnemyKind.Boss) > 0;
         }
 
-        private float _nextRefresh;
-
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
@@ -48,28 +49,43 @@ namespace TankRevival
             go.AddComponent<CombatRoster>();
         }
 
+        private void OnEnable()
+        {
+            RuntimeBattleRegistry.Changed -= OnRegistryChanged;
+            RuntimeBattleRegistry.Changed += OnRegistryChanged;
+            _pendingRefresh = true;
+        }
+
         private void Start()
         {
-            Refresh();
-            _nextRefresh = Time.unscaledTime + WarfarePerformanceGovernor.RosterRefreshInterval;
+            RuntimeBattleRegistry.ReconcileOnce();
+            RefreshFromRegistry();
         }
 
-        private void Update()
+        private void OnDisable()
         {
-            if (Time.unscaledTime < _nextRefresh) return;
-            _nextRefresh = Time.unscaledTime + WarfarePerformanceGovernor.RosterRefreshInterval;
-            Refresh();
+            RuntimeBattleRegistry.Changed -= OnRegistryChanged;
         }
 
-        private static void Refresh()
+        private void OnRegistryChanged()
         {
-            _enemies = FindObjectsByType<EnemyTank>(FindObjectsSortMode.None);
-            _healthUnits = FindObjectsByType<Health>(FindObjectsSortMode.None);
+            _pendingRefresh = true;
+        }
 
-            // Resolve singleton-like scene actors from the already collected health/enemy graph first.
-            // Player lookup remains one inexpensive single-object query instead of another full array scan.
-            _player = FindAnyObjectByType<PlayerTank>();
-            _eagle = null;
+        private void LateUpdate()
+        {
+            if (!_pendingRefresh && _lastRevision == RuntimeBattleRegistry.Revision) return;
+            RefreshFromRegistry();
+        }
+
+        private void RefreshFromRegistry()
+        {
+            _pendingRefresh = false;
+            _lastRevision = RuntimeBattleRegistry.Revision;
+            _enemies = RuntimeBattleRegistry.EnemySnapshot;
+            _healthUnits = RuntimeBattleRegistry.HealthSnapshot;
+            _player = RuntimeBattleRegistry.Player;
+            _eagle = RuntimeBattleRegistry.Eagle;
             _livingEnemies = 0;
             Array.Clear(_kindCounts, 0, _kindCounts.Length);
 
@@ -80,16 +96,6 @@ namespace TankRevival
                 _livingEnemies++;
                 int index = (int)enemy.Kind;
                 if (index >= 0 && index < _kindCounts.Length) _kindCounts[index]++;
-            }
-
-            for (int i = 0; i < _healthUnits.Length; i++)
-            {
-                Health health = _healthUnits[i];
-                if (health != null && health.name == "ORZELEK_DEFENSE_CORE")
-                {
-                    _eagle = health;
-                    break;
-                }
             }
 
             _lastRefresh = Time.unscaledTime;
