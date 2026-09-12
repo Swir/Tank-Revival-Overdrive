@@ -18,8 +18,10 @@ namespace TankRevival
         private WarfarePerformanceGovernor.BudgetTier _tier;
 
         public int InstalledSignatureCount => _signatures.Count;
-        public int RequiredAudioAssetCount => 1;
-        public bool HeavyCannonAssetAvailable => Resources.Load<AudioClip>("TankRevivalProduction/Audio/HeavyCannon") != null;
+        public int RequiredAudioAssetCount => 2;
+        public bool AuthoredAudioAssetsAvailable =>
+            Resources.Load<AudioClip>("TankRevivalProduction/Audio/HeavyCannon") != null &&
+            Resources.Load<AudioClip>("TankRevivalProduction/Audio/BossAlarm") != null;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -102,6 +104,7 @@ namespace TankRevival
 
     public sealed class EnemyClassSignature : MonoBehaviour
     {
+        private static Sprite _unitSprite;
         private GameObject _root;
         private readonly List<GameObject> _optional = new List<GameObject>();
         private bool _configured;
@@ -133,43 +136,43 @@ namespace TankRevival
             switch (kind)
             {
                 case EnemyKind.Fast:
-                    AddBlock("SpeedFinL", new Vector3(-0.48f, 0.12f, -0.03f), new Vector3(0.13f, 0.62f, 0.10f), accent, false);
-                    AddBlock("SpeedFinR", new Vector3(0.48f, 0.12f, -0.03f), new Vector3(0.13f, 0.62f, 0.10f), accent, false);
-                    AddBlock("ScoutMast", new Vector3(0f, 0.28f, -0.06f), new Vector3(0.08f, 0.55f, 0.08f), primary, true);
+                    AddBlock("SpeedFinL", new Vector3(-0.48f, 0.12f, -0.03f), new Vector3(0.13f, 0.62f, 1f), accent, false);
+                    AddBlock("SpeedFinR", new Vector3(0.48f, 0.12f, -0.03f), new Vector3(0.13f, 0.62f, 1f), accent, false);
+                    AddBlock("ScoutMast", new Vector3(0f, 0.28f, -0.06f), new Vector3(0.08f, 0.55f, 1f), primary, true);
                     break;
                 case EnemyKind.Heavy:
-                    AddBlock("HeavySkirtL", new Vector3(-0.52f, -0.04f, -0.04f), new Vector3(0.22f, 0.92f, 0.12f), primary, false);
-                    AddBlock("HeavySkirtR", new Vector3(0.52f, -0.04f, -0.04f), new Vector3(0.22f, 0.92f, 0.12f), primary, false);
-                    AddBlock("HeavyMantlet", new Vector3(0f, 0.25f, -0.07f), new Vector3(0.62f, 0.20f, 0.14f), accent, true);
+                    AddBlock("HeavySkirtL", new Vector3(-0.52f, -0.04f, -0.04f), new Vector3(0.22f, 0.92f, 1f), primary, false);
+                    AddBlock("HeavySkirtR", new Vector3(0.52f, -0.04f, -0.04f), new Vector3(0.22f, 0.92f, 1f), primary, false);
+                    AddBlock("HeavyMantlet", new Vector3(0f, 0.25f, -0.07f), new Vector3(0.62f, 0.20f, 1f), accent, true);
                     break;
                 case EnemyKind.Sniper:
-                    AddBlock("Rangefinder", new Vector3(0f, 0.43f, -0.07f), new Vector3(0.76f, 0.10f, 0.10f), accent, false);
-                    AddBlock("RangefinderEyeL", new Vector3(-0.34f, 0.43f, -0.10f), new Vector3(0.10f, 0.18f, 0.08f), primary, true);
-                    AddBlock("RangefinderEyeR", new Vector3(0.34f, 0.43f, -0.10f), new Vector3(0.10f, 0.18f, 0.08f), primary, true);
+                    AddBlock("Rangefinder", new Vector3(0f, 0.43f, -0.07f), new Vector3(0.76f, 0.10f, 1f), accent, false);
+                    AddBlock("RangefinderEyeL", new Vector3(-0.34f, 0.43f, -0.10f), new Vector3(0.10f, 0.18f, 1f), primary, true);
+                    AddBlock("RangefinderEyeR", new Vector3(0.34f, 0.43f, -0.10f), new Vector3(0.10f, 0.18f, 1f), primary, true);
                     break;
                 case EnemyKind.Siege:
-                    AddBlock("SiegePlateL", new Vector3(-0.50f, 0.05f, -0.05f), new Vector3(0.28f, 0.98f, 0.14f), primary, false);
-                    AddBlock("SiegePlateR", new Vector3(0.50f, 0.05f, -0.05f), new Vector3(0.28f, 0.98f, 0.14f), primary, false);
-                    AddBlock("SiegeAmmoRack", new Vector3(0f, -0.48f, -0.06f), new Vector3(0.64f, 0.28f, 0.13f), accent, true);
+                    AddBlock("SiegePlateL", new Vector3(-0.50f, 0.05f, -0.05f), new Vector3(0.28f, 0.98f, 1f), primary, false);
+                    AddBlock("SiegePlateR", new Vector3(0.50f, 0.05f, -0.05f), new Vector3(0.28f, 0.98f, 1f), primary, false);
+                    AddBlock("SiegeAmmoRack", new Vector3(0f, -0.48f, -0.06f), new Vector3(0.64f, 0.28f, 1f), accent, true);
                     break;
                 case EnemyKind.Elite:
-                    AddBlock("EliteCommandDeck", new Vector3(0f, 0.22f, -0.07f), new Vector3(0.72f, 0.26f, 0.14f), primary, false);
-                    AddBlock("EliteAntennaL", new Vector3(-0.29f, 0.54f, -0.07f), new Vector3(0.06f, 0.58f, 0.06f), accent, true);
-                    AddBlock("EliteAntennaR", new Vector3(0.29f, 0.54f, -0.07f), new Vector3(0.06f, 0.58f, 0.06f), accent, true);
+                    AddBlock("EliteCommandDeck", new Vector3(0f, 0.22f, -0.07f), new Vector3(0.72f, 0.26f, 1f), primary, false);
+                    AddBlock("EliteAntennaL", new Vector3(-0.29f, 0.54f, -0.07f), new Vector3(0.06f, 0.58f, 1f), accent, true);
+                    AddBlock("EliteAntennaR", new Vector3(0.29f, 0.54f, -0.07f), new Vector3(0.06f, 0.58f, 1f), accent, true);
                     break;
                 case EnemyKind.Supply:
-                    AddBlock("SupplyBox", new Vector3(0f, -0.08f, -0.06f), new Vector3(0.72f, 0.62f, 0.13f), primary, false);
-                    AddBlock("SupplyMarkV", new Vector3(0f, -0.08f, -0.09f), new Vector3(0.13f, 0.46f, 0.05f), accent, false);
-                    AddBlock("SupplyMarkH", new Vector3(0f, -0.08f, -0.09f), new Vector3(0.46f, 0.13f, 0.05f), accent, false);
+                    AddBlock("SupplyBox", new Vector3(0f, -0.08f, -0.06f), new Vector3(0.72f, 0.62f, 1f), primary, false);
+                    AddBlock("SupplyMarkV", new Vector3(0f, -0.08f, -0.09f), new Vector3(0.13f, 0.46f, 1f), accent, false);
+                    AddBlock("SupplyMarkH", new Vector3(0f, -0.08f, -0.09f), new Vector3(0.46f, 0.13f, 1f), accent, false);
                     break;
                 case EnemyKind.Boss:
-                    AddBlock("BossPodL", new Vector3(-0.62f, 0.10f, -0.05f), new Vector3(0.30f, 0.92f, 0.16f), primary, false);
-                    AddBlock("BossPodR", new Vector3(0.62f, 0.10f, -0.05f), new Vector3(0.30f, 0.92f, 0.16f), primary, false);
-                    AddBlock("BossCrown", new Vector3(0f, 0.50f, -0.08f), new Vector3(0.82f, 0.18f, 0.15f), accent, false);
-                    AddBlock("BossCore", new Vector3(0f, 0.18f, -0.10f), new Vector3(0.28f, 0.28f, 0.08f), Color.white, true);
+                    AddBlock("BossPodL", new Vector3(-0.62f, 0.10f, -0.05f), new Vector3(0.30f, 0.92f, 1f), primary, false);
+                    AddBlock("BossPodR", new Vector3(0.62f, 0.10f, -0.05f), new Vector3(0.30f, 0.92f, 1f), primary, false);
+                    AddBlock("BossCrown", new Vector3(0f, 0.50f, -0.08f), new Vector3(0.82f, 0.18f, 1f), accent, false);
+                    AddBlock("BossCore", new Vector3(0f, 0.18f, -0.10f), new Vector3(0.28f, 0.28f, 1f), Color.white, true);
                     break;
                 default:
-                    AddBlock("BasicArmorBand", new Vector3(0f, 0.03f, -0.06f), new Vector3(0.78f, 0.13f, 0.12f), accent, true);
+                    AddBlock("BasicArmorBand", new Vector3(0f, 0.03f, -0.06f), new Vector3(0.78f, 0.13f, 1f), accent, true);
                     break;
             }
 
@@ -185,28 +188,25 @@ namespace TankRevival
 
         private void AddBlock(string name, Vector3 localPosition, Vector3 localScale, Color color, bool optional)
         {
-            GameObject block = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            block.name = name;
+            GameObject block = new GameObject(name);
             block.transform.SetParent(_root.transform, false);
             block.transform.localPosition = localPosition;
             block.transform.localScale = localScale;
 
-            Collider collider = block.GetComponent<Collider>();
-            if (collider != null) Destroy(collider);
-
-            Renderer renderer = block.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                Shader shader = Shader.Find("Sprites/Default");
-                if (shader != null)
-                {
-                    Material material = new Material(shader);
-                    material.color = color;
-                    renderer.sharedMaterial = material;
-                }
-            }
+            SpriteRenderer renderer = block.AddComponent<SpriteRenderer>();
+            renderer.sprite = GetUnitSprite();
+            renderer.color = color;
+            renderer.sortingOrder = 7;
 
             if (optional) _optional.Add(block);
+        }
+
+        private static Sprite GetUnitSprite()
+        {
+            if (_unitSprite != null) return _unitSprite;
+            _unitSprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f), 1f);
+            _unitSprite.name = "v5.2_ProductionSignatureUnitSprite";
+            return _unitSprite;
         }
 
         private static void GetPalette(EnemyKind kind, out Color primary, out Color accent)
