@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v5-7"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-92.3%25-d29922?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-48%2F52-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V5.7%20IN%20PROGRESS-d29922?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-52%2F52-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V5.7%20COMPLETE-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-██████████████████░░ 92.3%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **48** | **4** | **52** | **92.3%** |
+| **52** | **0** | **52** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -96,11 +96,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Live bounty tracking exposes the active Ace objective, time pressure and War Bond payout through the existing war economy instead of a parallel reward currency.
 - [x] Packaged Windows Ace gate boots the exact development EXE and verifies archetype catalog, promotion health mutation, tactical configuration and runtime service installation.
 
-## v5.7 — Boss Legends: Second Generation — IN PROGRESS
-- [ ] Second-generation boss doctrines make major boss encounters mechanically distinct through phase-aware command patterns, not simple HP inflation.
-- [ ] Module-reactive retaliation turns real ArmorSystem gun/track/engine/ammo-rack damage into readable boss counterplay and changing attack pressure.
-- [ ] Boss command telegraphs expose doctrine, retaliation state and vulnerable windows clearly while preserving BossLegendDirector weak-point and projectile authority.
-- [ ] Packaged Windows boss-generation gate boots the exact development EXE and verifies doctrine catalog, module reaction thresholds, bounded attack configuration and runtime installation.
+## v5.7 — Boss Legends: Second Generation — COMPLETE
+- [x] Second-generation boss doctrines make major boss encounters mechanically distinct through phase-aware command patterns, not simple HP inflation.
+- [x] Module-reactive retaliation turns real ArmorSystem gun/track/engine/ammo-rack damage into readable boss counterplay and changing attack pressure.
+- [x] Boss command telegraphs expose doctrine, retaliation state and vulnerable windows clearly while preserving BossLegendDirector weak-point and projectile authority.
+- [x] Packaged Windows boss-generation gate boots the exact development EXE and verifies doctrine catalog, module reaction thresholds, bounded attack configuration and runtime installation.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
