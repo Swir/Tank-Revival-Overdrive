@@ -1,0 +1,128 @@
+name: Career Records Windows Gate
+
+on:
+  push:
+    branches:
+      - 'dev-v5-4'
+    paths:
+      - '.dev-build-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-career-candidate:
+    name: Compile v5.4 Windows x64
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Career-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Career-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+      - name: Build development player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Verify executable
+        shell: bash
+        run: |
+          test -f build/StandaloneWindows64/TankRevivalOverdrive.exe
+          test -d build/StandaloneWindows64/TankRevivalOverdrive_Data
+      - name: Pack exact candidate
+        shell: bash
+        run: |
+          cd build/StandaloneWindows64
+          zip -r ../../TankRevivalOverdrive-v5.4-career-Windows-x64.zip .
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v5.4-career-Windows-x64
+          path: TankRevivalOverdrive-v5.4-career-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  career-runtime-smoke:
+    name: Boot packaged EXE and verify v5.4 career records
+    needs: build-career-candidate
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download exact candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v5.4-career-Windows-x64
+          path: candidate
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevivalOverdrive-v5.4-career-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data directory missing after extraction' }
+      - name: Run v5.4 career smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item CAREER_RECORDS_PASS.txt, CAREER_RECORDS_FAIL.txt, CareerPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-career-records-smoke','-logFile','CareerPlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Career records smoke timed out after 60 seconds'
+          }
+          if (Test-Path 'CAREER_RECORDS_FAIL.txt') {
+            Get-Content CAREER_RECORDS_FAIL.txt
+            if (Test-Path CareerPlayer.log) { Get-Content CareerPlayer.log -Tail 180 }
+            throw 'Career records runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'CAREER_RECORDS_PASS.txt')) {
+            if (Test-Path CareerPlayer.log) { Get-Content CareerPlayer.log -Tail 180 }
+            throw "Runtime exited without career records PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content CAREER_RECORDS_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Test-Path CareerPlayer.log) {
+            if (Select-String -Path CareerPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) {
+              Get-Content CareerPlayer.log -Tail 220
+              throw 'Blocking exception signature found during v5.4 career runtime smoke'
+            }
+          }
+          Write-Host 'v5.4 career records runtime smoke passed.'
+      - name: Upload career diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v5.4-career-diagnostics
+          path: |
+            candidate/runtime/CAREER_RECORDS_PASS.txt
+            candidate/runtime/CAREER_RECORDS_FAIL.txt
+            candidate/runtime/CareerPlayer.log
+          if-no-files-found: ignore
+          retention-days: 14
