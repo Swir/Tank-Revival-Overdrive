@@ -2,11 +2,6 @@ using UnityEngine;
 
 namespace TankRevival
 {
-    /// <summary>
-    /// v5.8 player-triggered active defense for Orzelek. Uses the existing War Bond balance,
-    /// authoritative Health state and RuntimeBattleRegistry actors. It never creates a second
-    /// currency or replaces TankGame combat authority.
-    /// </summary>
     public sealed class OrzelekFortressDirector : MonoBehaviour
     {
         private const string BondsKey = "TankRevival.WarBonds";
@@ -54,16 +49,12 @@ namespace TankRevival
                 if (_eagle != null) _eagle.Damaged += OnEagleDamaged;
             }
             if (_game == null || !_game.IsPlaying || _eagle == null || _eagle.IsDead) return;
-
             if (Input.GetKeyDown(KeyCode.F6)) ActivateShield();
             else if (Input.GetKeyDown(KeyCode.F7)) ActivateRepairDrone();
             else if (Input.GetKeyDown(KeyCode.F8)) ActivateCounterBattery();
         }
 
-        private void OnDestroy()
-        {
-            if (_eagle != null) _eagle.Damaged -= OnEagleDamaged;
-        }
+        private void OnDestroy() { if (_eagle != null) _eagle.Damaged -= OnEagleDamaged; }
 
         private void OnEagleDamaged(Health health, int amount)
         {
@@ -89,8 +80,7 @@ namespace TankRevival
 
         private void ActivateShield()
         {
-            if (Time.unscaledTime < _shieldReady) return;
-            if (!Spend(ShieldCost, "AEGIS SHIELD")) return;
+            if (Time.unscaledTime < _shieldReady || !Spend(ShieldCost, "AEGIS SHIELD")) return;
             _shieldReady = Time.unscaledTime + ShieldCooldown;
             _eagle.InvulnerableUntil = Mathf.Max(_eagle.InvulnerableUntil, Time.time + ShieldSeconds);
             VisualFactory.RingPulse(_eagle.transform.position, new Color(0.18f, 0.82f, 1f), 1.8f);
@@ -100,8 +90,7 @@ namespace TankRevival
 
         private void ActivateRepairDrone()
         {
-            if (Time.unscaledTime < _repairReady || _eagle.Current >= _eagle.Maximum) return;
-            if (!Spend(RepairCost, "REPAIR DRONE")) return;
+            if (Time.unscaledTime < _repairReady || _eagle.Current >= _eagle.Maximum || !Spend(RepairCost, "REPAIR DRONE")) return;
             _repairReady = Time.unscaledTime + RepairCooldown;
             _eagle.Heal(2);
             VisualFactory.RingPulse(_eagle.transform.position, new Color(0.22f, 1f, 0.42f), 1.55f);
@@ -111,10 +100,10 @@ namespace TankRevival
 
         private void ActivateCounterBattery()
         {
-            if (Time.unscaledTime < _counterReady) return;
-            if (!Spend(CounterBatteryCost, "COUNTER BATTERY")) return;
+            if (Time.unscaledTime < _counterReady || !Spend(CounterBatteryCost, "COUNTER BATTERY")) return;
             _counterReady = Time.unscaledTime + CounterBatteryCooldown;
             EnemyTank[] enemies = RuntimeBattleRegistry.EnemySnapshot;
+            EnemyTank[] selected = new EnemyTank[CounterBatteryTargets];
             int struck = 0;
             for (int pass = 0; pass < CounterBatteryTargets; pass++)
             {
@@ -123,31 +112,29 @@ namespace TankRevival
                 for (int i = 0; i < enemies.Length; i++)
                 {
                     EnemyTank enemy = enemies[i];
-                    if (enemy == null || enemy.Health == null || enemy.Health.IsDead) continue;
+                    if (enemy == null || enemy.Health == null || enemy.Health.IsDead || WasSelected(selected, enemy)) continue;
                     float sq = ((Vector2)enemy.transform.position - (Vector2)_eagle.transform.position).sqrMagnitude;
                     if (sq > bestSq) continue;
-                    bool alreadyHit = enemy.gameObject.CompareTag("Respawn");
-                    if (alreadyHit) continue;
                     best = enemy;
                     bestSq = sq;
                 }
                 if (best == null) break;
-                best.gameObject.tag = "Respawn";
+                selected[struck] = best;
                 best.Health.Damage(1, Team.Player);
                 VisualFactory.RingPulse(best.transform.position, new Color(1f, 0.55f, 0.12f), 0.75f);
                 struck++;
             }
-            for (int i = 0; i < enemies.Length; i++) if (enemies[i] != null && enemies[i].gameObject.CompareTag("Respawn")) enemies[i].gameObject.tag = "Untagged";
             BattleAudio.PlayGlobal(SoundCue.ExplosionSmall, 0.55f, 0.03f);
             Banner("COUNTER BATTERY // " + struck + " HOSTILES SUPPRESSED");
         }
 
-        private void Banner(string text)
+        private static bool WasSelected(EnemyTank[] selected, EnemyTank enemy)
         {
-            _banner = text;
-            _bannerUntil = Time.unscaledTime + 2.5f;
+            for (int i = 0; i < selected.Length; i++) if (selected[i] == enemy) return true;
+            return false;
         }
 
+        private void Banner(string text) { _banner = text; _bannerUntil = Time.unscaledTime + 2.5f; }
         private static string Ready(float t) => Time.unscaledTime >= t ? "READY" : Mathf.CeilToInt(t - Time.unscaledTime) + "s";
 
         private void EnsureStyles()
