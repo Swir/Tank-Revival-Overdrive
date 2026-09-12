@@ -19,31 +19,40 @@ This roadmap tracks large playable milestones. Small cosmetic-only releases are 
 - Soak summary records FPS, managed-memory pressure, pool reuse and runtime repair/warning deltas.
 - Goal achieved: stable 100-round gameplay foundation suitable for a demo candidate.
 
-### v4.9 — Demo UX, Settings & First-Run Polish — CURRENT MILESTONE
+### v4.9 — Demo UX, Settings & First-Run Polish — COMPLETE
 - Full player-facing main menu, pause overlay, replay/end screen and Windows exit path.
 - First-run onboarding explaining the objective, supply tanks, ammunition and essential controls.
 - Persistent graphics presets, fullscreen/windowed mode, resolution selection, V-Sync, FPS cap and master volume.
 - Graphics presets are integrated with WarfarePerformanceGovernor budget floors while dynamic load protection remains active.
 - Dedicated controls reference and clear pre-demo build identity.
-- Goal: game can be handed to a player as a normal Windows game without developer knowledge.
+- Goal achieved: game can be handed to a player as a normal Windows game without developer knowledge.
 
-### v5.0 — PUBLIC DEMO CANDIDATE — NEXT
-- Full Windows x64 development/release CI validation.
-- Add a demo smoke gate covering clean launch -> first-run -> menu -> play -> pause/settings -> resume -> restart/end -> exit paths.
-- Run the late-round 80/90/100 stress/soak acceptance pass against the demo-candidate branch.
-- Final demo-facing HUD/readability cleanup only where it removes genuine usability blockers.
-- Package as a normal Windows ZIP containing the executable and Unity runtime data.
-- Publish only after green CI and release-candidate validation.
+### v5.0 — PUBLIC DEMO CANDIDATE — CURRENT (RC3)
+- Dedicated non-development Windows x64 candidate build path in CIBuild.
+- Separate Demo Candidate Windows workflow, independent from ordinary development artifact packaging.
+- Source gate validates required demo/stability/pooling systems and exact RC version before Unity build starts.
+- Package gate validates executable, Unity data directory, BUILD_INFO, README_DEMO and DEMO_MANIFEST.
+- Candidate manifest records the exact GitHub commit used to produce the ZIP.
+- ZIP receives a SHA-256 checksum and a demo-specific artifact name.
+- RC2 added a packaged Windows runtime qualification stage: the exact ZIP is downloaded on `windows-latest`, checksum-verified, extracted and the real standalone EXE is launched.
+- `DemoCISmokeProbe` is enabled only with `-demo-ci-smoke` and requires live `TankGame`, player-facing demo shell and Runtime Stability Director before writing a PASS marker and exiting cleanly.
+- RC3 adds `DemoCISoakProbe`, enabled only with `-demo-ci-soak`, which drives the same packaged standalone through rounds 80/90/100 and injects Heavy/Siege/Sniper/Elite pressure at every stage.
+- The RC3 soak gate validates authoritative campaign continuity, projectile-pool integrity, Runtime Stability health, and zero new warning/repair/pool-fault deltas.
+- FPS and managed-memory peaks are recorded as diagnostics but are not used as hard CI thresholds because hosted Windows runners are not stable performance-reference machines.
+- Both standalone runtime jobs capture Player.log and reject blocking crash/exception signatures.
+- Development-only F10 acceptance overlay remains available for longer interactive menu -> play -> pause -> resume confirmation.
+- Final acceptance is now: green compile/package CI + green packaged Windows boot gate + green packaged late-round 80/90/100 soak gate.
 
-When this gate is reached, release reporting must explicitly state:
+When this gate is fully reached, release reporting must explicitly state:
 
 **🎮 DEMO GOTOWE DO GRANIA — WINDOWS EXE**
 
-## Post-demo direction
+## v5.1+ post-demo direction
 - Player feedback / difficulty tuning.
+- Save/profile hardening and recovery.
 - Further art/audio replacement with authored production assets where appropriate.
 - Expanded campaign variants, additional bosses and challenge modes only after demo stability is protected.
-- Save/profile hardening, achievements and distribution packaging.
+- Achievements and broader distribution packaging.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
@@ -52,3 +61,6 @@ When this gate is reached, release reporting must explicitly state:
 4. Windows CI must be green before a milestone is considered release-ready.
 5. Performance changes must preserve gameplay authority; presentation density may scale, combat outcomes may not.
 6. Demo-facing releases must pass both compile/package CI and explicit runtime stability/smoke gates.
+7. A public demo ZIP must be reproducibly attributable to its exact commit and checksum.
+8. A demo candidate is not release-ready until the packaged EXE itself boots on a fresh Windows runner.
+9. A public demo is not release-ready until that same packaged EXE also passes automated late-round 80/90/100 runtime qualification.
