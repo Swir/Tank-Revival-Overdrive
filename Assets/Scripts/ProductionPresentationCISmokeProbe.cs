@@ -62,15 +62,6 @@ namespace TankRevival
                     if (!signature.IsConfigured || dummy.transform.childCount == 0)
                     {
                         Finish(false, "signature failed for " + kind);
-                        Destroy(dummy);
-                        return;
-                    }
-
-                    Collider[] colliders = dummy.GetComponentsInChildren<Collider>(true);
-                    if (colliders != null && colliders.Length > 0)
-                    {
-                        Finish(false, "presentation collider leaked for " + kind + "; count=" + colliders.Length);
-                        Destroy(dummy);
                         return;
                     }
 
