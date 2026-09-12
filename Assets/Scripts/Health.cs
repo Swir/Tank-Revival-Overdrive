@@ -33,6 +33,11 @@ namespace TankRevival
                 gameObject.AddComponent<DamageSmokeEmitter>();
         }
 
+        public void SetMaximum(int newMaximum)
+        {
+            SetMaximum(newMaximum, false);
+        }
+
         public void SetMaximum(int newMaximum, bool grantAddedCapacity)
         {
             if (IsDead) return;
