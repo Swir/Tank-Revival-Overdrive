@@ -31,6 +31,13 @@ namespace TankRevival
 
             if (GetComponent<DamageSmokeEmitter>() == null)
                 gameObject.AddComponent<DamageSmokeEmitter>();
+
+            RuntimeBattleRegistry.RegisterHealth(this);
+        }
+
+        private void OnDestroy()
+        {
+            RuntimeBattleRegistry.UnregisterHealth(this);
         }
 
         public void SetMaximum(int newMaximum)
