@@ -11,6 +11,8 @@ namespace TankRevival
     /// runs only when the packaged standalone is launched with -demo-ci-soak. The probe drives the
     /// authoritative TankGame through rounds 80/90/100, injects heavy pressure, validates projectile
     /// pool integrity and runtime-stability telemetry, then emits an explicit PASS/FAIL marker for CI.
+    /// The player side is made temporarily invulnerable only inside this opt-in CI path so the probe
+    /// measures runtime integrity rather than the survivability of an unattended tank.
     /// </summary>
     [DefaultExecutionOrder(20010)]
     public sealed class DemoCISoakProbe : MonoBehaviour
@@ -95,12 +97,14 @@ namespace TankRevival
             {
                 if (!StartStage(rounds[i])) yield break;
                 yield return new WaitForSecondsRealtime(1.5f);
+                ProtectPlayerSide();
 
                 if (!InjectPressure()) yield break;
 
                 float stageUntil = Time.realtimeSinceStartup + 5f;
                 while (Time.realtimeSinceStartup < stageUntil)
                 {
+                    ProtectPlayerSide();
                     if (!_game.IsPlaying)
                     {
                         Fail("campaign stopped during round " + rounds[i]);
@@ -158,6 +162,7 @@ namespace TankRevival
                 ProjectilePool.ReleaseAllActive();
                 _roundField.SetValue(_game, round);
                 _beginRound.Invoke(_game, new object[] { round });
+                ProtectPlayerSide();
                 Debug.Log("[DemoCISoakProbe] stage round=" + round);
                 return true;
             }
@@ -166,6 +171,18 @@ namespace TankRevival
                 Debug.LogException(ex);
                 Fail("stage start failed round " + round + ": " + ex.GetType().Name);
                 return false;
+            }
+        }
+
+        private static void ProtectPlayerSide()
+        {
+            Health[] units = FindObjectsByType<Health>(FindObjectsSortMode.None);
+            float protectedUntil = Time.time + TotalTimeoutSeconds + 10f;
+            for (int i = 0; i < units.Length; i++)
+            {
+                Health health = units[i];
+                if (health != null && !health.IsDead && health.Team == Team.Player)
+                    health.InvulnerableUntil = protectedUntil;
             }
         }
 
