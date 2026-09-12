@@ -27,15 +27,18 @@ This roadmap tracks large playable milestones. Small cosmetic-only releases are 
 - Dedicated controls reference and clear pre-demo build identity.
 - Goal achieved: game can be handed to a player as a normal Windows game without developer knowledge.
 
-### v5.0 — PUBLIC DEMO CANDIDATE — CURRENT
+### v5.0 — PUBLIC DEMO CANDIDATE — CURRENT (RC2)
 - Dedicated non-development Windows x64 candidate build path in CIBuild.
 - Separate Demo Candidate Windows workflow, independent from ordinary development artifact packaging.
 - Source gate validates required demo/stability/pooling systems and exact RC version before Unity build starts.
 - Package gate validates executable, Unity data directory, BUILD_INFO, README_DEMO and DEMO_MANIFEST.
 - Candidate manifest records the exact GitHub commit used to produce the ZIP.
 - ZIP receives a SHA-256 checksum and a demo-specific artifact name.
-- Development-only F10 acceptance overlay observes real authoritative states and confirms menu -> play -> pause -> resume/soak coverage without owning gameplay state.
-- Final acceptance remains: green demo-candidate CI plus manual runtime smoke/soak confirmation from the produced Windows package.
+- RC2 adds a packaged Windows runtime qualification stage: the exact ZIP is downloaded on `windows-latest`, checksum-verified, extracted and the real standalone EXE is launched.
+- `DemoCISmokeProbe` is enabled only with `-demo-ci-smoke` and requires live `TankGame`, player-facing demo shell and Runtime Stability Director before writing a PASS marker and exiting cleanly.
+- Windows qualification also captures Player.log and rejects blocking crash/exception signatures.
+- Development-only F10 acceptance overlay remains available for longer interactive menu -> play -> pause -> resume/soak confirmation.
+- Final acceptance remains: green compile/package CI + green packaged Windows boot gate + no blocker from late-round 80/90/100 soak.
 
 When this gate is fully reached, release reporting must explicitly state:
 
@@ -56,3 +59,4 @@ When this gate is fully reached, release reporting must explicitly state:
 5. Performance changes must preserve gameplay authority; presentation density may scale, combat outcomes may not.
 6. Demo-facing releases must pass both compile/package CI and explicit runtime stability/smoke gates.
 7. A public demo ZIP must be reproducibly attributable to its exact commit and checksum.
+8. A demo candidate is not release-ready until the packaged EXE itself boots on a fresh Windows runner.
