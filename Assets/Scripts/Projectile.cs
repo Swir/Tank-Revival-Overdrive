@@ -9,9 +9,6 @@ namespace TankRevival
         public int Damage { get; private set; }
         public AmmoType Ammo { get; private set; }
 
-        /// <summary>
-        /// Presentation/combat telemetry hooks. Gameplay authority remains inside Projectile/Health.
-        /// </summary>
         public static event Action<Projectile, Vector3, Vector2, Team, AmmoType> ShotSpawned3D;
         public static event Action<Projectile, Vector3, Team, AmmoType, bool, bool> Impact3D;
         public static event Action<Projectile, Health, int, bool> DamageResolved;
@@ -65,8 +62,14 @@ namespace TankRevival
 
             if (Ammo != AmmoType.Basic && Time.time >= _nextTrail)
             {
-                _nextTrail = Time.time + (Ammo == AmmoType.Plasma ? 0.025f : 0.045f);
-                VisualFactory.ProjectileAfterglow(transform.position, _color, Ammo == AmmoType.Plasma ? 0.42f : 0.28f);
+                float baseInterval = Ammo == AmmoType.Plasma ? 0.025f : 0.045f;
+                if (WarfarePerformanceGovernor.Tier == WarfarePerformanceGovernor.BudgetTier.Balanced) baseInterval *= 1.45f;
+                else if (WarfarePerformanceGovernor.Tier == WarfarePerformanceGovernor.BudgetTier.Survival) baseInterval *= 2.2f;
+                _nextTrail = Time.time + baseInterval;
+
+                bool priority = OwnerTeam == Team.Player && Ammo == AmmoType.Plasma;
+                if (MassBattleFxBudget.TryConsumeProjectileTrail(priority))
+                    VisualFactory.ProjectileAfterglow(transform.position, _color, Ammo == AmmoType.Plasma ? 0.42f : 0.28f);
             }
         }
 
@@ -81,7 +84,8 @@ namespace TankRevival
                     Health target = weakPoint.TargetHealth;
                     if (target != null)
                         DamageResolved?.Invoke(this, target, weakDamage, target.IsDead);
-                    VisualFactory.MicroBurst(transform.position, Color.Lerp(_color, Color.white, 0.48f), 0.92f);
+                    if (MassBattleFxBudget.TryConsumeMicroFx(true))
+                        VisualFactory.MicroBurst(transform.position, Color.Lerp(_color, Color.white, 0.48f), 0.92f);
                     Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, Ammo == AmmoType.Explosive, false);
                     Destroy(gameObject);
                 }
@@ -106,7 +110,7 @@ namespace TankRevival
                         return;
                     }
 
-                    if (critical)
+                    if (critical && MassBattleFxBudget.TryConsumeMicroFx(true))
                     {
                         VisualFactory.MicroBurst(transform.position, new Color(1f, 0.12f, 0.04f), 1.0f);
                         VisualFactory.RingPulse(transform.position, new Color(1f, 0.24f, 0.06f), 0.88f);
@@ -121,7 +125,7 @@ namespace TankRevival
                 bool explosive = Ammo == AmmoType.Explosive;
                 if (explosive)
                     Detonate(health);
-                else
+                else if (MassBattleFxBudget.TryConsumeMicroFx(killed || OwnerTeam == Team.Player))
                     VisualFactory.MicroBurst(transform.position, _color, Ammo == AmmoType.Plasma ? 0.72f : 0.46f);
 
                 Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, explosive, false);
@@ -154,7 +158,8 @@ namespace TankRevival
             if (CanPenetrate())
             {
                 _penetrations--;
-                VisualFactory.MicroBurst(transform.position, _color, 0.36f);
+                if (MassBattleFxBudget.TryConsumeMicroFx(false))
+                    VisualFactory.MicroBurst(transform.position, _color, 0.36f);
                 Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, false, false);
                 return;
             }
