@@ -140,3 +140,67 @@ jobs:
             candidate/runtime/ProductionPlayer.log
           if-no-files-found: ignore
           retention-days: 14
+
+  campaign-expansion-runtime-smoke:
+    name: Boot dev EXE and verify v5.3 campaign expansion
+    needs: build-windows-dev
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Download exact development artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-dev-Windows-x64
+          path: candidate
+
+      - name: Extract development player
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevivalOverdrive-dev-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data directory missing after extraction' }
+
+      - name: Run v5.3 campaign expansion smoke probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item CAMPAIGN_EXPANSION_PASS.txt, CAMPAIGN_EXPANSION_FAIL.txt, CampaignExpansionPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-campaign-expansion-smoke','-logFile','CampaignExpansionPlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Campaign expansion smoke probe timed out after 60 seconds'
+          }
+          if (Test-Path 'CAMPAIGN_EXPANSION_FAIL.txt') {
+            Get-Content CAMPAIGN_EXPANSION_FAIL.txt
+            if (Test-Path CampaignExpansionPlayer.log) { Get-Content CampaignExpansionPlayer.log -Tail 180 }
+            throw 'Campaign expansion runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'CAMPAIGN_EXPANSION_PASS.txt')) {
+            if (Test-Path CampaignExpansionPlayer.log) { Get-Content CampaignExpansionPlayer.log -Tail 180 }
+            throw "Runtime exited without campaign expansion PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content CAMPAIGN_EXPANSION_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Test-Path CampaignExpansionPlayer.log) {
+            if (Select-String -Path CampaignExpansionPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) {
+              Get-Content CampaignExpansionPlayer.log -Tail 220
+              throw 'Blocking exception signature found during v5.3 campaign expansion smoke'
+            }
+          }
+          Write-Host 'v5.3 campaign expansion runtime smoke passed.'
+
+      - name: Upload campaign expansion diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v5.3-campaign-expansion-diagnostics
+          path: |
+            candidate/runtime/CAMPAIGN_EXPANSION_PASS.txt
+            candidate/runtime/CAMPAIGN_EXPANSION_FAIL.txt
+            candidate/runtime/CampaignExpansionPlayer.log
+          if-no-files-found: ignore
+          retention-days: 14
