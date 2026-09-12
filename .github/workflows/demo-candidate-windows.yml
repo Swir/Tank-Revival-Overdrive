@@ -36,16 +36,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(tr -d '\r\n' < VERSION)" = "v5.0.0-rc2"
+          test "$(tr -d '\r\n' < VERSION)" = "v5.0.0-rc3"
           test -f Assets/Scripts/DemoExperienceDirector.cs
           test -f Assets/Scripts/DemoAcceptanceGate.cs
           test -f Assets/Scripts/DemoCISmokeProbe.cs
+          test -f Assets/Scripts/DemoCISoakProbe.cs
           test -f Assets/Scripts/RuntimeStabilityDirector.cs
           test -f Assets/Scripts/LateRoundStressHarness.cs
           test -f Assets/Scripts/ProjectilePool.cs
           grep -q "PUBLIC DEMO CANDIDATE" Assets/Editor/CIBuild.cs
           grep -q "BuildDemoCandidate" Assets/Editor/CIBuild.cs
           grep -q -- "-demo-ci-smoke" Assets/Scripts/DemoCISmokeProbe.cs
+          grep -q -- "-demo-ci-soak" Assets/Scripts/DemoCISoakProbe.cs
+          grep -q "80, 90, 100" Assets/Scripts/DemoCISoakProbe.cs
           echo "Demo source gate passed."
 
       - name: Cache Unity Library
@@ -82,8 +85,8 @@ jobs:
           test -f "$root/DEMO_MANIFEST.txt"
           test -f "$root/README_DEMO.txt"
           grep -q "PUBLIC DEMO CANDIDATE" "$root/BUILD_INFO.txt"
-          grep -q "Build: 5.0.0-rc2" "$root/BUILD_INFO.txt"
-          grep -q "Demo candidate: 5.0.0-rc2" "$root/DEMO_MANIFEST.txt"
+          grep -q "Build: 5.0.0-rc3" "$root/BUILD_INFO.txt"
+          grep -q "Demo candidate: 5.0.0-rc3" "$root/DEMO_MANIFEST.txt"
           grep -q "Commit: $GITHUB_SHA" "$root/DEMO_MANIFEST.txt"
           test -s "$root/TankRevivalOverdrive.exe"
           echo "Windows demo candidate runtime gate passed."
@@ -92,7 +95,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          archive=TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-Windows-x64.zip
+          archive=TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc3-Windows-x64.zip
           cd build/StandaloneWindows64
           zip -r "../../$archive" .
           cd ../..
@@ -102,10 +105,10 @@ jobs:
       - name: Upload demo candidate artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-Windows-x64
+          name: TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc3-Windows-x64
           path: |
-            TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-Windows-x64.zip
-            TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-Windows-x64.zip.sha256
+            TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc3-Windows-x64.zip
+            TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc3-Windows-x64.zip.sha256
           if-no-files-found: error
           retention-days: 14
 
@@ -119,7 +122,7 @@ jobs:
       - name: Download packaged candidate
         uses: actions/download-artifact@v4
         with:
-          name: TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-Windows-x64
+          name: TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc3-Windows-x64
           path: candidate
 
       - name: Verify checksum and extract
@@ -127,7 +130,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location candidate
-          $zip = 'TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-Windows-x64.zip'
+          $zip = 'TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc3-Windows-x64.zip'
           $expected = (Get-Content "$zip.sha256").Split(' ')[0].Trim()
           $actual = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($expected.ToLowerInvariant() -ne $actual) { throw "Checksum mismatch: $expected != $actual" }
@@ -169,10 +172,77 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc2-smoke-diagnostics
+          name: TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc3-smoke-diagnostics
           path: |
             candidate/runtime/DEMO_SMOKE_PASS.txt
             candidate/runtime/DEMO_SMOKE_FAIL.txt
             candidate/runtime/Player.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  windows-late-round-soak:
+    name: Qualify packaged EXE through rounds 80/90/100
+    needs: windows-runtime-smoke
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Download exact packaged candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc3-Windows-x64
+          path: candidate
+
+      - name: Verify checksum and extract
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          $zip = 'TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc3-Windows-x64.zip'
+          $expected = (Get-Content "$zip.sha256").Split(' ')[0].Trim()
+          $actual = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($expected.ToLowerInvariant() -ne $actual) { throw "Checksum mismatch: $expected != $actual" }
+          Expand-Archive $zip -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+
+      - name: Run packaged late-round 80/90/100 qualification
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item DEMO_SOAK_PASS.txt, DEMO_SOAK_FAIL.txt, SoakPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-demo-ci-soak','-logFile','SoakPlayer.log' -PassThru
+          if (!$p.WaitForExit(120000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Late-round soak timed out after 120 seconds'
+          }
+          if (Test-Path 'DEMO_SOAK_FAIL.txt') {
+            Get-Content DEMO_SOAK_FAIL.txt
+            if (Test-Path SoakPlayer.log) { Get-Content SoakPlayer.log -Tail 240 }
+            throw 'Packaged late-round qualification reported FAIL'
+          }
+          if (!(Test-Path 'DEMO_SOAK_PASS.txt')) {
+            if (Test-Path SoakPlayer.log) { Get-Content SoakPlayer.log -Tail 240 }
+            throw "Runtime exited without soak PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content DEMO_SOAK_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Test-Path SoakPlayer.log) {
+            if (Select-String -Path SoakPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) {
+              Get-Content SoakPlayer.log -Tail 260
+              throw 'Blocking exception signature found during late-round qualification'
+            }
+          }
+          Write-Host 'Packaged Windows late-round 80/90/100 qualification passed.'
+
+      - name: Upload late-round qualification diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-Orzel-Overdrive-DEMO-v5.0.0-rc3-soak-diagnostics
+          path: |
+            candidate/runtime/DEMO_SOAK_PASS.txt
+            candidate/runtime/DEMO_SOAK_FAIL.txt
+            candidate/runtime/SoakPlayer.log
           if-no-files-found: ignore
           retention-days: 14
