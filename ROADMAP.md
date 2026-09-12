@@ -1,58 +1,76 @@
 # Tank Revival: Orzeł Overdrive — Roadmap
 
-This roadmap tracks large playable milestones. Small cosmetic-only releases are intentionally avoided.
+<!-- SWIR-ROADMAP-STANDARD:v1 -->
+<!-- ROADMAP-PROGRESS:START -->
+<p align="center">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v5-1"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-87.5%25-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-28%2F32-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-IN%20PROGRESS-7c3aed?style=for-the-badge">
+</p>
 
-## Current production track
+## 📊 Overall progress
 
-### v4.7 — Projectile Pooling & 100-Round Stress Harness — COMPLETE
-- Warm/reusable projectile runtime pool integrated with the existing Projectile authority.
-- Reuse collider, Rigidbody2D and projectile renderers instead of reconstructing them for every live shot.
-- Non-allocating explosive splash query buffer.
-- Development-only late-round stress harness: direct round 80/90/100 jumps, pressure-wave injection and pool/GC/FPS telemetry.
-- Goal achieved: the heaviest campaign combat can be profiled repeatedly.
+```text
+██████████████████░░ 87.5%
+```
 
-### v4.8 — Demo Stability & Runtime Hardening — COMPLETE
-- Projectile pool lifecycle validation, stale-reference pruning and bounded integrity telemetry.
-- Persistent Runtime Stability Director watching authoritative campaign, registry and pool state.
-- Conservative self-healing for repeated stale registry references and orphaned active projectiles after gameplay ends.
-- Development-only automated F5 soak gate covering rounds 80/90/100 with injected heavy pressure waves.
-- Soak summary records FPS, managed-memory pressure, pool reuse and runtime repair/warning deltas.
-- Goal achieved: stable 100-round gameplay foundation suitable for a demo candidate.
+| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
+|---:|---:|---:|---:|
+| **28** | **4** | **32** | **87.5%** |
 
-### v4.9 — Demo UX, Settings & First-Run Polish — COMPLETE
-- Full player-facing main menu, pause overlay, replay/end screen and Windows exit path.
-- First-run onboarding explaining the objective, supply tanks, ammunition and essential controls.
-- Persistent graphics presets, fullscreen/windowed mode, resolution selection, V-Sync, FPS cap and master volume.
-- Graphics presets are integrated with WarfarePerformanceGovernor budget floors while dynamic load protection remains active.
-- Dedicated controls reference and clear pre-demo build identity.
-- Goal achieved: game can be handed to a player as a normal Windows game without developer knowledge.
+> **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
+<!-- ROADMAP-PROGRESS:END -->
 
-### v5.0 — PUBLIC DEMO CANDIDATE — CURRENT (RC3)
-- Dedicated non-development Windows x64 candidate build path in CIBuild.
-- Separate Demo Candidate Windows workflow, independent from ordinary development artifact packaging.
-- Source gate validates required demo/stability/pooling systems and exact RC version before Unity build starts.
-- Package gate validates executable, Unity data directory, BUILD_INFO, README_DEMO and DEMO_MANIFEST.
-- Candidate manifest records the exact GitHub commit used to produce the ZIP.
-- ZIP receives a SHA-256 checksum and a demo-specific artifact name.
-- RC2 added a packaged Windows runtime qualification stage: the exact ZIP is downloaded on `windows-latest`, checksum-verified, extracted and the real standalone EXE is launched.
-- `DemoCISmokeProbe` is enabled only with `-demo-ci-smoke` and requires live `TankGame`, player-facing demo shell and Runtime Stability Director before writing a PASS marker and exiting cleanly.
-- RC3 adds `DemoCISoakProbe`, enabled only with `-demo-ci-soak`, which drives the same packaged standalone through rounds 80/90/100 and injects Heavy/Siege/Sniper/Elite pressure at every stage.
-- The RC3 soak gate validates authoritative campaign continuity, projectile-pool integrity, Runtime Stability health, and zero new warning/repair/pool-fault deltas.
-- FPS and managed-memory peaks are recorded as diagnostics but are not used as hard CI thresholds because hosted Windows runners are not stable performance-reference machines.
-- Both standalone runtime jobs capture Player.log and reject blocking crash/exception signatures.
-- Development-only F10 acceptance overlay remains available for longer interactive menu -> play -> pause -> resume confirmation.
-- Final acceptance is now: green compile/package CI + green packaged Windows boot gate + green packaged late-round 80/90/100 soak gate.
+This roadmap tracks large playable milestones. Small cosmetic-only releases are intentionally avoided. `ROADMAP_v03.txt` is historical only.
+
+## v4.7 — Projectile Pooling & 100-Round Stress Harness — COMPLETE
+- [x] Warm/reusable projectile runtime pool integrated with existing Projectile authority.
+- [x] Reuse collider, Rigidbody2D and projectile renderers instead of reconstructing every live shot.
+- [x] Non-allocating explosive splash query buffer.
+- [x] Development late-round stress harness with round 80/90/100 jumps, pressure injection and pool/GC/FPS telemetry.
+
+## v4.8 — Demo Stability & Runtime Hardening — COMPLETE
+- [x] Projectile pool lifecycle validation and stale-reference pruning.
+- [x] Persistent Runtime Stability Director watching campaign, registry and pool state.
+- [x] Conservative recovery for repeated stale registry references and orphaned projectiles after gameplay ends.
+- [x] Automated development soak gate covering rounds 80/90/100 with heavy pressure waves.
+- [x] Soak summary records FPS, managed memory, pool reuse and runtime repair/warning deltas.
+
+## v4.9 — Demo UX, Settings & First-Run Polish — COMPLETE
+- [x] Player-facing main menu, pause overlay, replay/end screen and Windows exit path.
+- [x] First-run onboarding explaining objective, supply tanks, ammunition and essential controls.
+- [x] Persistent graphics/fullscreen/resolution/V-Sync/FPS/audio settings.
+- [x] Graphics presets integrated with WarfarePerformanceGovernor while preserving combat authority.
+- [x] Dedicated controls reference and clear pre-demo build identity.
+
+## v5.0 — Public Demo Candidate — QUALIFIED RC3
+- [x] Dedicated non-development Windows x64 candidate build path.
+- [x] Separate Demo Candidate Windows workflow and exact-commit package manifest.
+- [x] Package validation for EXE, Unity data, BUILD_INFO, README_DEMO and DEMO_MANIFEST.
+- [x] SHA-256 checksum for the candidate ZIP.
+- [x] Fresh Windows runner downloads and boots the exact packaged candidate EXE.
+- [x] DemoCISmokeProbe requires live TankGame, demo shell and Runtime Stability Director.
+- [x] DemoCISoakProbe drives the packaged standalone through rounds 80/90/100.
+- [x] Soak injects Heavy/Siege/Sniper/Elite pressure while preserving authoritative gameplay systems.
+- [x] Runtime qualification rejects blocking crash/exception signatures and pool/stability faults.
+- [x] RC3 compile/package + packaged boot + packaged 80/90/100 soak gates are green.
 
 When this gate is fully reached, release reporting must explicitly state:
 
 **🎮 DEMO GOTOWE DO GRANIA — WINDOWS EXE**
 
-## v5.1+ post-demo direction
-- Player feedback / difficulty tuning.
-- Save/profile hardening and recovery.
-- Further art/audio replacement with authored production assets where appropriate.
-- Expanded campaign variants, additional bosses and challenge modes only after demo stability is protected.
-- Achievements and broader distribution packaging.
+## v5.1 — Resilient Player Profile & Recovery — COMPLETE
+- [x] Atomic versioned JSON profile persistence with integrity checksum.
+- [x] Automatic backup rotation and corruption recovery without blocking gameplay.
+- [x] Legacy high-score migration plus durable run/furthest-round profile statistics.
+- [x] Lifecycle-safe autosave on round transitions, focus loss, pause and application exit.
+
+## v5.2+ — Post-demo expansion
+- [ ] Authored art/audio production replacement pass while maintaining performance budgets.
+- [ ] Expanded campaign variants and additional boss/challenge mode package.
+- [ ] Achievement/distribution integration after profile format is stable.
+- [ ] Player feedback-driven difficulty/balance pass after public telemetry and playtesting.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
@@ -60,7 +78,8 @@ When this gate is fully reached, release reporting must explicitly state:
 3. Do not merge unstable development milestones to `main`.
 4. Windows CI must be green before a milestone is considered release-ready.
 5. Performance changes must preserve gameplay authority; presentation density may scale, combat outcomes may not.
-6. Demo-facing releases must pass both compile/package CI and explicit runtime stability/smoke gates.
+6. Demo-facing releases must pass compile/package CI and explicit runtime stability/smoke gates.
 7. A public demo ZIP must be reproducibly attributable to its exact commit and checksum.
 8. A demo candidate is not release-ready until the packaged EXE itself boots on a fresh Windows runner.
 9. A public demo is not release-ready until that same packaged EXE also passes automated late-round 80/90/100 runtime qualification.
+10. `ROADMAP.md` must preserve `<!-- SWIR-ROADMAP-STANDARD:v1 -->` and the canonical dashboard structure.
