@@ -76,3 +76,67 @@ jobs:
           path: TankRevivalOverdrive-dev-Windows-x64.zip
           if-no-files-found: error
           retention-days: 14
+
+  production-presentation-runtime-smoke:
+    name: Boot dev EXE and verify v5.2 production presentation
+    needs: build-windows-dev
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Download exact development artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-dev-Windows-x64
+          path: candidate
+
+      - name: Extract development player
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevivalOverdrive-dev-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data directory missing after extraction' }
+
+      - name: Run v5.2 production presentation smoke probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item PRODUCTION_PRESENTATION_PASS.txt, PRODUCTION_PRESENTATION_FAIL.txt, ProductionPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-production-presentation-smoke','-logFile','ProductionPlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Production presentation smoke probe timed out after 60 seconds'
+          }
+          if (Test-Path 'PRODUCTION_PRESENTATION_FAIL.txt') {
+            Get-Content PRODUCTION_PRESENTATION_FAIL.txt
+            if (Test-Path ProductionPlayer.log) { Get-Content ProductionPlayer.log -Tail 180 }
+            throw 'Production presentation runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'PRODUCTION_PRESENTATION_PASS.txt')) {
+            if (Test-Path ProductionPlayer.log) { Get-Content ProductionPlayer.log -Tail 180 }
+            throw "Runtime exited without production presentation PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content PRODUCTION_PRESENTATION_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Test-Path ProductionPlayer.log) {
+            if (Select-String -Path ProductionPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) {
+              Get-Content ProductionPlayer.log -Tail 220
+              throw 'Blocking exception signature found during production presentation runtime smoke'
+            }
+          }
+          Write-Host 'v5.2 production presentation runtime smoke passed.'
+
+      - name: Upload production presentation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v5.2-production-presentation-diagnostics
+          path: |
+            candidate/runtime/PRODUCTION_PRESENTATION_PASS.txt
+            candidate/runtime/PRODUCTION_PRESENTATION_FAIL.txt
+            candidate/runtime/ProductionPlayer.log
+          if-no-files-found: ignore
+          retention-days: 14
