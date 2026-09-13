@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-5"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-6"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-16a34a?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-84%2F84-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.5%20COMPLETE-16a34a?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-88%2F88-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.6%20COMPLETE-16a34a?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **84** | **0** | **84** | **100.0%** |
+| **88** | **0** | **88** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -149,6 +149,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Event-driven combat feedback adds bounded player-hit vignette, enemy-hit confirmation and destruction emphasis so impacts are readable without adding permanent text panels.
 - [x] High-value battlefield silhouettes make Boss/Elite/Siege threats visually identifiable through lightweight world-space rings/chevrons that obey strict presentation budgets.
 - [x] Packaged Windows visual-overdrive gate boots the exact development EXE and verifies presentation installation, damage/threat thresholds, FX budgets and unchanged authoritative Health behavior.
+
+## v6.6 — Cinematic Battlefield & Environment Reforge — COMPLETE
+- [x] Sector-aware environment reforge adds deterministic atmospheric layers, battlefield depth cues and distinct visual identities across the 100-round campaign without modifying colliders or combat authority.
+- [x] Comfort-bounded combat camera adds subtle player lead, threat framing and event impulses while preserving the full playable arena and preventing aim/physics changes.
+- [x] Budgeted battlefield aftermath adds reusable track marks, impact scars and destruction debris that visually accumulate during combat and recycle under late-round pressure.
+- [x] Packaged Windows cinematic-battlefield gate boots the exact development EXE and verifies atmosphere catalog, camera bounds, aftermath budgets and unchanged authoritative combat state.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
