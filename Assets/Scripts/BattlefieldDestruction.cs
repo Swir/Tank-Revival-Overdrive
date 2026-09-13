@@ -18,15 +18,9 @@ namespace TankRevival
             VisualFactory.Disc("CraterInner", root.transform, Vector2.one * (size * 0.66f), new Color(0.07f, 0.045f, 0.025f, 0.68f), Vector3.zero, -44);
             VisualFactory.RingObject("HotEdge", root.transform, Vector2.one * (size * 0.82f), new Color(tint.r, tint.g, tint.b, 0.28f), Vector3.zero, -43);
             root.transform.rotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
-
             var presentation = root.AddComponent<ImpactScar3DPresentation>();
             presentation.Initialize(size, tint);
-
-            // v3.8: artillery and mine scars are now persistent tactical terrain.
-            // The visual scar remains the lifetime owner, so the mobility field disappears
-            // naturally when the existing bounded destruction queue trims old impacts.
             root.AddComponent<TacticalTerrainField>().Initialize(TacticalTerrainKind.Crater, size * 0.52f, 0.82f, 0f, 0.97f);
-
             Scars.Enqueue(root);
             Trim();
         }
@@ -44,10 +38,8 @@ namespace TankRevival
             var collider = root.AddComponent<BoxCollider2D>();
             collider.size = new Vector2(0.72f, 0.54f) * scale;
             root.AddComponent<WreckDecay>().Initialize(kind == EnemyKind.Boss ? 42f : 20f + Random.Range(0f, 9f));
-
             var presentation = root.AddComponent<Wreck3DPresentation>();
             presentation.Initialize();
-
             Scars.Enqueue(root);
             Trim();
         }
@@ -118,7 +110,11 @@ namespace TankRevival
                 if (_hooked.Contains(id)) continue;
                 _hooked.Add(id);
                 EnemyTank captured = enemy;
-                enemy.Health.Died += _ => BattlefieldDestruction.AddWreck(captured.transform.position, captured.transform.rotation, captured.Kind);
+                enemy.Health.Died += _ =>
+                {
+                    if (DestructionReforgeDirector.Instance == null)
+                        BattlefieldDestruction.AddWreck(captured.transform.position, captured.transform.rotation, captured.Kind);
+                };
             }
         }
 
