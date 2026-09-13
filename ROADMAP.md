@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v7-1"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-96.3%25-7c3aed?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-105%2F109-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V7.1%20IN%20DEVELOPMENT-7c3aed?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-16a34a?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-109%2F109-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V7.1%20QUALIFIED-16a34a?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-███████████████████░ 96.3%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **105** | **4** | **109** | **96.3%** |
+| **109** | **0** | **109** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -181,11 +181,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Dedicated Demo 2 candidate packaging produces a non-development Windows x64 ZIP with exact-commit manifest and SHA-256 checksum.
 - [x] Fresh Windows runners boot the exact packaged Demo 2 EXE and complete smoke plus late-round 80/90/100 qualification before the candidate is considered release-ready.
 
-## v7.1 — Frontend, Menu & HUD Art Reforge — IN DEVELOPMENT
-- [ ] Player-facing menu, pause and end-of-run shell is rebuilt into a stronger game-first visual hierarchy with concise controls and no debug-like text wall.
-- [ ] Combat status becomes icon/bar-first: player armor, Orzełek health, lives, round pressure and active ammunition are represented through compact visual meters while authoritative TankGame/Health/Ammo state remains unchanged.
-- [ ] Ammunition inventory and tactical alerts use bounded icon chips and critical-only text so the battlefield remains visible during high-pressure rounds and all seven ammunition families stay immediately readable.
-- [ ] Packaged Windows frontend/HUD gate boots the exact development EXE and verifies frontend installation, HUD bounds, seven-ammo catalog coverage, legacy GUI suppression safety and unchanged authoritative combat state.
+## v7.1 — Frontend, Menu & HUD Art Reforge — COMPLETE
+- [x] Player-facing menu, pause and end-of-run shell is rebuilt into a stronger game-first visual hierarchy with concise controls and no debug-like text wall.
+- [x] Combat status becomes icon/bar-first: player armor, Orzełek health, lives, round pressure and active ammunition are represented through compact visual meters while authoritative TankGame/Health/Ammo state remains unchanged.
+- [x] Ammunition inventory and tactical alerts use bounded icon chips and critical-only text so the battlefield remains visible during high-pressure rounds and all seven ammunition families stay immediately readable.
+- [x] Packaged Windows frontend/HUD gate boots the exact development EXE and verifies frontend installation, HUD bounds, seven-ammo catalog coverage, legacy GUI suppression safety and unchanged authoritative combat state.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
