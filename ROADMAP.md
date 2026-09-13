@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-9"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v7-0"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-16a34a?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-100%2F100-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.9%20COMPLETE-16a34a?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-105%2F105-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V7.0%20QUALIFIED%20RC1-16a34a?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **100** | **0** | **100** | **100.0%** |
+| **105** | **0** | **105** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -173,6 +173,13 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Wreck lifecycle presentation transitions through bounded hot, smoldering and cold states with class-scaled fire/smoke/debris while preserving movement, collision and damage outcomes.
 - [x] Destructible battlefield objects receive staged impact/collapse presentation and heavy-ammo reaction cues connected to existing Obstacle destruction instead of a parallel damage model.
 - [x] Packaged Windows destruction-reforge gate boots the exact development EXE and verifies single wreck authority, class profile catalog, FULL/BALANCED/SURVIVAL budgets and unchanged authoritative Health/Obstacle behavior.
+
+## v7.0 — Public Demo 2 & Final Player Experience Reforge — QUALIFIED RC1
+- [x] Player-facing shell is refreshed for Demo 2 with current build identity, cleaner menu/pause/end presentation and no stale pre-demo version labels.
+- [x] First-ten-round contextual coaching replaces persistent instruction clutter with short auto-hiding movement, firing, ammunition, Orzełek and tactical-HUD prompts.
+- [x] Combat HUD defaults to a battlefield-first minimal presentation while preserving player-selectable Minimal/Focus/Standard modes and all critical tactical warnings.
+- [x] Dedicated Demo 2 candidate packaging produces a non-development Windows x64 ZIP with exact-commit manifest and SHA-256 checksum.
+- [x] Fresh Windows runners boot the exact packaged Demo 2 EXE and complete smoke plus late-round 80/90/100 qualification before the candidate is considered release-ready.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
