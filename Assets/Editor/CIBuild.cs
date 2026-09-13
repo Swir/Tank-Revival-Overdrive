@@ -70,15 +70,15 @@ namespace TankRevival.Editor
             if (summary.result != BuildResult.Succeeded)
                 throw new Exception("Tank Revival Windows build failed: " + summary.result);
 
-            string channel = demoCandidate ? "PUBLIC DEMO CANDIDATE" : "DEVELOPMENT";
+            string channel = demoCandidate ? "PUBLIC DEMO 2 RELEASE CANDIDATE" : "DEVELOPMENT";
             string info =
                 "TANK REVIVAL: ORZEL OVERDRIVE\n" +
                 "Channel: " + channel + "\n" +
                 "Build: " + version + "\n" +
                 "Unity: " + Application.unityVersion + "\n" +
                 "Target: Windows x64\n" +
-                "Controls: WASD/Arrows move, Mouse aim, LMB/Space/LeftCtrl fire, Q/E ammo, 1-7 ammo, P/Esc pause\n" +
-                "Campaign: 100 rounds, Orzelek defense, Supply Tanks, special ammo, bosses and Field Command Center\n";
+                "Controls: WASD/Arrows move, Mouse aim, LMB/Space/LeftCtrl fire, Q/E ammo, 1-7 ammo, R smoke, C ECM, V decoy, G SIGINT, H recon, P/Esc pause\n" +
+                "Campaign: 100 rounds, Orzelek defense, objectives, convoys, bosses, EW command network and Mobile HQ operations\n";
             File.WriteAllText(Path.Combine(BuildFolder, "BUILD_INFO.txt"), info);
 
             if (demoCandidate)
@@ -90,16 +90,18 @@ namespace TankRevival.Editor
                     "Commit: " + sha + "\n" +
                     "Target: Windows x64\n" +
                     "Executable: TankRevivalOverdrive.exe\n" +
-                    "Runtime data: TankRevivalOverdrive_Data\n";
+                    "Runtime data: TankRevivalOverdrive_Data\n" +
+                    "Campaign qualification: rounds 36/50/80/90/100\n";
                 File.WriteAllText(Path.Combine(BuildFolder, "DEMO_MANIFEST.txt"), manifest);
 
                 string readme =
-                    "TANK REVIVAL: ORZEL OVERDRIVE — DEMO CANDIDATE\n\n" +
+                    "TANK REVIVAL: ORZEL OVERDRIVE — DEMO 2 RELEASE CANDIDATE\n\n" +
                     "1. Rozpakuj caly ZIP do osobnego folderu.\n" +
                     "2. Uruchom TankRevivalOverdrive.exe.\n" +
                     "3. Nie przenos samego EXE bez folderu TankRevivalOverdrive_Data.\n\n" +
-                    "Sterowanie: WASD/strzalki ruch, mysz celowanie, LPM/Spacja/Lewy Ctrl ogien, Q/E lub 1-7 amunicja, ESC/P pauza.\n" +
-                    "Cel: obron Orzelka przez 100 rund.\n";
+                    "Sterowanie podstawowe: WASD/strzalki ruch, mysz celowanie, LPM/Spacja/Lewy Ctrl ogien, Q/E lub 1-7 amunicja, ESC/P pauza.\n" +
+                    "Kontry taktyczne: R dym, C ECM, V wabik, G SIGINT, H dron rozpoznawczy.\n" +
+                    "Cel: obron Orzelka przez 100 rund, niszcz siec dowodzenia i przetrwaj operacje Mobile HQ.\n";
                 File.WriteAllText(Path.Combine(BuildFolder, "README_DEMO.txt"), readme);
             }
 

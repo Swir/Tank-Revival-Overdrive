@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v7-9"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-0"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-22c55e?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-141%2F141-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V7.9%20QUALIFIED-22c55e?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-146%2F146-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.0%20QUALIFIED%20RC1-22c55e?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **141** | **0** | **141** | **100.0%** |
+| **146** | **0** | **146** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -234,6 +234,13 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Mobile HQ operations create a playable relay → escort → HQ assault loop with counterattack windows and bounded escort orders driven through existing TacticalNavigationAgent and TankGame projectile authority.
 - [x] If the Mobile HQ or primary EW command node falls, a surviving Elite can perform bounded emergency command takeover; destroying the successor opens a longer command-collapse window instead of permanent AI shutdown.
 - [x] Packaged Windows mobile-HQ gate boots the exact development EXE and verifies scheduling, HQ durability/relocation, counterattack budgets, emergency succession, command-network integration and version identity.
+
+## v8.0 — Public Demo 2 Release Candidate & Full Campaign Integration — QUALIFIED RC1
+- [x] Demo-facing integration layer introduces the advanced counterplay controls (`R` smoke, `C` ECM, `V` decoy, `G` SIGINT, `H` recon) progressively and compactly without restoring permanent tutorial clutter.
+- [x] Campaign integration verification covers the full v7.1–v7.9 system stack and representative round bands, including EW/network warfare and Mobile HQ operation thresholds.
+- [x] Dedicated non-development Demo 2 RC packaging emits an exact-commit manifest, Windows x64 ZIP and SHA-256 checksum with current v8.0 identity.
+- [x] Fresh Windows runner boots the exact packaged Demo 2 RC and verifies all required v7.x gameplay/presentation directors are installed and configuration-valid.
+- [x] The same packaged candidate passes integrated soak checkpoints 36/50/80/90/100 with blocking exception detection before v8.0 can be marked qualified.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.

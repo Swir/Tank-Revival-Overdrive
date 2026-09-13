@@ -1,0 +1,199 @@
+name: Demo 2 v8 Candidate Windows
+
+on:
+  push:
+    branches:
+      - 'dev-v8-0'
+    paths:
+      - '.demo2-v8-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-candidate:
+    name: Build v8.0 Demo 2 RC
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+      - name: Validate v8.0 source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v8.0.0-rc1"
+          test -f Assets/Scripts/Demo2FullCampaignIntegrationDirector.cs
+          test -f Assets/Scripts/Demo2ReleaseCandidateCISmokeProbe.cs
+          test -f Assets/Scripts/Demo2IntegratedSoakProbe.cs
+          test -f Assets/Scripts/FrontendHudArtDirector.cs
+          test -f Assets/Scripts/EnemySquadTacticsDirector.cs
+          test -f Assets/Scripts/TacticalNavigationDirector.cs
+          test -f Assets/Scripts/TerrainIntelligenceDirector.cs
+          test -f Assets/Scripts/AdaptiveFireControlDirector.cs
+          test -f Assets/Scripts/TacticalCounterplayDirector.cs
+          test -f Assets/Scripts/EnemyElectronicWarfareDirector.cs
+          test -f Assets/Scripts/CommandNetworkHuntDirector.cs
+          test -f Assets/Scripts/MobileHQWarfareDirector.cs
+          grep -q "AdvancedControlsIntroRound = 12" Assets/Scripts/Demo2FullCampaignIntegrationDirector.cs
+          grep -q "MobileHqIntroRound = 36" Assets/Scripts/Demo2FullCampaignIntegrationDirector.cs
+          grep -q -- "-demo2-rc-smoke" Assets/Scripts/Demo2ReleaseCandidateCISmokeProbe.cs
+          grep -q -- "-demo2-integrated-soak" Assets/Scripts/Demo2IntegratedSoakProbe.cs
+          grep -q "36, 50, 80, 90, 100" Assets/Scripts/Demo2IntegratedSoakProbe.cs
+          grep -q "BuildDemoCandidate" Assets/Editor/CIBuild.cs
+          echo "v8.0 source gate passed."
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Demo2V8-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Demo2V8-Library-${{ runner.os }}-6000.3.17f1-
+            MobileHQ-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+      - name: Build non-development Demo 2 RC
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildDemoCandidate
+          allowDirtyBuild: true
+      - name: Validate package and manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=build/StandaloneWindows64
+          test -f "$root/TankRevivalOverdrive.exe"
+          test -d "$root/TankRevivalOverdrive_Data"
+          test -f "$root/BUILD_INFO.txt"
+          test -f "$root/DEMO_MANIFEST.txt"
+          test -f "$root/README_DEMO.txt"
+          grep -q "PUBLIC DEMO 2 RELEASE CANDIDATE" "$root/BUILD_INFO.txt"
+          grep -q "Build: 8.0.0-rc1" "$root/BUILD_INFO.txt"
+          grep -q "Demo candidate: 8.0.0-rc1" "$root/DEMO_MANIFEST.txt"
+          grep -q "Commit: $GITHUB_SHA" "$root/DEMO_MANIFEST.txt"
+          grep -q "36/50/80/90/100" "$root/DEMO_MANIFEST.txt"
+      - name: Pack exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive=TankRevival-Orzel-Overdrive-DEMO2-v8.0.0-rc1-Windows-x64.zip
+          cd build/StandaloneWindows64
+          zip -r "../../$archive" .
+          cd ../..
+          sha256sum "$archive" | tee "$archive.sha256"
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-Orzel-Overdrive-DEMO2-v8.0.0-rc1-Windows-x64
+          path: |
+            TankRevival-Orzel-Overdrive-DEMO2-v8.0.0-rc1-Windows-x64.zip
+            TankRevival-Orzel-Overdrive-DEMO2-v8.0.0-rc1-Windows-x64.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  runtime-smoke:
+    name: Boot exact v8.0 RC on Windows
+    needs: build-candidate
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-Orzel-Overdrive-DEMO2-v8.0.0-rc1-Windows-x64
+          path: candidate
+      - name: Verify checksum and extract
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          $zip='TankRevival-Orzel-Overdrive-DEMO2-v8.0.0-rc1-Windows-x64.zip'
+          $expected=(Get-Content "$zip.sha256").Split(' ')[0].Trim().ToLowerInvariant()
+          $actual=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($expected -ne $actual) { throw "Checksum mismatch" }
+          Expand-Archive $zip -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing' }
+      - name: Run full-stack RC smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item DEMO2_RC_PASS.txt,DEMO2_RC_FAIL.txt,RCPlayer.log -ErrorAction SilentlyContinue
+          $p=Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-demo2-rc-smoke','-logFile','RCPlayer.log' -PassThru
+          if (!$p.WaitForExit(70000)) { Stop-Process -Id $p.Id -Force; throw 'RC smoke timeout' }
+          if (Test-Path DEMO2_RC_FAIL.txt) { Get-Content DEMO2_RC_FAIL.txt; Get-Content RCPlayer.log -Tail 260; throw 'RC smoke FAIL' }
+          if (!(Test-Path DEMO2_RC_PASS.txt)) { Get-Content RCPlayer.log -Tail 260; throw 'Missing RC PASS marker' }
+          if ($p.ExitCode -ne 0) { throw "RC smoke exit $($p.ExitCode)" }
+          if (Select-String -Path RCPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) { Get-Content RCPlayer.log -Tail 300; throw 'Blocking exception signature' }
+          Get-Content DEMO2_RC_PASS.txt
+      - name: Upload smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-DEMO2-v8.0.0-rc1-smoke-diagnostics
+          path: |
+            candidate/runtime/DEMO2_RC_PASS.txt
+            candidate/runtime/DEMO2_RC_FAIL.txt
+            candidate/runtime/RCPlayer.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  integrated-soak:
+    name: Qualify exact RC through 36/50/80/90/100
+    needs: runtime-smoke
+    runs-on: windows-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-Orzel-Overdrive-DEMO2-v8.0.0-rc1-Windows-x64
+          path: candidate
+      - name: Verify checksum and extract
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          Set-Location candidate
+          $zip='TankRevival-Orzel-Overdrive-DEMO2-v8.0.0-rc1-Windows-x64.zip'
+          $expected=(Get-Content "$zip.sha256").Split(' ')[0].Trim().ToLowerInvariant()
+          $actual=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($expected -ne $actual) { throw 'Checksum mismatch' }
+          Expand-Archive $zip -DestinationPath runtime -Force
+      - name: Run integrated campaign soak
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          Set-Location candidate/runtime
+          Remove-Item DEMO2_INTEGRATED_SOAK_PASS.txt,DEMO2_INTEGRATED_SOAK_FAIL.txt,IntegratedSoak.log -ErrorAction SilentlyContinue
+          $p=Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-demo2-integrated-soak','-logFile','IntegratedSoak.log' -PassThru
+          if (!$p.WaitForExit(150000)) { Stop-Process -Id $p.Id -Force; throw 'Integrated soak timeout' }
+          if (Test-Path DEMO2_INTEGRATED_SOAK_FAIL.txt) { Get-Content DEMO2_INTEGRATED_SOAK_FAIL.txt; Get-Content IntegratedSoak.log -Tail 320; throw 'Integrated soak FAIL' }
+          if (!(Test-Path DEMO2_INTEGRATED_SOAK_PASS.txt)) { Get-Content IntegratedSoak.log -Tail 320; throw 'Missing integrated soak PASS marker' }
+          if ($p.ExitCode -ne 0) { throw "Integrated soak exit $($p.ExitCode)" }
+          if (Select-String -Path IntegratedSoak.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) { Get-Content IntegratedSoak.log -Tail 360; throw 'Blocking exception signature during soak' }
+          Get-Content DEMO2_INTEGRATED_SOAK_PASS.txt
+      - name: Upload soak diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-DEMO2-v8.0.0-rc1-integrated-soak-diagnostics
+          path: |
+            candidate/runtime/DEMO2_INTEGRATED_SOAK_PASS.txt
+            candidate/runtime/DEMO2_INTEGRATED_SOAK_FAIL.txt
+            candidate/runtime/IntegratedSoak.log
+          if-no-files-found: ignore
+          retention-days: 14
