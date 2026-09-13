@@ -75,7 +75,7 @@ namespace TankRevival
                     case CampaignPacingBeat.Recovery: recovery++; hardRun = 0; break;
                     case CampaignPacingBeat.Skirmish: skirmish++; hardRun = 0; break;
                     case CampaignPacingBeat.Offensive: offensive++; hardRun++; break;
-                    case CampaignPacingBeat.SpecialOperation: special++; hardRun++; break;
+                    case CampaignPacingBeat.SpecialOperation: special++; hardRun = 0; break;
                     case CampaignPacingBeat.Escalation: escalation++; hardRun++; break;
                     case CampaignPacingBeat.BossClimax: boss++; hardRun++; break;
                 }
