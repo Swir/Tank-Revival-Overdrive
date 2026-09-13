@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v7-7"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-22c55e?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-133%2F133-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V7.7%20QUALIFIED-22c55e?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v7-8"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.1%25-f59e0b?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-133%2F137-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V7.8%20IN%20PROGRESS-f59e0b?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+███████████████████░ 97.1%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **133** | **0** | **133** | **100.0%** |
+| **133** | **4** | **137** | **97.1%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -222,6 +222,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Make coordinated AI react to player smoke with bounded flank/reposition orders, and reward destruction of the command node with a temporary tactical-superiority window.
 - [x] Add a cooldown-limited player decoy that redirects bounded real enemy fire and movement pressure, with faster decoy resolution while the EW command node survives.
 - [x] Packaged Windows EW-command gate boots the exact development EXE and verifies command/decoy/smoke-response bounds, tactical-system integration, authoritative projectile spawning and version identity.
+
+## v7.8 — SIGINT, Recon Drones & Command Network Hunt — IN PROGRESS
+- [ ] Enemy command network expands into bounded relay nodes attached to live support-capable enemies, with network strength affecting command resilience without replacing EnemyTank/Health authority.
+- [ ] Player SIGINT scan and recon-drone sweep reveal command/relay targets for a limited window and create a playable hunt loop instead of permanent omniscient markers.
+- [ ] Destroying relays weakens EW command benefits and breaking the full network grants a bounded tactical-superiority/reward window integrated with existing v7.6–v7.7 counterplay.
+- [ ] Packaged Windows command-network-hunt gate boots the exact development EXE and verifies relay/SIGINT/recon bounds, authoritative Health integration, tactical-system linkage and version identity.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
