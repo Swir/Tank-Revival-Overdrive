@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-4"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-95.0%25-7c3aed?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-76%2F80-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.4%20IN%20DEVELOPMENT-7c3aed?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-16a34a?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-80%2F80-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.4%20COMPLETE-16a34a?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-███████████████████░ 95.0%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **76** | **4** | **80** | **95.0%** |
+| **80** | **0** | **80** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -138,11 +138,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Player battlefield support earns limited artillery/air-support charges from destroyed reinforcement infrastructure and exposes readable telegraphs, targeting and War Bond rewards without a parallel currency.
 - [x] Packaged Windows combined-arms gate boots the exact development EXE and verifies reinforcement scheduling, spawn caps, support-charge bounds, target authority and runtime installation.
 
-## v6.4 — Combat Readability & Adaptive HUD — IN DEVELOPMENT
-- [ ] Adaptive combat HUD consolidates simultaneous objective, convoy, fortress, command-network and combined-arms information into a bounded priority display instead of independent permanent text panels.
-- [ ] Focus/standard/minimal HUD density modes preserve critical warnings while allowing the player to reclaim battlefield visibility during heavy combat.
-- [ ] Legacy tactical panels are safely suppressed only during rendering while their gameplay directors continue updating authoritative combat state without changing outcomes.
-- [ ] Packaged Windows combat-readability gate boots the exact development EXE and verifies HUD installation, density-mode bounds, legacy-panel suppression safety and live gameplay authority.
+## v6.4 — Combat Readability & Adaptive HUD — COMPLETE
+- [x] Adaptive combat HUD consolidates simultaneous objective, convoy, fortress, command-network and combined-arms information into a bounded priority display instead of independent permanent text panels.
+- [x] Focus/standard/minimal HUD density modes preserve critical warnings while allowing the player to reclaim battlefield visibility during heavy combat.
+- [x] Legacy tactical panels are safely suppressed only during rendering while their gameplay directors continue updating authoritative combat state without changing outcomes.
+- [x] Packaged Windows combat-readability gate boots the exact development EXE and verifies HUD installation, density-mode bounds, legacy-panel suppression safety and live gameplay authority.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
