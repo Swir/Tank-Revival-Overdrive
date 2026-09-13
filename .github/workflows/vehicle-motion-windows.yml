@@ -1,0 +1,139 @@
+name: Vehicle Motion Windows Gate
+
+on:
+  push:
+    branches:
+      - dev-v6-7
+    paths:
+      - '.vehicle-motion-trigger'
+      - 'Assets/Scripts/VehicleMotionWeaponAnimationDirector.cs'
+      - 'Assets/Scripts/VehicleMotionWeaponAnimationCISmokeProbe.cs'
+      - '.github/workflows/vehicle-motion-windows.yml'
+      - 'VERSION'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-vehicle-motion:
+    name: Build vehicle motion candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+
+      - name: Validate v6.7 source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v6.7.0-dev"
+          test -f Assets/Scripts/VehicleMotionWeaponAnimationDirector.cs
+          test -f Assets/Scripts/VehicleMotionWeaponAnimationCISmokeProbe.cs
+          grep -q "MaxHullLeanDegrees = 4.5f" Assets/Scripts/VehicleMotionWeaponAnimationDirector.cs
+          grep -q "MaxBarrelRecoil = 0.22f" Assets/Scripts/VehicleMotionWeaponAnimationDirector.cs
+          grep -q "ShotObservationUsesProjectileAuthority" Assets/Scripts/VehicleMotionWeaponAnimationDirector.cs
+          grep -q -- "-vehicle-motion-smoke" Assets/Scripts/VehicleMotionWeaponAnimationCISmokeProbe.cs
+          echo "v6.7 source gate passed."
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: VehicleMotion-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+            Library-${{ runner.os }}-6000.3.17f1-
+
+      - name: Build development player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+
+      - name: Verify executable
+        shell: bash
+        run: |
+          test -f build/StandaloneWindows64/TankRevivalOverdrive.exe
+          test -d build/StandaloneWindows64/TankRevivalOverdrive_Data
+
+      - name: Pack exact candidate
+        shell: bash
+        run: |
+          cd build/StandaloneWindows64
+          zip -r ../../vehicle-motion-candidate.zip .
+          cd ../..
+          test -s vehicle-motion-candidate.zip
+
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: vehicle-motion-candidate
+          path: vehicle-motion-candidate.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-runtime-smoke:
+    name: Boot vehicle motion candidate on Windows
+    needs: build-vehicle-motion
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download exact candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: vehicle-motion-candidate
+          path: candidate
+
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Expand-Archive candidate/vehicle-motion-candidate.zip -DestinationPath candidate/runtime -Force
+          if (!(Test-Path 'candidate/runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing' }
+
+      - name: Run vehicle motion smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item VEHICLE_MOTION_PASS.txt, VEHICLE_MOTION_FAIL.txt, Player.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-vehicle-motion-smoke','-logFile','Player.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Vehicle motion smoke timed out'
+          }
+          if (Test-Path 'VEHICLE_MOTION_FAIL.txt') {
+            Get-Content VEHICLE_MOTION_FAIL.txt
+            if (Test-Path Player.log) { Get-Content Player.log -Tail 180 }
+            throw 'Vehicle motion runtime smoke reported FAIL'
+          }
+          if (!(Test-Path 'VEHICLE_MOTION_PASS.txt')) {
+            if (Test-Path Player.log) { Get-Content Player.log -Tail 180 }
+            throw "Runtime exited without PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content VEHICLE_MOTION_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned $($p.ExitCode)" }
+          if (Select-String -Path Player.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) {
+            Get-Content Player.log -Tail 220
+            throw 'Blocking exception signature found in Player.log'
+          }
