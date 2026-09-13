@@ -1,0 +1,151 @@
+name: Squad AI Windows Gate
+
+on:
+  push:
+    branches:
+      - 'dev-v7-2'
+    paths:
+      - '.squad-ai-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-squad-ai:
+    name: Build v7.2 Windows candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+
+      - name: Validate v7.2 source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v7.2.0-dev"
+          test -f Assets/Scripts/EnemySquadTacticsDirector.cs
+          test -f Assets/Scripts/BossCommandTacticsDirector.cs
+          test -f Assets/Scripts/EnemySquadTacticsCISmokeProbe.cs
+          grep -q "RoleCount = 6" Assets/Scripts/EnemySquadTacticsDirector.cs
+          grep -q "MaxCoordinatedShotsPerBeat = 6" Assets/Scripts/EnemySquadTacticsDirector.cs
+          grep -q "MaxEscortShots = 5" Assets/Scripts/BossCommandTacticsDirector.cs
+          grep -q -- "-squad-ai-smoke" Assets/Scripts/EnemySquadTacticsCISmokeProbe.cs
+          echo "v7.2 source gate passed."
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: SquadAI-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            SquadAI-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+
+      - name: Build development Windows player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+
+      - name: Verify and pack candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=build/StandaloneWindows64
+          test -f "$root/TankRevivalOverdrive.exe"
+          test -d "$root/TankRevivalOverdrive_Data"
+          cd "$root"
+          zip -r ../../TankRevival-v7.2-squad-ai-Windows-x64.zip .
+          cd ../..
+          test -s TankRevival-v7.2-squad-ai-Windows-x64.zip
+
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v7.2-squad-ai-Windows-x64
+          path: TankRevival-v7.2-squad-ai-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  runtime-smoke:
+    name: Boot exact v7.2 EXE on Windows
+    needs: build-squad-ai
+    runs-on: windows-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Download exact candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-v7.2-squad-ai-Windows-x64
+          path: candidate
+
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevival-v7.2-squad-ai-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data missing after extraction' }
+
+      - name: Run squad AI smoke probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item SQUAD_AI_PASS.txt, SQUAD_AI_FAIL.txt, SquadAiPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-squad-ai-smoke','-logFile','SquadAiPlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Squad AI smoke timed out after 60 seconds'
+          }
+          if (Test-Path 'SQUAD_AI_FAIL.txt') {
+            Get-Content SQUAD_AI_FAIL.txt
+            if (Test-Path SquadAiPlayer.log) { Get-Content SquadAiPlayer.log -Tail 220 }
+            throw 'Squad AI runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'SQUAD_AI_PASS.txt')) {
+            if (Test-Path SquadAiPlayer.log) { Get-Content SquadAiPlayer.log -Tail 220 }
+            throw "Runtime exited without squad AI PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content SQUAD_AI_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Select-String -Path SquadAiPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) {
+            Get-Content SquadAiPlayer.log -Tail 260
+            throw 'Blocking exception signature found during squad AI smoke'
+          }
+          Write-Host 'v7.2 squad AI runtime smoke passed.'
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v7.2-squad-ai-diagnostics
+          path: |
+            candidate/runtime/SQUAD_AI_PASS.txt
+            candidate/runtime/SQUAD_AI_FAIL.txt
+            candidate/runtime/SquadAiPlayer.log
+          if-no-files-found: ignore
+          retention-days: 14
