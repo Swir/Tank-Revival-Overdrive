@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v7-2"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-16a34a?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-113%2F113-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V7.2%20QUALIFIED-16a34a?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v7-3"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-96.6%25-f59e0b?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-113%2F117-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V7.3%20IN%20PROGRESS-f59e0b?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+███████████████████░ 96.6%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **113** | **0** | **113** | **100.0%** |
+| **113** | **4** | **117** | **96.6%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -192,6 +192,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Squad pressure scales across the 100-round campaign with strict shot/cadence budgets, RuntimeBattleRegistry integration and no replacement of EnemyTank movement, Health, Projectile or collision authority.
 - [x] Boss rounds gain phase-aware command behavior that turns BossLegend phase transitions into coordinated escort volleys and changing player/Orzełek pressure instead of isolated boss-only attacks.
 - [x] Packaged Windows squad-AI gate boots the exact development EXE and verifies role catalog, shot/cadence bounds, boss-command installation, RuntimeBattleRegistry integration and version identity.
+
+## v7.3 — Formation Movement, Pathing & Tactical Navigation Reforge — IN PROGRESS
+- [ ] Formation navigation turns v7.2 squad roles into coordinated movement objectives: flank lanes, siege escorts, sniper standoff positions, hunter pressure and breaker routes toward Orzełek.
+- [ ] Obstacle-aware tactical steering uses bounded physics probes, separation and anti-stall recovery so squads route around collisions without replacing Rigidbody2D or Health authority.
+- [ ] Class-aware formation doctrine adds regroup/fallback behavior, Heavy/Siege protection spacing and late-round pressure scaling while keeping movement budgets deterministic and bounded.
+- [ ] Packaged Windows tactical-navigation gate boots the exact development EXE and verifies navigation installation, role/class coverage, steering bounds, anti-stall safeguards and version identity.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
