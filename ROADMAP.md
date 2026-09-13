@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-0"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-1"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-22c55e?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-146%2F146-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.0%20QUALIFIED%20RC1-22c55e?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-150%2F150-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.1%20QUALIFIED-22c55e?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **146** | **0** | **146** | **100.0%** |
+| **150** | **0** | **150** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -241,6 +241,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Dedicated non-development Demo 2 RC packaging emits an exact-commit manifest, Windows x64 ZIP and SHA-256 checksum with current v8.0 identity.
 - [x] Fresh Windows runner boots the exact packaged Demo 2 RC and verifies all required v7.x gameplay/presentation directors are installed and configuration-valid.
 - [x] The same packaged candidate passes integrated soak checkpoints 36/50/80/90/100 with blocking exception detection before v8.0 can be marked qualified.
+
+## v8.1 — Campaign Pacing, Encounter Composition & 100-Round Director Reforge — COMPLETE
+- [x] Deterministic 100-round pacing director assigns recovery, skirmish, offensive, special-operation, escalation and boss-climax beats with bounded pressure envelopes without replacing TankGame round authority.
+- [x] TankGame wave size/concurrency/spawn tempo and CampaignEncounter composition consume the pacing profile so adjacent rounds have materially different intensity while boss, EW/network and Mobile HQ thresholds remain compatible.
+- [x] Recovery and escalation windows are player-readable and prevent the advanced v7.x systems from operating at maximum pressure on every round while preserving a demanding late-game arc.
+- [x] Packaged Windows campaign-pacing gate boots the exact development EXE and verifies the 1–100 schedule, pressure bounds, representative checkpoints, integration and version identity.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
