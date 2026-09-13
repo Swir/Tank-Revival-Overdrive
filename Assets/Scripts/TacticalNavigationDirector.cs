@@ -171,6 +171,14 @@ namespace TankRevival
                 if (enemy.Kind == EnemyKind.Heavy) speedScale *= 0.92f;
                 if (enemy.Kind == EnemyKind.Boss) speedScale *= 0.84f;
 
+                TerrainIntelligenceDirector terrain = TerrainIntelligenceDirector.Instance;
+                if (terrain != null && terrain.TryRefineOrder(enemy, role, objective, standoff, enemies, out Vector2 refinedObjective, out float refinedStandoff))
+                {
+                    objective = refinedObjective;
+                    standoff = refinedStandoff;
+                    if (role == SquadTacticalRole.Escort || enemy.Kind == EnemyKind.Heavy) speedScale *= 0.94f;
+                }
+
                 agent.SetOrder(objective, standoff, speedScale, enemies);
             }
         }
