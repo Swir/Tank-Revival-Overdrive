@@ -98,6 +98,11 @@ namespace TankRevival
             {
                 _decoyActive = false;
                 RestoreOwnedSuppression(null, true);
+                if (!HasLiveCommandVehicle)
+                {
+                    UnsubscribeCommand();
+                    _nextCommandSearch = 0f;
+                }
                 return;
             }
 
