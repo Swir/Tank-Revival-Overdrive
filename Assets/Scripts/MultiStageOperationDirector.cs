@@ -130,7 +130,7 @@ namespace TankRevival
             _status = "SECURE FORWARD CONTROL POINT";
             _phasePosition = PositionFor(_round, 0);
             BuildZoneMarker("CONTROL_POINT", _phasePosition, new Color(0.14f, 0.78f, 1f));
-            BattleAudio.PlayGlobal(SoundCue.RoundStart, 0.42f, 0f);
+            BattleAudio.PlayGlobal(SoundCue.BossAlarm, 0.28f, 0f);
         }
 
         private void UpdateCapturePhase()
@@ -235,7 +235,7 @@ namespace TankRevival
             _phasePosition = PositionFor(_round, 1);
             _status = "HOLD EXTRACTION CORRIDOR";
             BuildZoneMarker("FINAL_HOLD", _phasePosition, new Color(0.24f, 1f, 0.48f));
-            BattleAudio.PlayGlobal(SoundCue.Powerup, 0.46f, 0.05f);
+            BattleAudio.PlayGlobal(SoundCue.Pickup, 0.46f, 0.05f);
         }
 
         private void UpdateFinalHoldPhase()
