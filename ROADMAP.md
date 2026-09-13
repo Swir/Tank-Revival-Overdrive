@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-7"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-16a34a?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-92%2F92-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.7%20COMPLETE-16a34a?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-8"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-95.8%25-7c3aed?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-92%2F96-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.8%20IN%20DEVELOPMENT-7c3aed?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+███████████████████░ 95.8%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **92** | **0** | **92** | **100.0%** |
+| **92** | **4** | **96** | **95.8%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -161,6 +161,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Weapon presentation adds bounded cannon recoil, muzzle flash and recovery timing for player and enemy fire while Projectile remains the sole damage authority.
 - [x] Light/Fast, Heavy/Siege and Boss vehicles receive distinct motion language and recoil weight so battlefield silhouettes also communicate handling and threat class.
 - [x] Packaged Windows vehicle-motion gate boots the exact development EXE and verifies motion/recoil bounds, shot notification integration and unchanged authoritative combat behavior.
+
+## v6.8 — Weapon Impacts, Explosion & Combat VFX Reforge — IN DEVELOPMENT
+- [ ] Ammo-aware impact signatures make Basic/AP/HE/Incendiary/EMP/Twin/Plasma visually distinct using Projectile impact authority without changing damage, penetration or status resolution.
+- [ ] Layered explosion and destruction presentation adds bounded flash, shockwave, sparks, smoke and debris intensity scaled by impact/destruction significance rather than spawning unlimited effects.
+- [ ] Projectile trail presentation differentiates high-value ammunition while obeying FULL/BALANCED/SURVIVAL budgets and preserving projectile movement/collision authority.
+- [ ] Packaged Windows combat-VFX gate boots the exact development EXE and verifies ammo signature catalog, FX budgets, Projectile event integration and unchanged authoritative Health behavior.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
