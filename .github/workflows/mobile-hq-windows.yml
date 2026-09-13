@@ -1,0 +1,160 @@
+name: Mobile HQ Windows Gate
+
+on:
+  push:
+    branches:
+      - 'dev-v7-9'
+    paths:
+      - '.mobile-hq-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-mobile-hq:
+    name: Build v7.9 Windows candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+
+      - name: Validate v7.9 source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v7.9.0-dev"
+          test -f Assets/Scripts/MobileHQWarfareDirector.cs
+          test -f Assets/Scripts/MobileHQWarfareCISmokeProbe.cs
+          grep -q "MinimumOperationRound = 36" Assets/Scripts/MobileHQWarfareDirector.cs
+          grep -q "OperationRoundCadence = 8" Assets/Scripts/MobileHQWarfareDirector.cs
+          grep -q "MobileHQHealthMultiplier = 1.65f" Assets/Scripts/MobileHQWarfareDirector.cs
+          grep -q "MaxEscortOrders = 5" Assets/Scripts/MobileHQWarfareDirector.cs
+          grep -q "MaxCounterattackShots = 4" Assets/Scripts/MobileHQWarfareDirector.cs
+          grep -q "EmergencySuccessionDelay = 2.5f" Assets/Scripts/MobileHQWarfareDirector.cs
+          grep -q "CommandCollapseDuration = 8.0f" Assets/Scripts/MobileHQWarfareDirector.cs
+          grep -q "RuntimeBattleRegistry.EnemySnapshot" Assets/Scripts/MobileHQWarfareDirector.cs
+          grep -q "TacticalNavigationAgent" Assets/Scripts/MobileHQWarfareDirector.cs
+          grep -q "SpawnProjectile" Assets/Scripts/MobileHQWarfareDirector.cs
+          grep -q "CommandNetworkHuntDirector.Instance" Assets/Scripts/MobileHQWarfareDirector.cs
+          grep -q -- "-mobile-hq-smoke" Assets/Scripts/MobileHQWarfareCISmokeProbe.cs
+          echo "v7.9 source gate passed."
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: MobileHQ-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            MobileHQ-Library-${{ runner.os }}-6000.3.17f1-
+            CommandNetworkHunt-Library-${{ runner.os }}-6000.3.17f1-
+            EwCommand-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+
+      - name: Build development Windows player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+
+      - name: Verify and pack candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=build/StandaloneWindows64
+          test -f "$root/TankRevivalOverdrive.exe"
+          test -d "$root/TankRevivalOverdrive_Data"
+          cd "$root"
+          zip -r ../../TankRevival-v7.9-mobile-hq-Windows-x64.zip .
+          cd ../..
+          test -s TankRevival-v7.9-mobile-hq-Windows-x64.zip
+
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v7.9-mobile-hq-Windows-x64
+          path: TankRevival-v7.9-mobile-hq-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  runtime-smoke:
+    name: Boot exact v7.9 EXE on Windows
+    needs: build-mobile-hq
+    runs-on: windows-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Download exact candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-v7.9-mobile-hq-Windows-x64
+          path: candidate
+
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevival-v7.9-mobile-hq-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data missing after extraction' }
+
+      - name: Run mobile HQ smoke probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item MOBILE_HQ_PASS.txt, MOBILE_HQ_FAIL.txt, MobileHQPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-mobile-hq-smoke','-logFile','MobileHQPlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Mobile HQ smoke timed out after 60 seconds'
+          }
+          if (Test-Path 'MOBILE_HQ_FAIL.txt') {
+            Get-Content MOBILE_HQ_FAIL.txt
+            if (Test-Path MobileHQPlayer.log) { Get-Content MobileHQPlayer.log -Tail 220 }
+            throw 'Mobile HQ runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'MOBILE_HQ_PASS.txt')) {
+            if (Test-Path MobileHQPlayer.log) { Get-Content MobileHQPlayer.log -Tail 220 }
+            throw "Runtime exited without mobile HQ PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content MOBILE_HQ_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Select-String -Path MobileHQPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) {
+            Get-Content MobileHQPlayer.log -Tail 260
+            throw 'Blocking exception signature found during mobile HQ smoke'
+          }
+          Write-Host 'v7.9 mobile HQ runtime smoke passed.'
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v7.9-mobile-hq-diagnostics
+          path: |
+            candidate/runtime/MOBILE_HQ_PASS.txt
+            candidate/runtime/MOBILE_HQ_FAIL.txt
+            candidate/runtime/MobileHQPlayer.log
+          if-no-files-found: ignore
+          retention-days: 14
