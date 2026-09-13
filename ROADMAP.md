@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-1"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-2"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-22c55e?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-150%2F150-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.1%20QUALIFIED-22c55e?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-154%2F154-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.2%20QUALIFIED-22c55e?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **150** | **0** | **150** | **100.0%** |
+| **154** | **0** | **154** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -247,6 +247,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] TankGame wave size/concurrency/spawn tempo and CampaignEncounter composition consume the pacing profile so adjacent rounds have materially different intensity while boss, EW/network and Mobile HQ thresholds remain compatible.
 - [x] Recovery and escalation windows are player-readable and prevent the advanced v7.x systems from operating at maximum pressure on every round while preserving a demanding late-game arc.
 - [x] Packaged Windows campaign-pacing gate boots the exact development EXE and verifies the 1–100 schedule, pressure bounds, representative checkpoints, integration and version identity.
+
+## v8.2 — Sector Identity, Encounter Decks & Campaign Replayability Reforge — COMPLETE
+- [x] Ten 10-round sectors gain distinct combat doctrines and player-readable identities that materially change encounter emphasis without replacing TankGame, CampaignEncounter or v8.1 pacing authority.
+- [x] Three bounded per-run encounter decks (Spearhead, Attrition, Disruption) rotate sector composition, champion pressure and fire-support emphasis so repeat campaigns do not replay the same 100-round sequence.
+- [x] Sector/deck refinement remains compatible with boss cadence, recovery windows, EW/network thresholds and Mobile HQ operations while keeping health/fire-support/strike multipliers inside verified bounds.
+- [x] Packaged Windows sector-identity gate boots the exact development EXE and verifies all 10 doctrines, all 3 decks, replay rotation, campaign checkpoints, integration bounds and v8.2 version identity.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.

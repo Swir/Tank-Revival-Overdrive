@@ -1,0 +1,154 @@
+name: Sector Identity Windows Gate
+
+on:
+  push:
+    branches:
+      - 'dev-v8-2'
+    paths:
+      - '.sector-identity-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-sector-identity:
+    name: Build v8.2 Windows candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+
+      - name: Validate v8.2 source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v8.2.0-dev"
+          test -f Assets/Scripts/SectorIdentityDirector.cs
+          test -f Assets/Scripts/SectorIdentityCISmokeProbe.cs
+          grep -q "SectorCount = 10" Assets/Scripts/SectorIdentityDirector.cs
+          grep -q "DeckCount = 3" Assets/Scripts/SectorIdentityDirector.cs
+          grep -q "Spearhead" Assets/Scripts/SectorIdentityDirector.cs
+          grep -q "Attrition" Assets/Scripts/SectorIdentityDirector.cs
+          grep -q "Disruption" Assets/Scripts/SectorIdentityDirector.cs
+          grep -q "CampaignPacingDirector.RefineEncounter" Assets/Scripts/SectorIdentityCISmokeProbe.cs
+          grep -q -- "-sector-identity-smoke" Assets/Scripts/SectorIdentityCISmokeProbe.cs
+          echo "v8.2 source gate passed."
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: SectorIdentity-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            SectorIdentity-Library-${{ runner.os }}-6000.3.17f1-
+            CampaignPacing-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+
+      - name: Build development Windows player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+
+      - name: Verify and pack candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=build/StandaloneWindows64
+          test -f "$root/TankRevivalOverdrive.exe"
+          test -d "$root/TankRevivalOverdrive_Data"
+          cd "$root"
+          zip -r ../../TankRevival-v8.2-sector-identity-Windows-x64.zip .
+          cd ../..
+          test -s TankRevival-v8.2-sector-identity-Windows-x64.zip
+
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v8.2-sector-identity-Windows-x64
+          path: TankRevival-v8.2-sector-identity-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  runtime-smoke:
+    name: Boot exact v8.2 EXE on Windows
+    needs: build-sector-identity
+    runs-on: windows-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Download exact candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-v8.2-sector-identity-Windows-x64
+          path: candidate
+
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevival-v8.2-sector-identity-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data missing after extraction' }
+
+      - name: Run sector identity smoke probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item SECTOR_IDENTITY_PASS.txt, SECTOR_IDENTITY_FAIL.txt, SectorIdentityPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-sector-identity-smoke','-logFile','SectorIdentityPlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Sector identity smoke timed out after 60 seconds'
+          }
+          if (Test-Path 'SECTOR_IDENTITY_FAIL.txt') {
+            Get-Content SECTOR_IDENTITY_FAIL.txt
+            if (Test-Path SectorIdentityPlayer.log) { Get-Content SectorIdentityPlayer.log -Tail 240 }
+            throw 'Sector identity runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'SECTOR_IDENTITY_PASS.txt')) {
+            if (Test-Path SectorIdentityPlayer.log) { Get-Content SectorIdentityPlayer.log -Tail 240 }
+            throw "Runtime exited without sector identity PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content SECTOR_IDENTITY_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Select-String -Path SectorIdentityPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) {
+            Get-Content SectorIdentityPlayer.log -Tail 280
+            throw 'Blocking exception signature found during sector identity smoke'
+          }
+          Write-Host 'v8.2 sector identity runtime smoke passed.'
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v8.2-sector-identity-diagnostics
+          path: |
+            candidate/runtime/SECTOR_IDENTITY_PASS.txt
+            candidate/runtime/SECTOR_IDENTITY_FAIL.txt
+            candidate/runtime/SectorIdentityPlayer.log
+          if-no-files-found: ignore
+          retention-days: 14
