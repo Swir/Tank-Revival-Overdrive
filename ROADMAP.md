@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v7-3"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v7-4"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-22c55e?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-117%2F117-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V7.3%20QUALIFIED-22c55e?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-121%2F121-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V7.4%20QUALIFIED-22c55e?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **117** | **0** | **117** | **100.0%** |
+| **121** | **0** | **121** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -198,6 +198,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Obstacle-aware tactical steering uses bounded physics probes, separation and anti-stall recovery so squads route around collisions without replacing Rigidbody2D or Health authority.
 - [x] Class-aware formation doctrine adds regroup/fallback behavior, Heavy/Siege protection spacing and late-round pressure scaling while keeping movement budgets deterministic and bounded.
 - [x] Packaged Windows tactical-navigation gate boots the exact development EXE and verifies navigation installation, role/class coverage, steering bounds, anti-stall safeguards and version identity.
+
+## v7.4 — Terrain Intelligence, Cover & Breach Warfare — COMPLETE
+- [x] Terrain-intelligence layer scores nearby brick/steel obstacles as tactical cover and refines role-aware movement objectives without replacing Rigidbody2D, Health or TankGame authority.
+- [x] Cover doctrine gives Sniper/Suppressor units protected standoff anchors while Heavy/Escort units screen vulnerable allies and preserve deterministic bounded steering costs.
+- [x] Breach doctrine lets Breaker/Siege units identify obstructed Orzełek approach lanes, select bounded breach points and pressure destructible brick obstacles through existing Obstacle/Projectile authority rather than a parallel damage model.
+- [x] Packaged Windows terrain-intelligence gate boots the exact development EXE and verifies cover/breach configuration bounds, obstacle integration, role coverage and version identity.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
