@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v5-8"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100%25-2ea043?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-56%2F56-2ea043?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V5.8%20COMPLETE-2ea043?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v5-9"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-93.3%25-d29922?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-56%2F60-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V5.9%20IN%20PROGRESS-d29922?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+███████████████████░ 93.3%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **56** | **0** | **56** | **100.0%** |
+| **56** | **4** | **60** | **93.3%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -107,6 +107,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Defense readiness reacts to real Eagle damage/health state and uses bounded cooldowns/costs so active defense supplements rather than replaces combat skill.
 - [x] Player-facing fortress HUD communicates available defenses, costs, cooldown/readiness and Eagle pressure clearly during live rounds.
 - [x] Packaged Windows fortress gate boots the exact development EXE and verifies economy spending, defense configuration bounds and runtime installation.
+
+## v5.9 — Command Network & Fortress Siege Counterplay — IN PROGRESS
+- [ ] Enemy command network assembles live suppressor, escort and siege cells from existing enemy classes and changes target pressure without replacing EnemyTank authority.
+- [ ] Fortress-breaker operations create telegraphed attacks against Orzełek with bounded counterplay windows and explicit interaction with active fortress defenses.
+- [ ] Command-threat HUD communicates active operation, assigned roles, countdown, counterplay state and battlefield outcome during live rounds.
+- [ ] Packaged Windows command-network gate boots the exact development EXE and verifies role catalog, operation bounds, fortress-counterplay configuration and runtime installation.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
