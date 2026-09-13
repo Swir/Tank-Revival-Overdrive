@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-3"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-94.7%25-7c3aed?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-72%2F76-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.3%20IN%20DEVELOPMENT-7c3aed?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-4"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-95.0%25-7c3aed?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-76%2F80-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.4%20IN%20DEVELOPMENT-7c3aed?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-███████████████████░ 94.7%
+███████████████████░ 95.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **72** | **4** | **76** | **94.7%** |
+| **76** | **4** | **80** | **95.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -132,11 +132,17 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Convoy HUD and battlefield markers expose route progress, vehicle HP, current threat state and War Bond reward while using the existing economy and combat registry.
 - [x] Packaged Windows convoy-warfare gate boots the exact development EXE and verifies mission catalog, route/reward/health bounds, deterministic scheduling and runtime installation.
 
-## v6.3 — Combined Arms & Reinforcement Warfare — IN DEVELOPMENT
-- [ ] Enemy reinforcement command posts deploy bounded specialist relief waves into active combat through authoritative TankGame spawning and can be destroyed to stop the flow.
-- [ ] Combined-arms response teams react to convoy/objective pressure with deterministic escort, hunter and siege compositions while preserving existing enemy AI and health authority.
-- [ ] Player battlefield support earns limited artillery/air-support charges from destroyed reinforcement infrastructure and exposes readable telegraphs, targeting and War Bond rewards without a parallel currency.
-- [ ] Packaged Windows combined-arms gate boots the exact development EXE and verifies reinforcement scheduling, spawn caps, support-charge bounds, target authority and runtime installation.
+## v6.3 — Combined Arms & Reinforcement Warfare — COMPLETE
+- [x] Enemy reinforcement command posts deploy bounded specialist relief waves into active combat through authoritative TankGame spawning and can be destroyed to stop the flow.
+- [x] Combined-arms response teams react to convoy/objective pressure with deterministic escort, hunter and siege compositions while preserving existing enemy AI and health authority.
+- [x] Player battlefield support earns limited artillery/air-support charges from destroyed reinforcement infrastructure and exposes readable telegraphs, targeting and War Bond rewards without a parallel currency.
+- [x] Packaged Windows combined-arms gate boots the exact development EXE and verifies reinforcement scheduling, spawn caps, support-charge bounds, target authority and runtime installation.
+
+## v6.4 — Combat Readability & Adaptive HUD — IN DEVELOPMENT
+- [ ] Adaptive combat HUD consolidates simultaneous objective, convoy, fortress, command-network and combined-arms information into a bounded priority display instead of independent permanent text panels.
+- [ ] Focus/standard/minimal HUD density modes preserve critical warnings while allowing the player to reclaim battlefield visibility during heavy combat.
+- [ ] Legacy tactical panels are safely suppressed only during rendering while their gameplay directors continue updating authoritative combat state without changing outcomes.
+- [ ] Packaged Windows combat-readability gate boots the exact development EXE and verifies HUD installation, density-mode bounds, legacy-panel suppression safety and live gameplay authority.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
