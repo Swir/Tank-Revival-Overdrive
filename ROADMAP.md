@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-5"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-95.2%25-7c3aed?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-80%2F84-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.5%20IN%20DEVELOPMENT-7c3aed?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-16a34a?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-84%2F84-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.5%20COMPLETE-16a34a?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-███████████████████░ 95.2%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **80** | **4** | **84** | **95.2%** |
+| **84** | **0** | **84** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -144,11 +144,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Legacy tactical panels are safely suppressed only during rendering while their gameplay directors continue updating authoritative combat state without changing outcomes.
 - [x] Packaged Windows combat-readability gate boots the exact development EXE and verifies HUD installation, density-mode bounds, legacy-panel suppression safety and live gameplay authority.
 
-## v6.5 — Battlefield Presentation & Visual Overdrive — IN DEVELOPMENT
-- [ ] Persistent vehicle damage-state presentation adds readable hull distress, critical-health pulse and class-aware threat markers without modifying Health, armor or AI authority.
-- [ ] Event-driven combat feedback adds bounded player-hit vignette, enemy-hit confirmation and destruction emphasis so impacts are readable without adding permanent text panels.
-- [ ] High-value battlefield silhouettes make Boss/Elite/Siege threats visually identifiable through lightweight world-space rings/chevrons that obey strict presentation budgets.
-- [ ] Packaged Windows visual-overdrive gate boots the exact development EXE and verifies presentation installation, damage/threat thresholds, FX budgets and unchanged authoritative Health behavior.
+## v6.5 — Battlefield Presentation & Visual Overdrive — COMPLETE
+- [x] Persistent vehicle damage-state presentation adds readable hull distress, critical-health pulse and class-aware threat markers without modifying Health, armor or AI authority.
+- [x] Event-driven combat feedback adds bounded player-hit vignette, enemy-hit confirmation and destruction emphasis so impacts are readable without adding permanent text panels.
+- [x] High-value battlefield silhouettes make Boss/Elite/Siege threats visually identifiable through lightweight world-space rings/chevrons that obey strict presentation budgets.
+- [x] Packaged Windows visual-overdrive gate boots the exact development EXE and verifies presentation installation, damage/threat thresholds, FX budgets and unchanged authoritative Health behavior.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
