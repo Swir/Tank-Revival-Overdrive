@@ -37,14 +37,17 @@ namespace TankRevival
             {
                 AddSteelImpact(hitPosition, heavy);
                 VisualFactory.Explosion(hitPosition, new Color(0.75f, 0.85f, 1f), heavy ? 0.62f : 0.45f);
+                DestructionReforgeDirector.Instance?.ReportObstacleImpact(hitPosition, Kind, false, heavy);
                 return true;
             }
 
             HitPoints -= resolved;
             VisualFactory.Explosion(hitPosition, new Color(0.95f, 0.40f, 0.12f), heavy ? 0.72f : 0.55f);
             UpdateDamageVisuals();
+            bool destroyed = HitPoints <= 0;
+            DestructionReforgeDirector.Instance?.ReportObstacleImpact(hitPosition, Kind, destroyed, heavy);
 
-            if (HitPoints <= 0)
+            if (destroyed)
             {
                 SpawnCollapseDebris();
                 Destroy(gameObject);
