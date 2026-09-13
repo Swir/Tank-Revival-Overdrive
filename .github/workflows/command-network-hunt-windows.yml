@@ -1,0 +1,159 @@
+name: Command Network Hunt Windows Gate
+
+on:
+  push:
+    branches:
+      - 'dev-v7-8'
+    paths:
+      - '.command-network-hunt-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-command-network-hunt:
+    name: Build v7.8 Windows candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+
+      - name: Validate v7.8 source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v7.8.0-dev"
+          test -f Assets/Scripts/CommandNetworkHuntDirector.cs
+          test -f Assets/Scripts/CommandNetworkHuntCISmokeProbe.cs
+          grep -q "MinimumRelayRound = 28" Assets/Scripts/CommandNetworkHuntDirector.cs
+          grep -q "MaxRelayNodes = 3" Assets/Scripts/CommandNetworkHuntDirector.cs
+          grep -q "RelayHealthMultiplier = 1.18f" Assets/Scripts/CommandNetworkHuntDirector.cs
+          grep -q "SigintCooldown = 18f" Assets/Scripts/CommandNetworkHuntDirector.cs
+          grep -q "ReconCooldown = 32f" Assets/Scripts/CommandNetworkHuntDirector.cs
+          grep -q "FullNetworkBreakDuration = 6f" Assets/Scripts/CommandNetworkHuntDirector.cs
+          grep -q "RuntimeBattleRegistry.EnemySnapshot" Assets/Scripts/CommandNetworkHuntDirector.cs
+          grep -q "health.Died += OnRelayDied" Assets/Scripts/CommandNetworkHuntDirector.cs
+          grep -q "EnemyElectronicWarfareDirector.Instance" Assets/Scripts/CommandNetworkHuntDirector.cs
+          grep -q "AdaptiveFireControlDirector.Instance" Assets/Scripts/CommandNetworkHuntDirector.cs
+          grep -q -- "-command-network-hunt-smoke" Assets/Scripts/CommandNetworkHuntCISmokeProbe.cs
+          echo "v7.8 source gate passed."
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: CommandNetworkHunt-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            CommandNetworkHunt-Library-${{ runner.os }}-6000.3.17f1-
+            EwCommand-Library-${{ runner.os }}-6000.3.17f1-
+            TacticalCounterplay-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+
+      - name: Build development Windows player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+
+      - name: Verify and pack candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=build/StandaloneWindows64
+          test -f "$root/TankRevivalOverdrive.exe"
+          test -d "$root/TankRevivalOverdrive_Data"
+          cd "$root"
+          zip -r ../../TankRevival-v7.8-command-network-hunt-Windows-x64.zip .
+          cd ../..
+          test -s TankRevival-v7.8-command-network-hunt-Windows-x64.zip
+
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v7.8-command-network-hunt-Windows-x64
+          path: TankRevival-v7.8-command-network-hunt-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  runtime-smoke:
+    name: Boot exact v7.8 EXE on Windows
+    needs: build-command-network-hunt
+    runs-on: windows-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Download exact candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-v7.8-command-network-hunt-Windows-x64
+          path: candidate
+
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevival-v7.8-command-network-hunt-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data missing after extraction' }
+
+      - name: Run command network hunt smoke probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item COMMAND_NETWORK_HUNT_PASS.txt, COMMAND_NETWORK_HUNT_FAIL.txt, CommandNetworkHuntPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-command-network-hunt-smoke','-logFile','CommandNetworkHuntPlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Command network hunt smoke timed out after 60 seconds'
+          }
+          if (Test-Path 'COMMAND_NETWORK_HUNT_FAIL.txt') {
+            Get-Content COMMAND_NETWORK_HUNT_FAIL.txt
+            if (Test-Path CommandNetworkHuntPlayer.log) { Get-Content CommandNetworkHuntPlayer.log -Tail 220 }
+            throw 'Command network hunt runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'COMMAND_NETWORK_HUNT_PASS.txt')) {
+            if (Test-Path CommandNetworkHuntPlayer.log) { Get-Content CommandNetworkHuntPlayer.log -Tail 220 }
+            throw "Runtime exited without command network hunt PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content COMMAND_NETWORK_HUNT_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Select-String -Path CommandNetworkHuntPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) {
+            Get-Content CommandNetworkHuntPlayer.log -Tail 260
+            throw 'Blocking exception signature found during command network hunt smoke'
+          }
+          Write-Host 'v7.8 command network hunt runtime smoke passed.'
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v7.8-command-network-hunt-diagnostics
+          path: |
+            candidate/runtime/COMMAND_NETWORK_HUNT_PASS.txt
+            candidate/runtime/COMMAND_NETWORK_HUNT_FAIL.txt
+            candidate/runtime/CommandNetworkHuntPlayer.log
+          if-no-files-found: ignore
+          retention-days: 14
