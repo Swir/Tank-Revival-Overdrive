@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-8"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-16a34a?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-96%2F96-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.8%20COMPLETE-16a34a?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-9"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-96.0%25-7c3aed?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-96%2F100-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.9%20IN%20DEVELOPMENT-7c3aed?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+███████████████████░ 96.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **96** | **0** | **96** | **100.0%** |
+| **96** | **4** | **100** | **96.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -167,6 +167,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Layered explosion and destruction presentation adds bounded flash, shockwave, sparks, smoke and debris intensity scaled by impact/destruction significance rather than spawning unlimited effects.
 - [x] Projectile trail presentation differentiates high-value ammunition while obeying FULL/BALANCED/SURVIVAL budgets and preserving projectile movement/collision authority.
 - [x] Packaged Windows combat-VFX gate boots the exact development EXE and verifies ammo signature catalog, FX budgets, Projectile event integration and unchanged authoritative Health behavior.
+
+## v6.9 — Destruction, Wreckage & Battlefield Damage Reforge — IN DEVELOPMENT
+- [ ] A single wreck-authority path replaces duplicate death-wreck generation and creates class-aware Basic/Fast/Sniper/Heavy/Siege/Elite/Boss aftermath without changing Health or kill authority.
+- [ ] Wreck lifecycle presentation transitions through bounded hot, smoldering and cold states with class-scaled fire/smoke/debris while preserving movement, collision and damage outcomes.
+- [ ] Destructible battlefield objects receive staged impact/collapse presentation and heavy-ammo reaction cues connected to existing Obstacle destruction instead of a parallel damage model.
+- [ ] Packaged Windows destruction-reforge gate boots the exact development EXE and verifies single wreck authority, class profile catalog, FULL/BALANCED/SURVIVAL budgets and unchanged authoritative Health/Obstacle behavior.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
