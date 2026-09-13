@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v7-5"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-96.8%25-f59e0b?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-121%2F125-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V7.5%20IN%20DEVELOPMENT-f59e0b?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-22c55e?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-125%2F125-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V7.5%20QUALIFIED-22c55e?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-███████████████████░ 96.8%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **121** | **4** | **125** | **96.8%** |
+| **125** | **0** | **125** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -205,11 +205,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Breach doctrine lets Breaker/Siege units identify obstructed Orzełek approach lanes, select bounded breach points and pressure destructible brick obstacles through existing Obstacle/Projectile authority rather than a parallel damage model.
 - [x] Packaged Windows terrain-intelligence gate boots the exact development EXE and verifies cover/breach configuration bounds, obstacle integration, role coverage and version identity.
 
-## v7.5 — Adaptive Fire Control, Suppression & Combined Maneuver — IN DEVELOPMENT
-- [ ] Predictive fire-control estimates player motion from observed positions and lets precision-capable enemies lead shots with bounded look-ahead while preserving Projectile/TankGame authority.
-- [ ] Suppression doctrine creates short-lived, telegraphed fire lanes that pressure movement space without direct hidden damage, with strict shot, lane and cadence budgets for late rounds.
-- [ ] Combined-maneuver doctrine sequences cover/suppression/flank/breach beats so Heavy/Escort screens and Suppressor fire create real movement windows for Flanker/Breaker units instead of independent actions.
-- [ ] Packaged Windows adaptive-fire-control gate boots the exact development EXE and verifies prediction/suppression/maneuver bounds, RuntimeBattleRegistry integration, authoritative projectile spawning and version identity.
+## v7.5 — Adaptive Fire Control, Suppression & Combined Maneuver — COMPLETE
+- [x] Predictive fire-control estimates player motion from observed positions and lets precision-capable enemies lead shots with bounded look-ahead while preserving Projectile/TankGame authority.
+- [x] Suppression doctrine creates short-lived, telegraphed fire lanes that pressure movement space without direct hidden damage, with strict shot, lane and cadence budgets for late rounds.
+- [x] Combined-maneuver doctrine sequences cover/suppression/flank/breach beats so Heavy/Escort screens and Suppressor fire create real movement windows for Flanker/Breaker units instead of independent actions.
+- [x] Packaged Windows adaptive-fire-control gate boots the exact development EXE and verifies prediction/suppression/maneuver bounds, RuntimeBattleRegistry integration, authoritative projectile spawning and version identity.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
