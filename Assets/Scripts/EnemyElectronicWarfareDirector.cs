@@ -89,8 +89,8 @@ namespace TankRevival
         private void OnDestroy()
         {
             UnsubscribeCommand();
-            RestoreSuperioritySuppression();
-            RestoreDecoySuppression();
+            RestoreSuperioritySuppression(null, true);
+            RestoreDecoySuppression(null, true);
             if (_instance == this) _instance = null;
         }
 
@@ -99,8 +99,8 @@ namespace TankRevival
             if (_game == null) _game = FindAnyObjectByType<TankGame>();
             if (_game == null || !_game.IsPlaying)
             {
-                EndDecoy();
-                RestoreSuperioritySuppression();
+                EndDecoy(null, true);
+                RestoreSuperioritySuppression(null, true);
                 return;
             }
 
@@ -191,8 +191,8 @@ namespace TankRevival
         {
             if (!HasLiveCommandVehicle || counterplay == null || !counterplay.NetworkJammed || TacticalSuperiorityActive) return;
 
-            // The EW command vehicle hardens only adaptive fire control. Squad and boss command
-            // coordination still drop during player ECM/EMP, so counterplay remains valuable.
+            // A live EW node hardens adaptive fire-control only. Squad and boss coordination still
+            // drop under player ECM/EMP, so the player's countermeasure remains materially useful.
             AdaptiveFireControlDirector adaptive = AdaptiveFireControlDirector.Instance;
             if (adaptive != null && !DecoyActive) adaptive.enabled = true;
         }
@@ -244,6 +244,7 @@ namespace TankRevival
             if (!DecoyActive)
             {
                 if (_decoyActive) EndDecoy(counterplay);
+                else RestoreDecoySuppression(counterplay);
                 return;
             }
 
@@ -301,10 +302,10 @@ namespace TankRevival
             }
         }
 
-        private void EndDecoy(TacticalCounterplayDirector counterplay = null)
+        private void EndDecoy(TacticalCounterplayDirector counterplay = null, bool forceRestore = false)
         {
             _decoyActive = false;
-            RestoreDecoySuppression(counterplay);
+            RestoreDecoySuppression(counterplay, forceRestore);
         }
 
         private void UpdateTacticalSuperiority(TacticalCounterplayDirector counterplay)
@@ -326,29 +327,38 @@ namespace TankRevival
             }
         }
 
-        private void RestoreSuperioritySuppression(TacticalCounterplayDirector counterplay = null)
+        private void RestoreSuperioritySuppression(TacticalCounterplayDirector counterplay = null, bool forceRestore = false)
         {
-            bool jammed = counterplay != null && counterplay.NetworkJammed;
-            bool smoked = counterplay != null && counterplay.PlayerInsideSmoke;
-            if (_superioritySuppressedAdaptive && !jammed && !smoked && !DecoyActive && AdaptiveFireControlDirector.Instance != null)
-                AdaptiveFireControlDirector.Instance.enabled = true;
-            if (_superioritySuppressedSquad && !jammed && EnemySquadTacticsDirector.Instance != null)
-                EnemySquadTacticsDirector.Instance.enabled = true;
-            if (_superioritySuppressedBoss && !jammed && BossCommandTacticsDirector.Instance != null)
-                BossCommandTacticsDirector.Instance.enabled = true;
-            _superioritySuppressedAdaptive = false;
-            _superioritySuppressedSquad = false;
-            _superioritySuppressedBoss = false;
+            bool jammed = !forceRestore && counterplay != null && counterplay.NetworkJammed;
+            bool smoked = !forceRestore && counterplay != null && counterplay.PlayerInsideSmoke;
+
+            if (_superioritySuppressedAdaptive && (forceRestore || (!jammed && !smoked && !DecoyActive)))
+            {
+                if (AdaptiveFireControlDirector.Instance != null) AdaptiveFireControlDirector.Instance.enabled = true;
+                _superioritySuppressedAdaptive = false;
+            }
+            if (_superioritySuppressedSquad && (forceRestore || !jammed))
+            {
+                if (EnemySquadTacticsDirector.Instance != null) EnemySquadTacticsDirector.Instance.enabled = true;
+                _superioritySuppressedSquad = false;
+            }
+            if (_superioritySuppressedBoss && (forceRestore || !jammed))
+            {
+                if (BossCommandTacticsDirector.Instance != null) BossCommandTacticsDirector.Instance.enabled = true;
+                _superioritySuppressedBoss = false;
+            }
         }
 
-        private void RestoreDecoySuppression(TacticalCounterplayDirector counterplay = null)
+        private void RestoreDecoySuppression(TacticalCounterplayDirector counterplay = null, bool forceRestore = false)
         {
             if (!_decoySuppressedAdaptive) return;
-            bool jammed = counterplay != null && counterplay.NetworkJammed;
-            bool smoked = counterplay != null && counterplay.PlayerInsideSmoke;
-            if (!jammed && !smoked && !TacticalSuperiorityActive && AdaptiveFireControlDirector.Instance != null)
-                AdaptiveFireControlDirector.Instance.enabled = true;
-            _decoySuppressedAdaptive = false;
+            bool jammed = !forceRestore && counterplay != null && counterplay.NetworkJammed;
+            bool smoked = !forceRestore && counterplay != null && counterplay.PlayerInsideSmoke;
+            if (forceRestore || (!jammed && !smoked && !TacticalSuperiorityActive))
+            {
+                if (AdaptiveFireControlDirector.Instance != null) AdaptiveFireControlDirector.Instance.enabled = true;
+                _decoySuppressedAdaptive = false;
+            }
         }
 
         private void UpdateCommandPresentation()
