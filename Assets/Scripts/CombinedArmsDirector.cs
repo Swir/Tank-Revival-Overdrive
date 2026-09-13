@@ -141,17 +141,23 @@ namespace TankRevival
                 if (HasOperationForRound(_round)) BeginOperation();
             }
 
-            if (!HasOperationForRound(_round) || _resolved) return;
+            if (!HasOperationForRound(_round)) return;
+
+            HandleSupportControls();
+            if (_resolved) return;
 
             if (_commandPostHealth == null || _commandPostHealth.IsDead)
             {
-                if (!_resolved) ResolveCommandPostDestroyed();
+                ResolveCommandPostDestroyed();
                 return;
             }
 
             if (_wavesDeployed < WaveCountForRound(_round) && Time.time >= _nextWave)
                 DeployReinforcementWave();
+        }
 
+        private void HandleSupportControls()
+        {
             if (_supportCharges > 0 && _supportFireAt < 0f)
             {
                 if (Input.GetKeyDown(KeyCode.F9)) QueueSupport(false);
@@ -217,12 +223,14 @@ namespace TankRevival
             _supportCharges = Mathf.Min(MaxSupportCharges, _supportCharges + 1);
             int reward = RewardForRound(_round);
             WarEconomyDirector.AwardMissionBonds(reward, "REINFORCEMENT NODE DESTROYED");
-            _status = "NODE DESTROYED // SUPPORT CHARGE ACQUIRED";
+            _status = "NODE DESTROYED // SUPPORT READY: F9 ARTILLERY / F10 CAS";
             if (_commandPost != null)
             {
                 VisualFactory.Explosion(_commandPost.transform.position, DoctrineColor(_doctrine), 1.45f);
+                Destroy(_commandPost);
                 _commandPost = null;
             }
+            _commandPostHealth = null;
             BattleAudio.PlayGlobal(SoundCue.RoundClear, 0.46f, 0f);
         }
 
