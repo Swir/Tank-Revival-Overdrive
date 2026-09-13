@@ -8,6 +8,7 @@ namespace TankRevival
     /// v6.6 presentation-only battlefield reforge. It observes authoritative combat state and adds
     /// atmosphere, bounded camera framing and recyclable aftermath decals without changing gameplay.
     /// </summary>
+    [DefaultExecutionOrder(1000)]
     public sealed class CinematicBattlefieldDirector : MonoBehaviour
     {
         public const int SectorCount = 10;
@@ -16,12 +17,11 @@ namespace TankRevival
         public const int MaxDebris = 24;
         public const float MaxCameraOffset = 0.42f;
         public const float MaxCameraZoomDelta = 0.28f;
+        public static bool ConfigurationValid => SectorCount == 10 && MaxTrackMarks <= 64 && MaxImpactScars <= 48 && MaxDebris <= 32 && MaxCameraOffset <= 0.5f && MaxCameraZoomDelta <= 0.35f;
 
         private sealed class FxSlot
         {
             public GameObject Go;
-            public SpriteRenderer Renderer;
-            public float Born;
         }
 
         private static Sprite _whiteSprite;
@@ -305,7 +305,6 @@ namespace TankRevival
             slot.Go.transform.position = new Vector3(position.x, position.y, 0f);
             slot.Go.transform.rotation = Quaternion.Euler(0f, 0f, angle);
             slot.Go.transform.localScale = scale;
-            slot.Born = Time.time;
             slot.Go.SetActive(true);
         }
 
@@ -315,7 +314,7 @@ namespace TankRevival
             {
                 GameObject go = CreateQuad(prefix + "_" + i, _aftermathRoot, Vector2.zero, scale, color, order);
                 go.SetActive(false);
-                pool.Add(new FxSlot { Go = go, Renderer = go.GetComponent<SpriteRenderer>() });
+                pool.Add(new FxSlot { Go = go });
             }
         }
 
