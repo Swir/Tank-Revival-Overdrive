@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v7-6"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-96.9%25-f59e0b?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-125%2F129-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V7.6%20IN%20PROGRESS-f59e0b?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-22c55e?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-129%2F129-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V7.6%20QUALIFIED-22c55e?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-███████████████████░ 96.9%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **125** | **4** | **129** | **96.9%** |
+| **129** | **0** | **129** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -211,11 +211,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Combined-maneuver doctrine sequences cover/suppression/flank/breach beats so Heavy/Escort screens and Suppressor fire create real movement windows for Flanker/Breaker units instead of independent actions.
 - [x] Packaged Windows adaptive-fire-control gate boots the exact development EXE and verifies prediction/suppression/maneuver bounds, RuntimeBattleRegistry integration, authoritative projectile spawning and version identity.
 
-## v7.6 — Tactical Counterplay, Smoke & Electronic Warfare — QUALIFYING
-- [ ] Player-deployed smoke creates bounded concealment zones that suspend v7.5 predictive/combined fire-control while the player remains concealed without disabling ordinary EnemyTank combat authority.
-- [ ] Active ECM gives the player a cooldown-limited way to interrupt squad, boss-command and adaptive-fire coordination without deleting enemies, stunning base AI or introducing a parallel damage model.
-- [ ] Existing player EMP ammunition gains strategic network-disruption value through authoritative `Projectile.DamageResolved`, extending the real EMP hit path instead of simulating separate hits.
-- [ ] Packaged Windows tactical-counterplay gate boots the exact development EXE and verifies smoke/ECM/EMP bounds, coordination integration, authoritative Projectile linkage and version identity.
+## v7.6 — Tactical Counterplay, Smoke & Electronic Warfare — COMPLETE
+- [x] Player-deployed smoke creates bounded concealment zones that suspend v7.5 predictive/combined fire-control while the player remains concealed without disabling ordinary EnemyTank combat authority.
+- [x] Active ECM gives the player a cooldown-limited way to interrupt squad, boss-command and adaptive-fire coordination without deleting enemies, stunning base AI or introducing a parallel damage model.
+- [x] Existing player EMP ammunition gains strategic network-disruption value through authoritative `Projectile.DamageResolved`, extending the real EMP hit path instead of simulating separate hits.
+- [x] Packaged Windows tactical-counterplay gate boots the exact development EXE and verifies smoke/ECM/EMP bounds, coordination integration, authoritative Projectile linkage and version identity.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
