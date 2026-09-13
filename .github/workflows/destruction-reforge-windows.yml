@@ -1,0 +1,147 @@
+name: Destruction Reforge Windows Gate
+
+on:
+  push:
+    branches:
+      - dev-v6-9
+    paths:
+      - '.destruction-reforge-trigger'
+      - 'Assets/Scripts/DestructionReforgeDirector.cs'
+      - 'Assets/Scripts/DestructionAuthorityMigration.cs'
+      - 'Assets/Scripts/DestructionReforgeCISmokeProbe.cs'
+      - 'Assets/Scripts/Obstacle.cs'
+      - 'Assets/Scripts/BattlefieldDestruction.cs'
+      - '.github/workflows/destruction-reforge-windows.yml'
+      - 'VERSION'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-destruction-reforge:
+    name: Build destruction reforge candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+
+      - name: Validate v6.9 source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v6.9.0-dev"
+          test -f Assets/Scripts/DestructionReforgeDirector.cs
+          test -f Assets/Scripts/DestructionAuthorityMigration.cs
+          test -f Assets/Scripts/DestructionReforgeCISmokeProbe.cs
+          grep -q "WreckProfileCount = 7" Assets/Scripts/DestructionReforgeDirector.cs
+          grep -q "FullWreckBudget = 26" Assets/Scripts/DestructionReforgeDirector.cs
+          grep -q "BalancedWreckBudget = 18" Assets/Scripts/DestructionReforgeDirector.cs
+          grep -q "SurvivalWreckBudget = 12" Assets/Scripts/DestructionReforgeDirector.cs
+          grep -q "SingleWreckAuthority" Assets/Scripts/DestructionReforgeDirector.cs
+          grep -q "LegacyAuthoritySuppressed" Assets/Scripts/DestructionAuthorityMigration.cs
+          grep -q -- "-destruction-reforge-smoke" Assets/Scripts/DestructionReforgeCISmokeProbe.cs
+          grep -q "ReportObstacleImpact" Assets/Scripts/Obstacle.cs
+          echo "v6.9 source gate passed."
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: DestructionReforge-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+            Library-${{ runner.os }}-6000.3.17f1-
+
+      - name: Build development player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+
+      - name: Verify executable
+        shell: bash
+        run: |
+          test -f build/StandaloneWindows64/TankRevivalOverdrive.exe
+          test -d build/StandaloneWindows64/TankRevivalOverdrive_Data
+
+      - name: Pack exact candidate
+        shell: bash
+        run: |
+          cd build/StandaloneWindows64
+          zip -r ../../destruction-reforge-candidate.zip .
+          cd ../..
+          test -s destruction-reforge-candidate.zip
+
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: destruction-reforge-candidate
+          path: destruction-reforge-candidate.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-runtime-smoke:
+    name: Boot destruction reforge candidate on Windows
+    needs: build-destruction-reforge
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download exact candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: destruction-reforge-candidate
+          path: candidate
+
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Expand-Archive candidate/destruction-reforge-candidate.zip -DestinationPath candidate/runtime -Force
+          if (!(Test-Path 'candidate/runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing' }
+
+      - name: Run destruction reforge smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item DESTRUCTION_REFORGE_PASS.txt, DESTRUCTION_REFORGE_FAIL.txt, Player.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-destruction-reforge-smoke','-logFile','Player.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Destruction reforge smoke timed out'
+          }
+          if (Test-Path 'DESTRUCTION_REFORGE_FAIL.txt') {
+            Get-Content DESTRUCTION_REFORGE_FAIL.txt
+            if (Test-Path Player.log) { Get-Content Player.log -Tail 200 }
+            throw 'Destruction reforge runtime smoke reported FAIL'
+          }
+          if (!(Test-Path 'DESTRUCTION_REFORGE_PASS.txt')) {
+            if (Test-Path Player.log) { Get-Content Player.log -Tail 200 }
+            throw "Runtime exited without PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content DESTRUCTION_REFORGE_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned $($p.ExitCode)" }
+          if (Select-String -Path Player.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) {
+            Get-Content Player.log -Tail 240
+            throw 'Blocking exception signature found in Player.log'
+          }
