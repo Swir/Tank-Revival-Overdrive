@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-0"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-16a34a?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-64%2F64-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.0%20QUALIFIED-16a34a?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-1"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-7c3aed?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-68%2F68-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.1%20QUALIFIED-7c3aed?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **64** | **0** | **64** | **100.0%** |
+| **68** | **0** | **68** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -119,6 +119,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Battlefield hazard layer adds visible minefields and telegraphed artillery danger zones with bounded damage, counterplay time and no hidden unavoidable spawn damage.
 - [x] Objective HUD, battlefield markers and existing War Bond/Eagle repair integrations make the new systems readable and materially connected to progression and fortress defense.
 - [x] Packaged Windows dynamic-battlefield gate boots the exact development EXE and verifies objective/hazard catalog, deterministic scheduling, tuning bounds and runtime installation.
+
+## v6.1 — Battlefield Control & Multi-Stage Operations — COMPLETE
+- [x] Deterministic multi-stage operations chain capture, interdiction and final hold phases into one playable mission arc on selected non-boss rounds without replacing TankGame round authority.
+- [x] Sector-control simulation allows enemies to contest and reverse capture progress while designated command targets connect live combat to operation advancement.
+- [x] Operation HUD and battlefield markers clearly expose current phase, contest state, command target and War Bond reward through existing progression systems.
+- [x] Packaged Windows multi-stage-operation gate boots the exact development EXE and verifies phase catalog, scheduling, contest/reward bounds and runtime installation.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
