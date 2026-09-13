@@ -26,20 +26,22 @@ namespace TankRevival
             bool hasGame = FindAnyObjectByType<TankGame>() != null;
             bool hasSquad = EnemySquadTacticsDirector.Instance != null;
             bool hasNavigation = TacticalNavigationDirector.Instance != null;
+            bool hasRegroup = TacticalRegroupDirector.Instance != null;
             bool hasRegistry = RuntimeBattleRegistry.HealthSnapshot != null && RuntimeBattleRegistry.EnemySnapshot != null;
-            bool config = TacticalNavigationDirector.ConfigurationValid;
+            bool navigationConfig = TacticalNavigationDirector.ConfigurationValid;
+            bool regroupConfig = TacticalRegroupDirector.ConfigurationValid;
             bool version = Application.version == "7.3.0-dev";
 
-            if (hasGame && hasSquad && hasNavigation && hasRegistry && config && version)
+            if (hasGame && hasSquad && hasNavigation && hasRegroup && hasRegistry && navigationConfig && regroupConfig && version)
             {
-                WriteMarker(true, $"game={hasGame} squad={hasSquad} navigation={hasNavigation} registry={hasRegistry} config={config} cadence={TacticalNavigationDirector.DecisionCadence} probe={TacticalNavigationDirector.ProbeDistance} separation={TacticalNavigationDirector.SeparationRadius} maxEnemies={TacticalNavigationDirector.MaxManagedEnemies} version={Application.version}");
+                WriteMarker(true, $"game={hasGame} squad={hasSquad} navigation={hasNavigation} regroup={hasRegroup} registry={hasRegistry} navConfig={navigationConfig} regroupConfig={regroupConfig} cadence={TacticalNavigationDirector.DecisionCadence} probe={TacticalNavigationDirector.ProbeDistance} separation={TacticalNavigationDirector.SeparationRadius} antiStall={TacticalNavigationDirector.AntiStallSeconds} maxEnemies={TacticalNavigationDirector.MaxManagedEnemies} fallbackHp={TacticalRegroupDirector.FallbackHealthRatio} isolation={TacticalRegroupDirector.IsolationDistance} version={Application.version}");
                 Application.Quit(0);
                 return;
             }
 
             if (Time.realtimeSinceStartup - _startedAt >= TimeoutSeconds)
             {
-                WriteMarker(false, $"game={hasGame} squad={hasSquad} navigation={hasNavigation} registry={hasRegistry} config={config} version={Application.version}");
+                WriteMarker(false, $"game={hasGame} squad={hasSquad} navigation={hasNavigation} regroup={hasRegroup} registry={hasRegistry} navConfig={navigationConfig} regroupConfig={regroupConfig} version={Application.version}");
                 Application.Quit(33);
             }
         }
