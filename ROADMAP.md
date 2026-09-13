@@ -34,7 +34,7 @@ This roadmap tracks large playable milestones. Small cosmetic-only releases are 
 - [x] Projectile pool lifecycle validation and stale-reference pruning.
 - [x] Persistent Runtime Stability Director watching campaign, registry and pool state.
 - [x] Conservative recovery for repeated stale registry references and orphaned projectiles after gameplay ends.
-- [x] Automated development late-round stress harness with round 80/90/100 jumps, pressure injection and pool/GC/FPS telemetry.
+- [x] Automated development soak gate covering rounds 80/90/100 with heavy pressure waves.
 - [x] Soak summary records FPS, managed memory, pool reuse and runtime repair/warning deltas.
 
 ## v4.9 — Demo UX, Settings & First-Run Polish — COMPLETE
