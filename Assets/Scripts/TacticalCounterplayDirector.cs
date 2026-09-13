@@ -123,7 +123,7 @@ namespace TankRevival
             _nextSmoke = Time.time + SmokeCooldown;
             VisualFactory.RingPulse(center, new Color(0.62f, 0.72f, 0.76f), SmokeRadius);
             VisualFactory.MicroBurst(center, new Color(0.64f, 0.72f, 0.76f), 1.35f);
-            BattleAudio.PlayGlobal(SoundCue.PowerUp, 0.28f, 0.04f);
+            BattleAudio.PlayGlobal(SoundCue.Pickup, 0.28f, 0.04f);
         }
 
         private void TriggerEcm()
@@ -133,7 +133,7 @@ namespace TankRevival
             Vector2 center = _game != null ? _game.PlayerPosition : Vector2.zero;
             VisualFactory.RingPulse(center, new Color(0.18f, 0.92f, 1f), 2.8f);
             VisualFactory.RingPulse(center, new Color(0.42f, 0.38f, 1f), 1.8f);
-            BattleAudio.PlayGlobal(SoundCue.PowerUp, 0.34f, 0.03f);
+            BattleAudio.PlayGlobal(SoundCue.Emp, 0.34f, 0.03f);
         }
 
         private void OnProjectileDamageResolved(Projectile projectile, Health target, int damage, bool killed)
