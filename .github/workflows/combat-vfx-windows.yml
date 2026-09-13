@@ -1,0 +1,140 @@
+name: Combat VFX Windows Gate
+
+on:
+  push:
+    branches:
+      - dev-v6-8
+    paths:
+      - '.combat-vfx-trigger'
+      - 'Assets/Scripts/CombatVfxReforgeDirector.cs'
+      - 'Assets/Scripts/CombatVfxReforgeCISmokeProbe.cs'
+      - '.github/workflows/combat-vfx-windows.yml'
+      - 'VERSION'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-combat-vfx:
+    name: Build combat VFX candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+
+      - name: Validate v6.8 source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v6.8.0-dev"
+          test -f Assets/Scripts/CombatVfxReforgeDirector.cs
+          test -f Assets/Scripts/CombatVfxReforgeCISmokeProbe.cs
+          grep -q "AmmoSignatureCount = 7" Assets/Scripts/CombatVfxReforgeDirector.cs
+          grep -q "MaxTrackedTrails = 96" Assets/Scripts/CombatVfxReforgeDirector.cs
+          grep -q "MaxLayerBurstsPerSecond = 28" Assets/Scripts/CombatVfxReforgeDirector.cs
+          grep -q "UsesProjectileEventAuthority" Assets/Scripts/CombatVfxReforgeDirector.cs
+          grep -q -- "-combat-vfx-smoke" Assets/Scripts/CombatVfxReforgeCISmokeProbe.cs
+          echo "v6.8 source gate passed."
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: CombatVFX-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+            Library-${{ runner.os }}-6000.3.17f1-
+
+      - name: Build development player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+
+      - name: Verify executable
+        shell: bash
+        run: |
+          test -f build/StandaloneWindows64/TankRevivalOverdrive.exe
+          test -d build/StandaloneWindows64/TankRevivalOverdrive_Data
+
+      - name: Pack exact candidate
+        shell: bash
+        run: |
+          cd build/StandaloneWindows64
+          zip -r ../../combat-vfx-candidate.zip .
+          cd ../..
+          test -s combat-vfx-candidate.zip
+
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: combat-vfx-candidate
+          path: combat-vfx-candidate.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-runtime-smoke:
+    name: Boot combat VFX candidate on Windows
+    needs: build-combat-vfx
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download exact candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: combat-vfx-candidate
+          path: candidate
+
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Expand-Archive candidate/combat-vfx-candidate.zip -DestinationPath candidate/runtime -Force
+          if (!(Test-Path 'candidate/runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing' }
+
+      - name: Run combat VFX smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item COMBAT_VFX_PASS.txt, COMBAT_VFX_FAIL.txt, Player.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-combat-vfx-smoke','-logFile','Player.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Combat VFX smoke timed out'
+          }
+          if (Test-Path 'COMBAT_VFX_FAIL.txt') {
+            Get-Content COMBAT_VFX_FAIL.txt
+            if (Test-Path Player.log) { Get-Content Player.log -Tail 180 }
+            throw 'Combat VFX runtime smoke reported FAIL'
+          }
+          if (!(Test-Path 'COMBAT_VFX_PASS.txt')) {
+            if (Test-Path Player.log) { Get-Content Player.log -Tail 180 }
+            throw "Runtime exited without PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content COMBAT_VFX_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned $($p.ExitCode)" }
+          if (Select-String -Path Player.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) {
+            Get-Content Player.log -Tail 220
+            throw 'Blocking exception signature found in Player.log'
+          }
