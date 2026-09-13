@@ -1,0 +1,158 @@
+name: Tactical Counterplay Windows Gate
+
+on:
+  push:
+    branches:
+      - 'dev-v7-6'
+    paths:
+      - '.tactical-counterplay-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-tactical-counterplay:
+    name: Build v7.6 Windows candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+
+      - name: Validate v7.6 source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v7.6.0-dev"
+          test -f Assets/Scripts/TacticalCounterplayDirector.cs
+          test -f Assets/Scripts/TacticalCounterplayCISmokeProbe.cs
+          grep -q "SmokeRadius = 2.6f" Assets/Scripts/TacticalCounterplayDirector.cs
+          grep -q "SmokeDuration = 5.5f" Assets/Scripts/TacticalCounterplayDirector.cs
+          grep -q "EcmDuration = 4.2f" Assets/Scripts/TacticalCounterplayDirector.cs
+          grep -q "EmpJamDuration = 3.5f" Assets/Scripts/TacticalCounterplayDirector.cs
+          grep -q "Projectile.DamageResolved" Assets/Scripts/TacticalCounterplayDirector.cs
+          grep -q "AmmoType.EMP" Assets/Scripts/TacticalCounterplayDirector.cs
+          grep -q "AdaptiveFireControlDirector.Instance" Assets/Scripts/TacticalCounterplayDirector.cs
+          grep -q "EnemySquadTacticsDirector.Instance" Assets/Scripts/TacticalCounterplayDirector.cs
+          grep -q "BossCommandTacticsDirector.Instance" Assets/Scripts/TacticalCounterplayDirector.cs
+          grep -q -- "-tactical-counterplay-smoke" Assets/Scripts/TacticalCounterplayCISmokeProbe.cs
+          echo "v7.6 source gate passed."
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: TacticalCounterplay-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            TacticalCounterplay-Library-${{ runner.os }}-6000.3.17f1-
+            AdaptiveFireControl-Library-${{ runner.os }}-6000.3.17f1-
+            TerrainIntelligence-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+
+      - name: Build development Windows player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+
+      - name: Verify and pack candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=build/StandaloneWindows64
+          test -f "$root/TankRevivalOverdrive.exe"
+          test -d "$root/TankRevivalOverdrive_Data"
+          cd "$root"
+          zip -r ../../TankRevival-v7.6-tactical-counterplay-Windows-x64.zip .
+          cd ../..
+          test -s TankRevival-v7.6-tactical-counterplay-Windows-x64.zip
+
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v7.6-tactical-counterplay-Windows-x64
+          path: TankRevival-v7.6-tactical-counterplay-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  runtime-smoke:
+    name: Boot exact v7.6 EXE on Windows
+    needs: build-tactical-counterplay
+    runs-on: windows-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Download exact candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-v7.6-tactical-counterplay-Windows-x64
+          path: candidate
+
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevival-v7.6-tactical-counterplay-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data missing after extraction' }
+
+      - name: Run tactical counterplay smoke probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item TACTICAL_COUNTERPLAY_PASS.txt, TACTICAL_COUNTERPLAY_FAIL.txt, TacticalCounterplayPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-tactical-counterplay-smoke','-logFile','TacticalCounterplayPlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Tactical counterplay smoke timed out after 60 seconds'
+          }
+          if (Test-Path 'TACTICAL_COUNTERPLAY_FAIL.txt') {
+            Get-Content TACTICAL_COUNTERPLAY_FAIL.txt
+            if (Test-Path TacticalCounterplayPlayer.log) { Get-Content TacticalCounterplayPlayer.log -Tail 220 }
+            throw 'Tactical counterplay runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'TACTICAL_COUNTERPLAY_PASS.txt')) {
+            if (Test-Path TacticalCounterplayPlayer.log) { Get-Content TacticalCounterplayPlayer.log -Tail 220 }
+            throw "Runtime exited without tactical counterplay PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content TACTICAL_COUNTERPLAY_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Select-String -Path TacticalCounterplayPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) {
+            Get-Content TacticalCounterplayPlayer.log -Tail 260
+            throw 'Blocking exception signature found during tactical counterplay smoke'
+          }
+          Write-Host 'v7.6 tactical counterplay runtime smoke passed.'
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v7.6-tactical-counterplay-diagnostics
+          path: |
+            candidate/runtime/TACTICAL_COUNTERPLAY_PASS.txt
+            candidate/runtime/TACTICAL_COUNTERPLAY_FAIL.txt
+            candidate/runtime/TacticalCounterplayPlayer.log
+          if-no-files-found: ignore
+          retention-days: 14
