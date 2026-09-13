@@ -1,0 +1,156 @@
+name: Campaign Pacing Windows Gate
+
+on:
+  push:
+    branches:
+      - 'dev-v8-1'
+    paths:
+      - '.campaign-pacing-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-campaign-pacing:
+    name: Build v8.1 Windows candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+
+      - name: Validate v8.1 source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v8.1.0-dev"
+          test -f Assets/Scripts/CampaignPacingDirector.cs
+          test -f Assets/Scripts/CampaignPacingCISmokeProbe.cs
+          grep -q "CampaignPacingBeat" Assets/Scripts/CampaignPacingDirector.cs
+          grep -q "Recovery" Assets/Scripts/CampaignPacingDirector.cs
+          grep -q "BossClimax" Assets/Scripts/CampaignPacingDirector.cs
+          grep -q "ApplyWaveBudget" Assets/Scripts/CampaignPacingDirector.cs
+          grep -q "ApplyAliveCap" Assets/Scripts/CampaignPacingDirector.cs
+          grep -q "RescaleSpawnCadence" Assets/Scripts/CampaignPacingDirector.cs
+          grep -q "RefineEncounter" Assets/Scripts/CampaignPacingDirector.cs
+          grep -q "MobileHQWarfareDirector.MinimumOperationRound" Assets/Scripts/CampaignPacingDirector.cs
+          grep -q -- "-campaign-pacing-smoke" Assets/Scripts/CampaignPacingCISmokeProbe.cs
+          grep -q "round = 1; round <= 100" Assets/Scripts/CampaignPacingCISmokeProbe.cs
+          echo "v8.1 source gate passed."
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: CampaignPacing-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            CampaignPacing-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+
+      - name: Build development Windows player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+
+      - name: Verify and pack candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=build/StandaloneWindows64
+          test -f "$root/TankRevivalOverdrive.exe"
+          test -d "$root/TankRevivalOverdrive_Data"
+          cd "$root"
+          zip -r ../../TankRevival-v8.1-campaign-pacing-Windows-x64.zip .
+          cd ../..
+          test -s TankRevival-v8.1-campaign-pacing-Windows-x64.zip
+
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v8.1-campaign-pacing-Windows-x64
+          path: TankRevival-v8.1-campaign-pacing-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  runtime-smoke:
+    name: Boot exact v8.1 EXE on Windows
+    needs: build-campaign-pacing
+    runs-on: windows-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Download exact candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-v8.1-campaign-pacing-Windows-x64
+          path: candidate
+
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevival-v8.1-campaign-pacing-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data missing after extraction' }
+
+      - name: Run campaign pacing smoke probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item CAMPAIGN_PACING_PASS.txt, CAMPAIGN_PACING_FAIL.txt, CampaignPacingPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-campaign-pacing-smoke','-logFile','CampaignPacingPlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Campaign pacing smoke timed out after 60 seconds'
+          }
+          if (Test-Path 'CAMPAIGN_PACING_FAIL.txt') {
+            Get-Content CAMPAIGN_PACING_FAIL.txt
+            if (Test-Path CampaignPacingPlayer.log) { Get-Content CampaignPacingPlayer.log -Tail 240 }
+            throw 'Campaign pacing runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'CAMPAIGN_PACING_PASS.txt')) {
+            if (Test-Path CampaignPacingPlayer.log) { Get-Content CampaignPacingPlayer.log -Tail 240 }
+            throw "Runtime exited without campaign pacing PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content CAMPAIGN_PACING_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Select-String -Path CampaignPacingPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException' -Quiet) {
+            Get-Content CampaignPacingPlayer.log -Tail 280
+            throw 'Blocking exception signature found during campaign pacing smoke'
+          }
+          Write-Host 'v8.1 campaign pacing runtime smoke passed.'
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v8.1-campaign-pacing-diagnostics
+          path: |
+            candidate/runtime/CAMPAIGN_PACING_PASS.txt
+            candidate/runtime/CAMPAIGN_PACING_FAIL.txt
+            candidate/runtime/CampaignPacingPlayer.log
+          if-no-files-found: ignore
+          retention-days: 14
