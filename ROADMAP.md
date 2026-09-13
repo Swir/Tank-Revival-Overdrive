@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v5-9"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100%25-2ea043?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-60%2F60-2ea043?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V5.9%20COMPLETE-2ea043?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-0"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-93.8%25-7c3aed?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-60%2F64-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.0%20IN%20PROGRESS-7c3aed?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+███████████████████░ 93.8%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **60** | **0** | **60** | **100.0%** |
+| **60** | **4** | **64** | **93.8%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -113,6 +113,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Fortress-breaker operations create telegraphed attacks against Orzełek with bounded counterplay windows and explicit interaction with active fortress defenses.
 - [x] Command-threat HUD communicates active operation, assigned roles, countdown, counterplay state and battlefield outcome during live rounds.
 - [x] Packaged Windows command-network gate boots the exact development EXE and verifies role catalog, operation bounds, fortress-counterplay configuration and runtime installation.
+
+## v6.0 — Dynamic Battlefield & Objective Warfare — IN PROGRESS
+- [ ] Deterministic objective warfare injects playable Secure Relay, Artillery Uplink demolition and Fortification restoration missions across non-boss rounds without replacing TankGame round authority.
+- [ ] Battlefield hazard layer adds visible minefields and telegraphed artillery danger zones with bounded damage, counterplay time and no hidden unavoidable spawn damage.
+- [ ] Objective HUD, battlefield markers and existing War Bond/Eagle repair integrations make the new systems readable and materially connected to progression and fortress defense.
+- [ ] Packaged Windows dynamic-battlefield gate boots the exact development EXE and verifies objective/hazard catalog, deterministic scheduling, tuning bounds and runtime installation.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
