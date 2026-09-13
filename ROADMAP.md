@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-6"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v6-7"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-16a34a?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-88%2F88-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.6%20COMPLETE-16a34a?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-92%2F92-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V6.7%20COMPLETE-16a34a?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **88** | **0** | **88** | **100.0%** |
+| **92** | **0** | **92** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -155,6 +155,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Comfort-bounded combat camera adds subtle player lead, threat framing and event impulses while preserving the full playable arena and preventing aim/physics changes.
 - [x] Budgeted battlefield aftermath adds reusable track marks, impact scars and destruction debris that visually accumulate during combat and recycle under late-round pressure.
 - [x] Packaged Windows cinematic-battlefield gate boots the exact development EXE and verifies atmosphere catalog, camera bounds, aftermath budgets and unchanged authoritative combat state.
+
+## v6.7 — Vehicle Motion & Weapon Animation Reforge — COMPLETE
+- [x] Vehicle presentation adds class-aware hull lean, suspension travel and track/wheel animation driven only by observed movement without changing Rigidbody2D or collision authority.
+- [x] Weapon presentation adds bounded cannon recoil, muzzle flash and recovery timing for player and enemy fire while Projectile remains the sole damage authority.
+- [x] Light/Fast, Heavy/Siege and Boss vehicles receive distinct motion language and recoil weight so battlefield silhouettes also communicate handling and threat class.
+- [x] Packaged Windows vehicle-motion gate boots the exact development EXE and verifies motion/recoil bounds, shot notification integration and unchanged authoritative combat behavior.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
