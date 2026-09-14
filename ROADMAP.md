@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v9-3"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.0%25-d29922?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-194%2F198-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V9.3%20IN%20PROGRESS-d29922?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-198%2F198-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V9.3%20QUALIFIED-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 98.0%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **194** | **4** | **198** | **98.0%** |
+| **198** | **0** | **198** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -314,11 +314,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Enemy breakthrough operations retask existing Heavy/Siege/Elite units through TacticalNavigationAgent to attack the weakest fortification node with bounded projectile pressure.
 - [x] Packaged Windows v9.2 gate validates fortification-network scheduling, support/breakthrough safety bounds, runtime installation and exact EXE boot before qualification.
 
-## v9.3 — Siege Lines, Counter-Battery Warfare & Breach Operations — IN PROGRESS
-- [ ] Enemy siege lines deploy bounded physical artillery batteries with authoritative Health/collision on selected non-boss rounds, creating destroyable battlefield objectives instead of invisible pressure multipliers.
-- [ ] Friendly artillery gains bounded counter-battery fire against live siege batteries while enemy batteries use authoritative HE projectiles to suppress fortified lanes and open temporary breach windows.
-- [ ] Breach operations retask existing Heavy/Siege/Elite units through TacticalNavigationAgent toward defended lanes, with strict actor/shot/cadence budgets and no parallel enemy roster or damage authority.
-- [ ] Packaged Windows v9.3 gate validates siege scheduling, battery/counter-battery/breach safety bounds, runtime installation and exact EXE boot before qualification.
+## v9.3 — Siege Lines, Counter-Battery Warfare & Breach Operations — COMPLETE
+- [x] Enemy siege lines deploy bounded physical artillery batteries with authoritative Health/collision on selected non-boss rounds, creating destroyable battlefield objectives instead of invisible pressure multipliers.
+- [x] Friendly artillery gains bounded counter-battery fire against live siege batteries while enemy batteries use authoritative HE projectiles to suppress fortified lanes and open temporary breach windows.
+- [x] Breach operations retask existing Heavy/Siege/Elite units through TacticalNavigationAgent toward defended lanes, with strict actor/shot/cadence budgets and no parallel enemy roster or damage authority.
+- [x] Packaged Windows v9.3 gate validates siege scheduling, battery/counter-battery/breach safety bounds, runtime installation and exact EXE boot before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
