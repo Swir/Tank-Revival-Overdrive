@@ -1,0 +1,141 @@
+name: Counter-Offensive Campaign v10.6 Windows Gate
+
+on:
+  push:
+    branches:
+      - 'dev-v10-6'
+    paths:
+      - '.counter-offensive-v106-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-candidate:
+    name: Build exact v10.6 Windows x64 candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify v10.6 source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat VERSION)" = "v10.6.0-dev"
+          test -f Assets/Scripts/CounterOffensiveCampaignDirector.cs
+          test -f Assets/Scripts/CounterOffensiveCampaignCISmokeProbe.cs
+          grep -q 'CounterOffensiveCampaignDirector_v10_6' Assets/Scripts/CounterOffensiveCampaignDirector.cs
+          grep -q 'PlayerCounterOrderDirector.Instance' Assets/Scripts/CounterOffensiveCampaignDirector.cs
+          grep -q 'CounterOrderOutcome' Assets/Scripts/CounterOffensiveCampaignDirector.cs
+          grep -q 'MaxOperationalMomentum = 3' Assets/Scripts/CounterOffensiveCampaignDirector.cs
+          grep -q 'MaxCapturedIntel = 2' Assets/Scripts/CounterOffensiveCampaignDirector.cs
+          grep -q 'SpawnProjectile' Assets/Scripts/CounterOffensiveCampaignDirector.cs
+          grep -q 'WarEconomyDirector.AwardMissionBonds' Assets/Scripts/CounterOffensiveCampaignDirector.cs
+          grep -q '## v10.6 — Counter-Offensive Campaigns, Captured Intelligence & Command Collapse — IN PROGRESS' ROADMAP.md
+          grep -q 'DONE-230%2F234' ROADMAP.md
+          grep -q 'SWIR-ROADMAP-STANDARD:v1' ROADMAP.md
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: v106-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            v106-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+      - name: Build Windows x64 candidate
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Verify and package exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f build/StandaloneWindows64/TankRevivalOverdrive.exe
+          test -d build/StandaloneWindows64/TankRevivalOverdrive_Data
+          cd build/StandaloneWindows64
+          zip -r ../../TankRevivalOverdrive-v10.6-candidate-Windows-x64.zip .
+          cd ../..
+          test -s TankRevivalOverdrive-v10.6-candidate-Windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v10.6-candidate-Windows-x64
+          path: TankRevivalOverdrive-v10.6-candidate-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  packaged-exe-smoke:
+    name: Boot exact v10.6 candidate and validate counter-offensive campaign
+    needs: build-candidate
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v10.6-candidate-Windows-x64
+          path: candidate
+      - name: Extract exact candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevivalOverdrive-v10.6-candidate-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data directory missing after extraction' }
+      - name: Run v10.6 counter-offensive packaged smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item COUNTER_OFFENSIVE_PASS.txt, COUNTER_OFFENSIVE_FAIL.txt, CounterOffensivePlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-counter-offensive-smoke','-logFile','CounterOffensivePlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'v10.6 counter-offensive smoke timed out after 60 seconds'
+          }
+          if (Test-Path 'COUNTER_OFFENSIVE_FAIL.txt') {
+            Get-Content COUNTER_OFFENSIVE_FAIL.txt
+            if (Test-Path CounterOffensivePlayer.log) { Get-Content CounterOffensivePlayer.log -Tail 240 }
+            throw 'v10.6 counter-offensive runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'COUNTER_OFFENSIVE_PASS.txt')) {
+            if (Test-Path CounterOffensivePlayer.log) { Get-Content CounterOffensivePlayer.log -Tail 240 }
+            throw "Runtime exited without v10.6 PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content COUNTER_OFFENSIVE_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Test-Path CounterOffensivePlayer.log) {
+            if (Select-String -Path CounterOffensivePlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|Compilation failed' -Quiet) {
+              Get-Content CounterOffensivePlayer.log -Tail 260
+              throw 'Blocking exception signature found during v10.6 runtime smoke'
+            }
+          }
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v10.6-counter-offensive-diagnostics
+          path: |
+            candidate/runtime/COUNTER_OFFENSIVE_PASS.txt
+            candidate/runtime/COUNTER_OFFENSIVE_FAIL.txt
+            candidate/runtime/CounterOffensivePlayer.log
+          if-no-files-found: ignore
+          retention-days: 14
