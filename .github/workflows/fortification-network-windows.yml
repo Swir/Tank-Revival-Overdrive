@@ -39,7 +39,7 @@ jobs:
           grep -q "DynamicFrontlineTerritoryDirector" Assets/Scripts/FortificationNetworkDirector.cs
           grep -q "TacticalNavigationAgent" Assets/Scripts/FortificationNetworkDirector.cs
           grep -q "SpawnProjectile" Assets/Scripts/FortificationNetworkDirector.cs
-          grep -q "AmmoType.HE" Assets/Scripts/FortificationNetworkDirector.cs
+          grep -q "AmmoType.Explosive" Assets/Scripts/FortificationNetworkDirector.cs
           grep -q -- "-fortification-network-smoke" Assets/Scripts/FortificationNetworkCISmokeProbe.cs
           grep -q "## v9.2 — Fortification Networks, Artillery Positions & Breakthrough Operations — IN PROGRESS" ROADMAP.md
       - name: Cache Unity Library
