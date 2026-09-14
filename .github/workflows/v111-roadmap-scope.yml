@@ -1,0 +1,80 @@
+name: ROADMAP v11.1 Scope Registration
+
+on:
+  push:
+    branches:
+      - 'dev-v11-1'
+    paths:
+      - '.roadmap-v111-scope-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v11-1
+          fetch-depth: 0
+      - name: Register v11.1 milestone before implementation
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('ROADMAP.md')
+          s = p.read_text(encoding='utf-8')
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<!-- ROADMAP-PROGRESS:START -->' in s and '<!-- ROADMAP-PROGRESS:END -->' in s
+          assert '## v11.1 — Armor Facings, Component Damage & Mobility Kills Reforge' not in s
+          marker = '\n## Development rules'
+          assert marker in s
+          lines = [
+              '',
+              '## v11.1 — Armor Facings, Component Damage & Mobility Kills Reforge — IN PROGRESS',
+              '- [ ] Directional armor is deepened into explicit front/side/rear tactical exposure with ammo-aware penetration, overmatch/ricochet behavior and readable impact outcomes while preserving ArmorSystem/Health authority.',
+              '- [ ] Engine, tracks, gun and ammo-rack damage gain staged operational states including mobility kill, weapon impairment and catastrophic ammo-rack pressure, with bounded repair/recovery and no parallel HP model.',
+              '- [ ] v11.0 platoons react to crippled members: damaged leaders trigger protection/reformation, mobile escorts screen mobility-killed Heavy/Siege units and flank-capable units exploit exposed armor through existing TacticalNavigationAgent authority.',
+              '- [ ] Player/enemy combat presentation exposes concise armor-zone and module-state feedback while fixed cadences, strict actor caps and boss-safe rules preserve late-round performance and authority.',
+              '- [ ] Packaged Windows v11.1 Armor & Component Damage gate validates facing/ammo mapping, module-state thresholds, mobility/weapon kill bounds, tactical integration, runtime installation and exact EXE boot before qualification.',
+              ''
+          ]
+          s = s.replace(marker, '\n' + '\n'.join(lines) + marker, 1)
+          s = s.replace('badge.svg?branch=dev-v11-0', 'badge.svg?branch=dev-v11-1', 1)
+          s = s.replace('ROADMAP-100.0%25-2ea043', 'ROADMAP-98.0%25-d29922', 1)
+          s = s.replace('DONE-249%2F249-1f6feb', 'DONE-249%2F254-1f6feb', 1)
+          s = s.replace('STATUS-V11.0%20QUALIFIED-2ea043', 'STATUS-V11.1%20IN%20PROGRESS-d29922', 1)
+          s = s.replace('████████████████████ 100.0%', '████████████████████ 98.0%', 1)
+          s = s.replace('| **249** | **0** | **249** | **100.0%** |', '| **249** | **5** | **254** | **98.0%** |', 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Verify scope and dashboard consistency
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s = Path('ROADMAP.md').read_text(encoding='utf-8')
+          done = len(re.findall(r'^- \[x\] ', s, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', s, re.M))
+          assert (done, open_) == (249, 5), (done, open_)
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<img alt="CI"' in s and '<img alt="Roadmap progress"' in s
+          assert '<img alt="Completed"' in s and '<img alt="Status"' in s
+          assert 'badge.svg?branch=dev-v11-1' in s
+          assert 'ROADMAP-98.0%25-d29922' in s
+          assert 'DONE-249%2F254-1f6feb' in s
+          assert 'STATUS-V11.1%20IN%20PROGRESS-d29922' in s
+          assert '████████████████████ 98.0%' in s
+          assert '| **249** | **5** | **254** | **98.0%** |' in s
+          assert s.count('## v11.1 — Armor Facings, Component Damage & Mobility Kills Reforge — IN PROGRESS') == 1
+      - name: Commit registered roadmap scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git diff --cached --quiet && exit 0
+          git commit -m 'roadmap(v11.1): register Armor and Component Damage scope'
+          git push origin HEAD:dev-v11-1
