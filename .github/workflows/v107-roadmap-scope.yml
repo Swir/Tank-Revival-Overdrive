@@ -1,0 +1,81 @@
+name: ROADMAP v10.7 Scope Registration
+
+on:
+  push:
+    branches:
+      - 'dev-v10-7'
+    paths:
+      - '.roadmap-v107-scope-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v10-7
+          fetch-depth: 0
+      - name: Register v10.7 milestone before implementation
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('ROADMAP.md')
+          s = p.read_text(encoding='utf-8')
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<!-- ROADMAP-PROGRESS:START -->' in s and '<!-- ROADMAP-PROGRESS:END -->' in s
+          assert '## v10.7 — War State Director, Dynamic Operation Chains & Campaign Endgame Reforge' not in s
+          marker = '\n## Development rules'
+          assert marker in s
+          lines = [
+              '',
+              '## v10.7 — War State Director, Dynamic Operation Chains & Campaign Endgame Reforge — IN PROGRESS',
+              '- [ ] A run-level War State Director converts v10.6 outcome, operational momentum and captured intelligence into bounded ADVANTAGE / CONTESTED / CRISIS campaign states without replacing existing combat authority.',
+              '- [ ] Dynamic operation chains turn rounds 90–99 into a branching endgame arc whose objectives and support pressure depend on the live war state instead of a fixed late-game sequence.',
+              '- [ ] The final sector gains materially different ENDGAME plans — COMMAND COLLAPSE, BREAKTHROUGH PURSUIT or DESPERATE DEFENSE — with authoritative projectile, Health, frontline, Orzełek and War Bond consequences under strict caps.',
+              '- [ ] Round 100 receives a boss-safe final-war modifier and player-readable campaign outcome derived from the accumulated war state, while all existing boss/AI/damage authority remains intact.',
+              '- [ ] Packaged Windows v10.7 endgame gate validates state resolution, rounds 90–100 branch scheduling, strict support/recovery caps, v10.6 integration, runtime installation and exact EXE boot before qualification.',
+              ''
+          ]
+          section = '\n'.join(lines)
+          s = s.replace(marker, '\n' + section + marker, 1)
+          s = s.replace('badge.svg?branch=dev-v10-6', 'badge.svg?branch=dev-v10-7', 1)
+          s = s.replace('ROADMAP-100.0%25-2ea043', 'ROADMAP-97.9%25-d29922', 1)
+          s = s.replace('DONE-234%2F234-1f6feb', 'DONE-234%2F239-1f6feb', 1)
+          s = s.replace('STATUS-V10.6%20QUALIFIED-2ea043', 'STATUS-V10.7%20IN%20PROGRESS-d29922', 1)
+          s = s.replace('████████████████████ 100.0%', '████████████████████ 97.9%', 1)
+          s = s.replace('| **234** | **0** | **234** | **100.0%** |', '| **234** | **5** | **239** | **97.9%** |', 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Verify scope and dashboard consistency
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s = Path('ROADMAP.md').read_text(encoding='utf-8')
+          done = len(re.findall(r'^- \[x\] ', s, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', s, re.M))
+          assert (done, open_) == (234, 5), (done, open_)
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<img alt="CI"' in s and '<img alt="Roadmap progress"' in s
+          assert '<img alt="Completed"' in s and '<img alt="Status"' in s
+          assert 'badge.svg?branch=dev-v10-7' in s
+          assert 'ROADMAP-97.9%25-d29922' in s
+          assert 'DONE-234%2F239-1f6feb' in s
+          assert 'STATUS-V10.7%20IN%20PROGRESS-d29922' in s
+          assert '████████████████████ 97.9%' in s
+          assert '| **234** | **5** | **239** | **97.9%** |' in s
+          assert s.count('## v10.7 — War State Director, Dynamic Operation Chains & Campaign Endgame Reforge — IN PROGRESS') == 1
+      - name: Commit registered roadmap scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git diff --cached --quiet && exit 0
+          git commit -m 'roadmap(v10.7): register endgame reforge scope'
+          git push origin HEAD:dev-v10-7
