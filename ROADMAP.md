@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-8"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.8%25-7c3aed?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-174%2F178-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.8%20IN%20PROGRESS-7c3aed?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-22c55e?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-178%2F178-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.8%20QUALIFIED-22c55e?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 97.8%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **174** | **4** | **178** | **97.8%** |
+| **178** | **0** | **178** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -284,11 +284,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Destroyed logistics nodes yield a limited captured-supplies benefit through existing player/Orzełek/economy paths, while surviving protected logistics strengthen enemy counter-interdiction without hidden damage or invulnerability.
 - [x] Packaged Windows supply-routes gate boots the exact development EXE and verifies escort assignment, reroute/repair bounds, captured-supply rewards, runtime integration and v8.7 version identity.
 
-## v8.8 — Battlefield Salvage, Field Resupply & Logistics Counteroffensive — IN PROGRESS
-- [ ] High-value destroyed enemy units and interdicted logistics create bounded battlefield salvage opportunities tied to real death/logistics outcomes instead of a parallel loot spawn economy.
-- [ ] Nearby salvage offers a player-readable FIELD vs STRATEGIC recovery choice: immediate repair/ammunition or War Bond/denial value through existing PlayerTank, Orzełek, ammo and economy authority.
-- [ ] Enemy counter-recovery teams retask real surviving combat units through TacticalNavigationAgent to reclaim unsecured salvage and restore a bounded matching strategic reserve, creating an active race over battlefield resources.
-- [ ] Packaged Windows salvage gate boots the exact development EXE and verifies salvage eligibility/budgets, recovery-choice rewards, enemy reclaim bounds, authoritative integration and v8.8 version identity.
+## v8.8 — Battlefield Salvage, Field Resupply & Logistics Counteroffensive — COMPLETE
+- [x] High-value destroyed enemy units and interdicted logistics create bounded battlefield salvage opportunities tied to real death/logistics outcomes instead of a parallel loot spawn economy.
+- [x] Nearby salvage offers a player-readable FIELD vs STRATEGIC recovery choice: immediate repair/ammunition or War Bond/denial value through existing PlayerTank, Orzełek, ammo and economy authority.
+- [x] Enemy counter-recovery teams retask real surviving combat units through TacticalNavigationAgent to reclaim unsecured salvage and restore a bounded matching strategic reserve, creating an active race over battlefield resources.
+- [x] Packaged Windows salvage gate boots the exact development EXE and verifies salvage eligibility/budgets, recovery-choice rewards, enemy reclaim bounds, authoritative integration and v8.8 version identity.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
