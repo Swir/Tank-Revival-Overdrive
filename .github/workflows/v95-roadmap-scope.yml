@@ -1,0 +1,75 @@
+name: ROADMAP v9.5 Scope Registrar
+
+on:
+  push:
+    branches:
+      - 'dev-v9-5'
+    paths:
+      - '.roadmap-v95-scope-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v9-5
+      - name: Register unchecked v9.5 scope and preserve SWIR standard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('ROADMAP.md')
+          s = p.read_text(encoding='utf-8')
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '## v9.4 — Siege Logistics, Fire-Control Recon & Mobile Batteries — COMPLETE' in s
+          assert '## v9.5 — Fire Mission Networks, Decoy Batteries & Counter-Surveillance' not in s
+          assert len(re.findall(r'^- \[x\] ', s, re.M)) == 202
+          assert len(re.findall(r'^- \[ \] ', s, re.M)) == 0
+          s = s.replace('badge.svg?branch=dev-v9-4', 'badge.svg?branch=dev-v9-5')
+          s = s.replace('ROADMAP-100.0%25-2ea043', 'ROADMAP-98.1%25-d29922')
+          s = s.replace('DONE-202%2F202-1f6feb', 'DONE-202%2F206-1f6feb')
+          s = s.replace('STATUS-V9.4%20QUALIFIED-2ea043', 'STATUS-V9.5%20IN%20PROGRESS-d29922')
+          s = s.replace('████████████████████ 100.0%', '████████████████████ 98.1%', 1)
+          s = s.replace('| **202** | **0** | **202** | **100.0%** |', '| **202** | **4** | **206** | **98.1%** |', 1)
+          section = '''\n## v9.5 — Fire Mission Networks, Decoy Batteries & Counter-Surveillance — IN PROGRESS
+- [ ] Existing SIGINT/recon becomes authoritative artillery targeting intelligence: true siege batteries require bounded observation/lock windows for reliable counter-battery fire instead of being permanently known targets.
+- [ ] Enemy siege doctrine deploys a hard-capped decoy-battery screen that can waste unguided counter-battery cycles until identified, while decoys remain non-damaging presentation/target-deception objects rather than a parallel combat roster.
+- [ ] Fire-control spotters gain bounded counter-surveillance/reacquisition behavior after reconnaissance exposure, while supply loss, spotter loss and existing battery relocation materially change targeting confidence without hidden damage or invulnerability.
+- [ ] Packaged Windows v9.5 gate validates 1–100 scheduling, lock/decoy/counter-surveillance safety bounds, v7.8 SIGINT/recon + v9.3/v9.4 integration, runtime installation and exact EXE boot before qualification.
+'''
+          marker = '\n## Development rules'
+          assert marker in s
+          s = s.replace(marker, section + marker, 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Verify registered dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s = Path('ROADMAP.md').read_text(encoding='utf-8')
+          done = len(re.findall(r'^- \[x\] ', s, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', s, re.M))
+          assert (done, open_) == (202, 4), (done, open_)
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert 'badge.svg?branch=dev-v9-5' in s
+          assert 'ROADMAP-98.1%25-d29922' in s
+          assert 'DONE-202%2F206-1f6feb' in s
+          assert 'STATUS-V9.5%20IN%20PROGRESS-d29922' in s
+          assert '## 📊 Overall progress' in s
+          assert '████████████████████ 98.1%' in s
+          assert '| **202** | **4** | **206** | **98.1%** |' in s
+          bar = re.search(r'```text\n([^\n]+)\n```', s).group(1).split()[0]
+          assert len(bar) == 20, (bar, len(bar))
+      - name: Commit scope
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'roadmap(v9.5): register fire mission network milestone'
+          git push origin HEAD:dev-v9-5
