@@ -1,0 +1,80 @@
+name: ROADMAP v9.4 Qualification Lock
+
+on:
+  push:
+    branches:
+      - 'dev-v9-4'
+    paths:
+      - '.roadmap-v94-lock-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  lock-roadmap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v9-4
+          fetch-depth: 0
+      - name: Require green v9.4 Windows gates
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gate=$(gh run list --branch dev-v9-4 --workflow siege-logistics-windows.yml --status success --limit 1 --json databaseId -q '.[0].databaseId // empty')
+          dev=$(gh run list --branch dev-v9-4 --workflow dev-windows-build.yml --status success --limit 1 --json databaseId -q '.[0].databaseId // empty')
+          test -n "$gate"
+          test -n "$dev"
+          echo "v9.4 gate=$gate dev=$dev"
+      - name: Close v9.4 roadmap scope
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('ROADMAP.md')
+          s = p.read_text(encoding='utf-8')
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          heading = '## v9.4 — Siege Logistics, Fire-Control Recon & Mobile Batteries — IN PROGRESS'
+          assert heading in s
+          start = s.index(heading)
+          end = s.index('\n## Development rules', start)
+          section = s[start:end]
+          assert section.count('- [ ] ') == 4
+          section = section.replace(' — IN PROGRESS', ' — COMPLETE', 1).replace('- [ ] ', '- [x] ')
+          s = s[:start] + section + s[end:]
+          s = s.replace('ROADMAP-98.0%25-d29922', 'ROADMAP-100.0%25-2ea043')
+          s = s.replace('DONE-198%2F202-1f6feb', 'DONE-202%2F202-1f6feb')
+          s = s.replace('STATUS-V9.4%20IN%20PROGRESS-d29922', 'STATUS-V9.4%20QUALIFIED-2ea043')
+          s = s.replace('████████████████████ 98.0%', '████████████████████ 100.0%', 1)
+          s = s.replace('| **198** | **4** | **202** | **98.0%** |', '| **202** | **0** | **202** | **100.0%** |', 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Re-read and verify SWIR dashboard consistency
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s = Path('ROADMAP.md').read_text(encoding='utf-8')
+          done = len(re.findall(r'^- \[x\] ', s, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', s, re.M))
+          assert (done, open_) == (202, 0), (done, open_)
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert 'badge.svg?branch=dev-v9-4' in s
+          assert 'ROADMAP-100.0%25-2ea043' in s
+          assert 'DONE-202%2F202-1f6feb' in s
+          assert 'STATUS-V9.4%20QUALIFIED-2ea043' in s
+          assert '## 📊 Overall progress' in s
+          assert '████████████████████ 100.0%' in s
+          assert '| **202** | **0** | **202** | **100.0%** |' in s
+      - name: Commit qualification
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'roadmap(v9.4): qualify siege logistics milestone'
+          git push origin HEAD:dev-v9-4
