@@ -1,0 +1,94 @@
+name: V9.1 Roadmap Scope Register
+
+on:
+  push:
+    branches:
+      - 'dev-v9-1'
+    paths:
+      - '.roadmap-v91-scope-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v9-1
+          fetch-depth: 0
+      - name: Register v9.1 roadmap scope under SWIR Roadmap Standard v1
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('ROADMAP.md')
+          text = p.read_text(encoding='utf-8')
+          marker = '<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          if marker not in text:
+              raise SystemExit('SWIR roadmap marker missing')
+          if '## v9.1 — Strongpoints, Field Fortifications & Territory Counteroffensives' in text:
+              raise SystemExit('v9.1 scope already registered')
+          heading = '## Development rules'
+          if heading not in text:
+              raise SystemExit('Development rules anchor missing')
+          section = '''## v9.1 — Strongpoints, Field Fortifications & Territory Counteroffensives — IN PROGRESS
+- [ ] Friendly-controlled frontline lanes can be fortified into physical strongpoints with authoritative Health, bounded durability and readable field presentation instead of an abstract passive bonus.
+- [ ] The player can spend existing War Bonds to reinforce one selected lane with a bounded emplacement/support package, while enemy counteroffensives retask real surviving units through TacticalNavigationAgent to assault and destroy fortified positions.
+- [ ] Strongpoint control materially changes local frontline pressure, recovery/support access and counterattack behavior without replacing TankGame, Health, Projectile, DynamicFrontlineTerritoryDirector, WarEconomyDirector or tactical-navigation authority.
+- [ ] Packaged Windows strongpoint gate boots the exact development EXE and verifies fortification eligibility, bond spending, durability/repair bounds, enemy counteroffensive budgets, frontline integration and v9.1 version identity.
+
+'''
+          text = text.replace(heading, section + heading, 1)
+          completed = len(re.findall(r'^- \[x\] ', text, flags=re.M))
+          remaining = len(re.findall(r'^- \[ \] ', text, flags=re.M))
+          total = completed + remaining
+          if (completed, remaining, total) != (186, 4, 190):
+              raise SystemExit(f'unexpected roadmap state {completed}/{total}, remaining={remaining}')
+          pct = completed / total * 100
+          filled = round(pct / 5)
+          bar = '█' * filled + '░' * (20-filled)
+          text = re.sub(r'badge\.svg\?branch=[^\"\)]+', 'badge.svg?branch=dev-v9-1', text, count=1)
+          text = re.sub(r'https://img\.shields\.io/badge/ROADMAP-[^\"]+', f'https://img.shields.io/badge/ROADMAP-{pct:.1f}%25-7c3aed?style=for-the-badge', text, count=1)
+          text = re.sub(r'https://img\.shields\.io/badge/DONE-[^\"]+', 'https://img.shields.io/badge/DONE-186%2F190-1f6feb?style=for-the-badge', text, count=1)
+          text = re.sub(r'https://img\.shields\.io/badge/STATUS-[^\"]+', 'https://img.shields.io/badge/STATUS-V9.1%20IN%20PROGRESS-7c3aed?style=for-the-badge', text, count=1)
+          text = re.sub(r'(?m)^[█░]{20} [0-9.]+%$', f'{bar} {pct:.1f}%', text, count=1)
+          text = re.sub(r'\| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9.]+%\*\* \|', f'| **186** | **4** | **190** | **{pct:.1f}%** |', text, count=1)
+          p.write_text(text, encoding='utf-8')
+          PY
+      - name: Verify registered dashboard consistency
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '<!-- SWIR-ROADMAP-STANDARD:v1 -->' ROADMAP.md
+          grep -q '<!-- ROADMAP-PROGRESS:START -->' ROADMAP.md
+          grep -q '<!-- ROADMAP-PROGRESS:END -->' ROADMAP.md
+          grep -q 'alt="CI"' ROADMAP.md
+          grep -q 'alt="Roadmap progress"' ROADMAP.md
+          grep -q 'alt="Completed"' ROADMAP.md
+          grep -q 'alt="Status"' ROADMAP.md
+          grep -q '## 📊 Overall progress' ROADMAP.md
+          grep -q 'badge.svg?branch=dev-v9-1' ROADMAP.md
+          grep -q 'DONE-186%2F190' ROADMAP.md
+          grep -q 'STATUS-V9.1%20IN%20PROGRESS' ROADMAP.md
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('ROADMAP.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^- \[x\] ', text, flags=re.M)) == 186
+          assert len(re.findall(r'^- \[ \] ', text, flags=re.M)) == 4
+          m=re.search(r'(?m)^([█░]+) ([0-9.]+)%$', text)
+          assert m and len(m.group(1)) == 20 and m.group(2) == '97.9'
+          assert '| **186** | **4** | **190** | **97.9%** |' in text
+          PY
+      - name: Commit registered scope
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'docs(v9.1): register milestone scope'
+          git push origin HEAD:dev-v9-1
