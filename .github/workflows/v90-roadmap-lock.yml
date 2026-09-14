@@ -1,0 +1,95 @@
+name: V9.0 Roadmap Lock
+
+on:
+  push:
+    branches:
+      - 'dev-v9-0'
+    paths:
+      - '.roadmap-v90-lock-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  lock-roadmap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v9-0
+          fetch-depth: 0
+      - name: Mark verified v9.0 deliverables complete
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v9.0.0-dev"
+          test -f Assets/Scripts/DynamicFrontlineTerritoryDirector.cs
+          test -f Assets/Scripts/DynamicFrontlineTerritoryCISmokeProbe.cs
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md')
+          text=p.read_text(encoding='utf-8')
+          marker='<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          if marker not in text: raise SystemExit('roadmap marker missing')
+          heading='## v9.0 — Dynamic Frontline, Territory Control & Multi-Objective Warfare — IN PROGRESS'
+          done_heading='## v9.0 — Dynamic Frontline, Territory Control & Multi-Objective Warfare — COMPLETE'
+          if heading not in text: raise SystemExit('v9.0 in-progress heading missing')
+          start=text.index(heading)
+          end=text.index('## Development rules', start)
+          before=text[:start]
+          section=text[start:end]
+          after=text[end:]
+          if len(re.findall(r'^- \[ \] ', section, flags=re.M)) != 4: raise SystemExit('expected four open v9.0 deliverables')
+          section=section.replace(heading, done_heading, 1)
+          section=re.sub(r'^- \[ \] ', '- [x] ', section, flags=re.M)
+          text=before+section+after
+          completed=len(re.findall(r'^- \[x\] ', text, flags=re.M))
+          remaining=len(re.findall(r'^- \[ \] ', text, flags=re.M))
+          total=completed+remaining
+          if (completed,remaining,total)!=(186,0,186): raise SystemExit(f'unexpected final state {completed}/{total} remaining={remaining}')
+          pct=100.0
+          bar='█'*20
+          text=re.sub(r'badge\.svg\?branch=[^\"\)]+','badge.svg?branch=dev-v9-0',text,count=1)
+          text=re.sub(r'https://img\.shields\.io/badge/ROADMAP-[^\"]+','https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge',text,count=1)
+          text=re.sub(r'https://img\.shields\.io/badge/DONE-[^\"]+','https://img.shields.io/badge/DONE-186%2F186-1f6feb?style=for-the-badge',text,count=1)
+          text=re.sub(r'https://img\.shields\.io/badge/STATUS-[^\"]+','https://img.shields.io/badge/STATUS-V9.0%20QUALIFIED-2ea043?style=for-the-badge',text,count=1)
+          text=re.sub(r'(?m)^[█░]{20} [0-9.]+%$',f'{bar} {pct:.1f}%',text,count=1)
+          text=re.sub(r'\| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9.]+%\*\* \|','| **186** | **0** | **186** | **100.0%** |',text,count=1)
+          p.write_text(text,encoding='utf-8')
+          PY
+      - name: Verify SWIR Roadmap Standard v1 lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '<!-- SWIR-ROADMAP-STANDARD:v1 -->' ROADMAP.md
+          grep -q '<!-- ROADMAP-PROGRESS:START -->' ROADMAP.md
+          grep -q '<!-- ROADMAP-PROGRESS:END -->' ROADMAP.md
+          grep -q 'alt="CI"' ROADMAP.md
+          grep -q 'alt="Roadmap progress"' ROADMAP.md
+          grep -q 'alt="Completed"' ROADMAP.md
+          grep -q 'alt="Status"' ROADMAP.md
+          grep -q '## 📊 Overall progress' ROADMAP.md
+          grep -q 'badge.svg?branch=dev-v9-0' ROADMAP.md
+          grep -q 'ROADMAP-100.0%25' ROADMAP.md
+          grep -q 'DONE-186%2F186' ROADMAP.md
+          grep -q 'STATUS-V9.0%20QUALIFIED' ROADMAP.md
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('ROADMAP.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^- \[x\] ',text,flags=re.M))==186
+          assert len(re.findall(r'^- \[ \] ',text,flags=re.M))==0
+          m=re.search(r'(?m)^([█░]+) ([0-9.]+)%$',text)
+          assert m and len(m.group(1))==20 and m.group(1)=='█'*20 and m.group(2)=='100.0'
+          assert '| **186** | **0** | **186** | **100.0%** |' in text
+          assert '## v9.0 — Dynamic Frontline, Territory Control & Multi-Objective Warfare — COMPLETE' in text
+          PY
+      - name: Commit qualified roadmap
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'docs(v9.0): mark qualified milestone complete'
+          git push origin HEAD:dev-v9-0
