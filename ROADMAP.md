@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v9-1"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.9%25-7c3aed?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-186%2F190-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V9.1%20IN%20PROGRESS-7c3aed?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-190%2F190-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V9.1%20QUALIFIED-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 97.9%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **186** | **4** | **190** | **97.9%** |
+| **190** | **0** | **190** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -302,11 +302,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Territory ownership has real but bounded consequences for friendly recovery/logistics access, Orzełek support and enemy reinforcement/fire-support pressure through existing campaign, economy, Health and encounter authority.
 - [x] Packaged Windows dynamic-frontline gate boots the exact development EXE and verifies 1–100 scheduling, control-state transitions, multi-objective scoring, consequence bounds, runtime integration and v9.0 version identity.
 
-## v9.1 — Strongpoints, Field Fortifications & Territory Counteroffensives — IN PROGRESS
-- [ ] Friendly-controlled frontline lanes can be fortified into physical strongpoints with authoritative Health, bounded durability and readable field presentation instead of an abstract passive bonus.
-- [ ] The player can spend existing War Bonds to reinforce one selected lane with a bounded emplacement/support package, while enemy counteroffensives retask real surviving units through TacticalNavigationAgent to assault and destroy fortified positions.
-- [ ] Strongpoint control materially changes local frontline pressure, recovery/support access and counterattack behavior without replacing TankGame, Health, Projectile, DynamicFrontlineTerritoryDirector, WarEconomyDirector or tactical-navigation authority.
-- [ ] Packaged Windows strongpoint gate boots the exact development EXE and verifies fortification eligibility, bond spending, durability/repair bounds, enemy counteroffensive budgets, frontline integration and v9.1 version identity.
+## v9.1 — Strongpoints, Field Fortifications & Territory Counteroffensives — COMPLETE
+- [x] Friendly-controlled frontline lanes can be fortified into physical strongpoints with authoritative Health, bounded durability and readable field presentation instead of an abstract passive bonus.
+- [x] The player can spend existing War Bonds to reinforce one selected lane with a bounded emplacement/support package, while enemy counteroffensives retask real surviving units through TacticalNavigationAgent to assault and destroy fortified positions.
+- [x] Strongpoint control materially changes local frontline pressure, recovery/support access and counterattack behavior without replacing TankGame, Health, Projectile, DynamicFrontlineTerritoryDirector, WarEconomyDirector or tactical-navigation authority.
+- [x] Packaged Windows strongpoint gate boots the exact development EXE and verifies fortification eligibility, bond spending, durability/repair bounds, enemy counteroffensive budgets, frontline integration and v9.1 version identity.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
