@@ -1,0 +1,125 @@
+name: Supply Routes Windows Gate
+
+on:
+  push:
+    branches:
+      - 'dev-v8-7'
+    paths:
+      - '.supply-routes-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-supply-routes:
+    name: Build v8.7 Windows candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+      - name: Validate v8.7 source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v8.7.0-dev"
+          test -f Assets/Scripts/SupplyRouteWarfareDirector.cs
+          test -f Assets/Scripts/SupplyRouteWarfareCISmokeProbe.cs
+          grep -q "EscortCountForRound" Assets/Scripts/SupplyRouteWarfareDirector.cs
+          grep -q "ShouldReroute" Assets/Scripts/SupplyRouteWarfareDirector.cs
+          grep -q "CanRepairNode" Assets/Scripts/SupplyRouteWarfareDirector.cs
+          grep -q "ApplyCapturedSupplies" Assets/Scripts/SupplyRouteWarfareDirector.cs
+          grep -q "TacticalNavigationAgent" Assets/Scripts/SupplyRouteWarfareDirector.cs
+          grep -q -- "-supply-routes-smoke" Assets/Scripts/SupplyRouteWarfareCISmokeProbe.cs
+          echo "v8.7 source gate passed."
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: SupplyRoutes-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            SupplyRoutes-Library-${{ runner.os }}-6000.3.17f1-
+            LogisticsNetwork-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+      - name: Build development Windows player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Verify and pack candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=build/StandaloneWindows64
+          test -f "$root/TankRevivalOverdrive.exe"
+          test -d "$root/TankRevivalOverdrive_Data"
+          cd "$root"
+          zip -r ../../TankRevival-v8.7-supply-routes-Windows-x64.zip .
+          cd ../..
+          test -s TankRevival-v8.7-supply-routes-Windows-x64.zip
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v8.7-supply-routes-Windows-x64
+          path: TankRevival-v8.7-supply-routes-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  runtime-smoke:
+    name: Boot exact v8.7 EXE on Windows
+    needs: build-supply-routes
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - name: Download exact candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-v8.7-supply-routes-Windows-x64
+          path: candidate
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevival-v8.7-supply-routes-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data missing after extraction' }
+      - name: Run supply-routes smoke probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item SUPPLY_ROUTES_PASS.txt, SUPPLY_ROUTES_FAIL.txt, SupplyRoutesPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-supply-routes-smoke','-logFile','SupplyRoutesPlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Supply-routes smoke timed out after 60 seconds'
+          }
+          if (Test-Path 'SUPPLY_ROUTES_FAIL.txt') {
+            Get-Content SUPPLY_ROUTES_FAIL.txt
+            if (Test-Path SupplyRoutesPlayer.log) { Get-Content SupplyRoutesPlayer.log -Tail 260 }
+            throw 'Supply-routes runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'SUPPLY_ROUTES_PASS.txt')) {
+            if (Test-Path SupplyRoutesPlayer.log) { Get-Content SupplyRoutesPlayer.log -Tail 260 }
+            throw 'Supply-routes PASS marker missing'
+          }
+          Get-Content SUPPLY_ROUTES_PASS.txt
