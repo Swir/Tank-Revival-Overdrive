@@ -1,0 +1,80 @@
+name: V8.9 Roadmap Lock
+
+on:
+  push:
+    branches:
+      - 'dev-v8-9'
+    paths:
+      - '.roadmap-v89-lock-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v8-9
+          fetch-depth: 0
+      - name: Verify qualified milestone inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v8.9.0-dev"
+          test -f Assets/Scripts/ForwardRecoveryFrontlineDirector.cs
+          test -f Assets/Scripts/ForwardRecoveryFrontlineCISmokeProbe.cs
+          grep -q '<!-- SWIR-ROADMAP-STANDARD:v1 -->' ROADMAP.md
+          grep -q '## v8.9 — Forward Recovery Bases, Salvage Convoys & Frontline Control — IN PROGRESS' ROADMAP.md
+      - name: Close v8.9 scope and recalculate dashboard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md')
+          text=p.read_text(encoding='utf-8')
+          if '<!-- SWIR-ROADMAP-STANDARD:v1 -->' not in text:
+              raise SystemExit('roadmap standard marker missing')
+          if len(re.findall(r'^- \[x\] ', text, flags=re.M)) != 178 or len(re.findall(r'^- \[ \] ', text, flags=re.M)) != 4:
+              raise SystemExit('unexpected pre-lock checklist state')
+          text=text.replace('## v8.9 — Forward Recovery Bases, Salvage Convoys & Frontline Control — IN PROGRESS','## v8.9 — Forward Recovery Bases, Salvage Convoys & Frontline Control — COMPLETE',1)
+          text=text.replace('- [ ] ','- [x] ')
+          text=text.replace('ROADMAP-97.8%25-f59e0b','ROADMAP-100.0%25-22c55e',1)
+          text=text.replace('DONE-178%2F182-1f6feb','DONE-182%2F182-1f6feb',1)
+          text=text.replace('STATUS-V8.9%20IN%20PROGRESS-f59e0b','STATUS-V8.9%20QUALIFIED-22c55e',1)
+          text=text.replace('████████████████████ 97.8%','████████████████████ 100.0%',1)
+          text=text.replace('| **178** | **4** | **182** | **97.8%** |','| **182** | **0** | **182** | **100.0%** |',1)
+          p.write_text(text,encoding='utf-8')
+          PY
+      - name: Verify SWIR roadmap standard and arithmetic
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('ROADMAP.md').read_text(encoding='utf-8')
+          required=['<!-- SWIR-ROADMAP-STANDARD:v1 -->','badge.svg?branch=dev-v8-9','ROADMAP-100.0%25-22c55e','DONE-182%2F182-1f6feb','STATUS-V8.9%20QUALIFIED-22c55e','## 📊 Overall progress','| **182** | **0** | **182** | **100.0%** |','## v8.9 — Forward Recovery Bases, Salvage Convoys & Frontline Control — COMPLETE']
+          for token in required:
+              if token not in text: raise SystemExit('missing '+token)
+          completed=len(re.findall(r'^- \[x\] ',text,flags=re.M))
+          remaining=len(re.findall(r'^- \[ \] ',text,flags=re.M))
+          if (completed,remaining)!=(182,0): raise SystemExit(f'bad checklist {completed}/{remaining}')
+          m=re.search(r'(?m)^([█░]+) ([0-9.]+)%$',text)
+          if not m or len(m.group(1)) != 20 or m.group(1) != '████████████████████' or m.group(2) != '100.0':
+              raise SystemExit('bad 20-segment progress bar')
+          section=text.split('## v8.9 — Forward Recovery Bases, Salvage Convoys & Frontline Control — COMPLETE',1)[1].split('## Development rules',1)[0]
+          if len(re.findall(r'^- \[x\] ',section,flags=re.M)) != 4 or re.search(r'^- \[ \] ',section,flags=re.M):
+              raise SystemExit('v8.9 section incomplete')
+          PY
+      - name: Commit qualified roadmap
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'docs(v8.9): qualify milestone and lock roadmap'
+          git push origin HEAD:dev-v8-9
