@@ -1,0 +1,82 @@
+name: ROADMAP v10.5 Scope Registration
+
+on:
+  push:
+    branches:
+      - 'dev-v10-5'
+    paths:
+      - '.roadmap-v105-scope-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v10-5
+          fetch-depth: 0
+      - name: Register v10.5 milestone before implementation
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('ROADMAP.md')
+          s = p.read_text(encoding='utf-8')
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<!-- ROADMAP-PROGRESS:START -->' in s and '<!-- ROADMAP-PROGRESS:END -->' in s
+          assert '## v10.5 — Player Counter-Orders, Reserve Traps & Operational Intelligence' not in s
+
+          marker = '\n## Development rules'
+          assert marker in s
+          section = '''
+
+## v10.5 — Player Counter-Orders, Reserve Traps & Operational Intelligence — IN PROGRESS
+- [ ] Confirmed v10.4 MAIN/FEINT intelligence opens one bounded player counter-order window with BLOCK, COUNTERATTACK and DEEP STRIKE choices instead of resolving the reveal automatically.
+- [ ] Counter-orders create materially different live battlefield consequences through existing Health, TankGame projectile, frontline and enemy-roster authority: main-axis defense, feint-axis reserve trap or high-value deep interdiction.
+- [ ] Operational intelligence remains boss-safe, hard-capped and player-readable; each deception operation accepts at most one order and all support fire/recovery/reward effects have explicit budgets and cooldowns.
+- [ ] Packaged Windows v10.5 counter-orders gate validates scheduling, choice/effect caps, v10.4/v7.8/v9.0 integration, runtime installation and exact EXE boot before qualification.
+'''
+          s = s.replace(marker, section + marker, 1)
+          s = s.replace('badge.svg?branch=dev-v10-4', 'badge.svg?branch=dev-v10-5', 1)
+          s = s.replace('ROADMAP-100.0%25-2ea043', 'ROADMAP-98.3%25-d29922', 1)
+          s = s.replace('DONE-226%2F226-1f6feb', 'DONE-226%2F230-1f6feb', 1)
+          s = s.replace('STATUS-V10.4%20QUALIFIED-2ea043', 'STATUS-V10.5%20IN%20PROGRESS-d29922', 1)
+          s = s.replace('████████████████████ 100.0%', '████████████████████ 98.3%', 1)
+          s = s.replace('| **226** | **0** | **226** | **100.0%** |', '| **226** | **4** | **230** | **98.3%** |', 1)
+          p.write_text(s, encoding='utf-8')
+
+      - name: Verify scope and dashboard consistency
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s = Path('ROADMAP.md').read_text(encoding='utf-8')
+          done = len(re.findall(r'^- \[x\] ', s, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', s, re.M))
+          assert (done, open_) == (226, 4), (done, open_)
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<img alt="CI"' in s and '<img alt="Roadmap progress"' in s
+          assert '<img alt="Completed"' in s and '<img alt="Status"' in s
+          assert 'badge.svg?branch=dev-v10-5' in s
+          assert 'ROADMAP-98.3%25-d29922' in s
+          assert 'DONE-226%2F230-1f6feb' in s
+          assert 'STATUS-V10.5%20IN%20PROGRESS-d29922' in s
+          assert '████████████████████ 98.3%' in s
+          assert '| **226** | **4** | **230** | **98.3%** |' in s
+          assert s.count('## v10.5 — Player Counter-Orders, Reserve Traps & Operational Intelligence — IN PROGRESS') == 1
+
+      - name: Commit registered roadmap scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git diff --cached --quiet && exit 0
+          git commit -m 'roadmap(v10.5): register counter-orders milestone scope'
+          git push origin HEAD:dev-v10-5
