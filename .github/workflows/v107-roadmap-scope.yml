@@ -3,9 +3,9 @@ name: ROADMAP v10.7 Scope Registration
 on:
   push:
     branches:
-      - 'dev-v10-7'
+      - dev-v10-7
     paths:
-      - '.roadmap-v107-scope-trigger'
+      - .roadmap-v107-scope-trigger
   workflow_dispatch:
 
 permissions:
@@ -19,9 +19,11 @@ jobs:
         with:
           ref: dev-v10-7
           fetch-depth: 0
+
       - name: Register v10.7 scope before implementation qualification
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
           import re
           p = Path('ROADMAP.md')
@@ -32,27 +34,28 @@ jobs:
           done = len(re.findall(r'^- \[x\] ', s, re.M))
           open_ = len(re.findall(r'^- \[ \] ', s, re.M))
           assert (done, open_) == (234, 0), (done, open_)
-
           s = s.replace('badge.svg?branch=dev-v10-6', 'badge.svg?branch=dev-v10-7', 1)
           s = s.replace('ROADMAP-100.0%25-2ea043', 'ROADMAP-97.9%25-d29922', 1)
           s = s.replace('DONE-234%2F234-1f6feb', 'DONE-234%2F239-1f6feb', 1)
           s = s.replace('STATUS-V10.6%20QUALIFIED-2ea043', 'STATUS-V10.7%20IN%20PROGRESS-d29922', 1)
           s = s.replace('████████████████████ 100.0%', '████████████████████ 97.9%', 1)
           s = s.replace('| **234** | **0** | **234** | **100.0%** |', '| **234** | **5** | **239** | **97.9%** |', 1)
+          section = """## v10.7 — War State Director, Dynamic Operation Chains & Campaign Endgame Reforge — IN PROGRESS
+          - [ ] A run-level War State Director converts v10.6 outcome, operational momentum and captured intelligence into bounded ADVANTAGE / CONTESTED / CRISIS campaign states without replacing existing combat authority.
+          - [ ] Dynamic operation chains turn rounds 90–99 into a branching endgame arc whose objectives and support pressure depend on the live war state instead of a fixed late-game sequence.
+          - [ ] The final sector gains materially different ENDGAME plans — COMMAND COLLAPSE, BREAKTHROUGH PURSUIT or DESPERATE DEFENSE — with authoritative projectile, Health, frontline, Orzełek and War Bond consequences under strict caps.
+          - [ ] Round 100 receives a boss-safe final-war modifier and player-readable campaign outcome derived from the accumulated war state, while all existing boss/AI/damage authority remains intact.
+          - [ ] Packaged Windows v10.7 endgame gate validates state resolution, rounds 90–100 branch scheduling, strict support/recovery caps, v10.6 integration, runtime installation and exact EXE boot before qualification.
 
-          section = '''## v10.7 — War State Director, Dynamic Operation Chains & Campaign Endgame Reforge — IN PROGRESS
-- [ ] A run-level War State Director converts v10.6 outcome, operational momentum and captured intelligence into bounded ADVANTAGE / CONTESTED / CRISIS campaign states without replacing existing combat authority.
-- [ ] Dynamic operation chains turn rounds 90–99 into a branching endgame arc whose objectives and support pressure depend on the live war state instead of a fixed late-game sequence.
-- [ ] The final sector gains materially different ENDGAME plans — COMMAND COLLAPSE, BREAKTHROUGH PURSUIT or DESPERATE DEFENSE — with authoritative projectile, Health, frontline, Orzełek and War Bond consequences under strict caps.
-- [ ] Round 100 receives a boss-safe final-war modifier and player-readable campaign outcome derived from the accumulated war state, while all existing boss/AI/damage authority remains intact.
-- [ ] Packaged Windows v10.7 endgame gate validates state resolution, rounds 90–100 branch scheduling, strict support/recovery caps, v10.6 integration, runtime installation and exact EXE boot before qualification.
-
-'''
+          """
           s = s.replace('## Development rules', section + '## Development rules', 1)
           p.write_text(s, encoding='utf-8')
+          PY
+
       - name: Re-read and verify SWIR dashboard consistency
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
           import re
           s = Path('ROADMAP.md').read_text(encoding='utf-8')
@@ -71,6 +74,8 @@ jobs:
           assert '| **234** | **5** | **239** | **97.9%** |' in s
           section = s[s.index('## v10.7 — War State Director, Dynamic Operation Chains & Campaign Endgame Reforge — IN PROGRESS'):s.index('\n## Development rules')]
           assert section.count('- [ ] ') == 5 and '- [x] ' not in section
+          PY
+
       - name: Commit registered roadmap scope
         shell: bash
         run: |
