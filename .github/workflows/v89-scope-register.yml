@@ -1,0 +1,87 @@
+name: V8.9 Roadmap Scope Register
+
+on:
+  push:
+    branches:
+      - 'dev-v8-9'
+    paths:
+      - '.roadmap-v89-scope-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v8-9
+          fetch-depth: 0
+      - name: Register v8.9 scope and recalculate dashboard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('ROADMAP.md')
+          text = p.read_text(encoding='utf-8')
+          marker = '<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          if marker not in text:
+              raise SystemExit('SWIR roadmap marker missing')
+          if '## v8.9 — Forward Recovery Bases, Salvage Convoys & Frontline Control' in text:
+              raise SystemExit('v8.9 scope already registered')
+          insert = '''## v8.9 — Forward Recovery Bases, Salvage Convoys & Frontline Control — IN PROGRESS
+- [ ] Strategic salvage can be committed to a bounded forward-recovery objective, creating a temporary frontline base only after a real delivery/hold sequence instead of instant conversion.
+- [ ] Forward Recovery Bases provide limited repair, reserve-matched ammunition and Orzełek support through existing Health, PlayerTank, ammo and economy authority, with hard per-round/cooldown budgets.
+- [ ] Enemy counteroffensive teams retask real surviving units through TacticalNavigationAgent to contest or destroy the recovery base while friendly salvage convoys reposition captured materiel without introducing a parallel combat roster.
+- [ ] Packaged Windows frontline-recovery gate boots the exact development EXE and verifies scheduling, delivery/hold/counterattack/reward bounds, runtime integration and v8.9 version identity.
+
+'''
+          anchor = '## Development rules'
+          if anchor not in text:
+              raise SystemExit('Development rules anchor missing')
+          text = text.replace(anchor, insert + anchor, 1)
+          completed = len(re.findall(r'^- \[x\] ', text, flags=re.M))
+          remaining = len(re.findall(r'^- \[ \] ', text, flags=re.M))
+          total = completed + remaining
+          if (completed, remaining, total) != (178, 4, 182):
+              raise SystemExit(f'unexpected scope state {completed}/{total} remaining={remaining}')
+          pct = completed / total * 100
+          filled = max(0, min(20, round(pct / 5.0)))
+          bar = '█' * filled + '░' * (20 - filled)
+          text = re.sub(r'badge\.svg\?branch=[^\"\)]+', 'badge.svg?branch=dev-v8-9', text, count=1)
+          text = re.sub(r'https://img\.shields\.io/badge/ROADMAP-[^\"]+', f'https://img.shields.io/badge/ROADMAP-{pct:.1f}%25-f59e0b?style=for-the-badge', text, count=1)
+          text = re.sub(r'https://img\.shields\.io/badge/DONE-[^\"]+', 'https://img.shields.io/badge/DONE-178%2F182-1f6feb?style=for-the-badge', text, count=1)
+          text = re.sub(r'https://img\.shields\.io/badge/STATUS-[^\"]+', 'https://img.shields.io/badge/STATUS-V8.9%20IN%20PROGRESS-f59e0b?style=for-the-badge', text, count=1)
+          text = re.sub(r'(?m)^[█░]{20} [0-9.]+%$', f'{bar} {pct:.1f}%', text, count=1)
+          text = re.sub(r'\| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9.]+%\*\* \|', f'| **178** | **4** | **182** | **{pct:.1f}%** |', text, count=1)
+          p.write_text(text, encoding='utf-8')
+          PY
+      - name: Verify scope registration
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '<!-- SWIR-ROADMAP-STANDARD:v1 -->' ROADMAP.md
+          grep -q 'badge.svg?branch=dev-v8-9' ROADMAP.md
+          grep -q 'DONE-178%2F182' ROADMAP.md
+          grep -q 'STATUS-V8.9%20IN%20PROGRESS' ROADMAP.md
+          grep -q '## v8.9 — Forward Recovery Bases, Salvage Convoys & Frontline Control — IN PROGRESS' ROADMAP.md
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('ROADMAP.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^- \[x\] ', text, flags=re.M)) == 178
+          assert len(re.findall(r'^- \[ \] ', text, flags=re.M)) == 4
+          m=re.search(r'(?m)^([█░]+) ([0-9.]+)%$', text)
+          assert m and len(m.group(1)) == 20
+          PY
+      - name: Commit scope
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'docs(v8.9): register milestone scope'
+          git push origin HEAD:dev-v8-9
