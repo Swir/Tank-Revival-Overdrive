@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v10-3"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.2%25-d29922?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-218%2F222-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V10.3%20IN%20PROGRESS-d29922?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-222%2F222-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V10.3%20QUALIFIED-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 98.2%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **218** | **4** | **222** | **98.2%** |
+| **222** | **0** | **222** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -350,11 +350,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Sector doctrine history and theater initiative remain hard-capped, boss-safe and player-readable, with outcomes integrated with v8.4 campaign memory and v10.0 command momentum so success/failure changes later pressure without runaway snowballing.
 - [x] Packaged Windows v10.2 consequence-engine gate validates all ten sectors, branch transitions/caps, v8.4/v10.0/v10.1 integration, runtime installation and exact EXE boot before qualification.
 
-## v10.3 — Adaptive Enemy High Command, Counter-Doctrines & Sector War Plans — IN PROGRESS
-- [ ] Adaptive Enemy High Command reads the rolling v10.2 sector-doctrine history and resolves a bounded enemy counter-doctrine for later sector rounds, with deterministic history weighting, boss safety and no replacement of existing campaign authority.
-- [ ] ARMOR TRAP, DISPERSED LOGISTICS and SIEGE BREACH create materially different counterplay by issuing temporary orders to existing TacticalNavigationAgent units, using bounded AP/HE counter-fire and limited existing-Health logistics sustain rather than parallel movement, damage or economy systems.
-- [ ] Sector war plans are hard-capped and player-readable: at most four retasked combatants and two counter-fire shells per response beat, active only in the mid/late sector window so v10.2 consequences and boss rounds retain their own authority.
-- [ ] Packaged Windows v10.3 high-command gate validates doctrine mapping/history weighting, round windows/caps, v10.2 and tactical-navigation integration, runtime installation and exact EXE boot before qualification.
+## v10.3 — Adaptive Enemy High Command, Counter-Doctrines & Sector War Plans — COMPLETE
+- [x] Adaptive Enemy High Command reads the rolling v10.2 sector-doctrine history and resolves a bounded enemy counter-doctrine for later sector rounds, with deterministic history weighting, boss safety and no replacement of existing campaign authority.
+- [x] ARMOR TRAP, DISPERSED LOGISTICS and SIEGE BREACH create materially different counterplay by issuing temporary orders to existing TacticalNavigationAgent units, using bounded AP/HE counter-fire and limited existing-Health logistics sustain rather than parallel movement, damage or economy systems.
+- [x] Sector war plans are hard-capped and player-readable: at most four retasked combatants and two counter-fire shells per response beat, active only in the mid/late sector window so v10.2 consequences and boss rounds retain their own authority.
+- [x] Packaged Windows v10.3 high-command gate validates doctrine mapping/history weighting, round windows/caps, v10.2 and tactical-navigation integration, runtime installation and exact EXE boot before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
