@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v9-2"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.9%25-d29922?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-190%2F194-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V9.2%20IN%20PROGRESS-d29922?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-194%2F194-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V9.2%20QUALIFIED-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 97.9%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **190** | **4** | **194** | **97.9%** |
+| **194** | **0** | **194** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -308,11 +308,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Strongpoint control materially changes local frontline pressure, recovery/support access and counterattack behavior without replacing TankGame, Health, Projectile, DynamicFrontlineTerritoryDirector, WarEconomyDirector or tactical-navigation authority.
 - [x] Packaged Windows strongpoint gate boots the exact development EXE and verifies fortification eligibility, bond spending, durability/repair bounds, enemy counteroffensive budgets, frontline integration and v9.1 version identity.
 
-## v9.2 — Fortification Networks, Artillery Positions & Breakthrough Operations — IN PROGRESS
-- [ ] Multi-node fortification network connects strongpoints with artillery and repair positions across friendly frontline lanes using existing Health/frontline authority.
-- [ ] Artillery positions provide bounded real HE fire support while repair posts provide limited local recovery, with hard cadence and sustain caps.
-- [ ] Enemy breakthrough operations retask existing Heavy/Siege/Elite units through TacticalNavigationAgent to attack the weakest fortification node with bounded projectile pressure.
-- [ ] Packaged Windows v9.2 gate validates fortification-network scheduling, support/breakthrough safety bounds, runtime installation and exact EXE boot before qualification.
+## v9.2 — Fortification Networks, Artillery Positions & Breakthrough Operations — COMPLETE
+- [x] Multi-node fortification network connects strongpoints with artillery and repair positions across friendly frontline lanes using existing Health/frontline authority.
+- [x] Artillery positions provide bounded real HE fire support while repair posts provide limited local recovery, with hard cadence and sustain caps.
+- [x] Enemy breakthrough operations retask existing Heavy/Siege/Elite units through TacticalNavigationAgent to attack the weakest fortification node with bounded projectile pressure.
+- [x] Packaged Windows v9.2 gate validates fortification-network scheduling, support/breakthrough safety bounds, runtime installation and exact EXE boot before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
