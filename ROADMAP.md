@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-5"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-6"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-22c55e?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-166%2F166-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.5%20QUALIFIED-22c55e?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-170%2F170-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.6%20QUALIFIED-22c55e?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **166** | **0** | **166** | **100.0%** |
+| **170** | **0** | **170** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -271,6 +271,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Destroying real Heavy/Siege/Sniper/Elite units consumes the matching reserves; depleted pools materially reduce later endurance, strategic fire support and specialist/champion pressure while boss rounds remain bounded and playable.
 - [x] Reserve exhaustion carries between sectors: prior remaining strength plus v8.4 Victory/Defeat state determines bounded replenishment, so successful operations create long-term attrition while enemy initiative enables partial recovery.
 - [x] Packaged Windows strategic-reserves gate boots the exact development EXE and verifies ten-sector carryover, Victory/Neutral/Defeat ordering, class-to-reserve mapping, encounter bounds, runtime installation and v8.5 version identity.
+
+## v8.6 — Logistics Network, Supply Depots & Strategic Interdiction — COMPLETE
+- [x] Enemy strategic reserves gain physical battlefield logistics nodes (supply depot, mobile convoy and repair hub) with real Health/collision and deterministic non-boss scheduling, making v8.5 replenishment a playable target instead of an invisible number.
+- [x] Destroying logistics nodes consumes matching Armor/Fire Support/EW reserves and builds bounded sector interdiction; surviving nodes restore a limited amount of the matching reserve, so battlefield outcomes directly control enemy replenishment.
+- [x] Logistics integrity refines later CampaignEncounter pressure with bounded endurance/support/champion effects while preserving TankGame, Health, Projectile, boss and reserve authority; nodes remain readable through compact markers/briefs rather than permanent HUD clutter.
+- [x] Packaged Windows logistics-network gate boots the exact development EXE and verifies node scheduling/types, destruction-vs-survival reserve ordering, interdiction bounds, encounter integration, runtime installation and v8.6 version identity.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
