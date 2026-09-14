@@ -1,0 +1,73 @@
+name: ROADMAP v10.4 Scope Registrar
+
+on:
+  push:
+    branches:
+      - 'dev-v10-4'
+    paths:
+      - '.roadmap-v104-scope-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v10-4
+      - name: Register unchecked v10.4 scope and preserve SWIR standard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('ROADMAP.md')
+          s = p.read_text(encoding='utf-8')
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<!-- ROADMAP-PROGRESS:START -->' in s and '<!-- ROADMAP-PROGRESS:END -->' in s
+          assert '## 📊 Overall progress' in s
+          assert '## v10.3 — Adaptive Enemy High Command, Counter-Doctrines & Sector War Plans — COMPLETE' in s
+          assert '## v10.4 — High Command Reserves, Feint Operations & Counter-Intelligence War' not in s
+          assert len(re.findall(r'^- \[x\] ', s, re.M)) == 222
+          assert len(re.findall(r'^- \[ \] ', s, re.M)) == 0
+          s = s.replace('badge.svg?branch=dev-v10-3', 'badge.svg?branch=dev-v10-4')
+          s = s.replace('ROADMAP-100.0%25-2ea043', 'ROADMAP-98.2%25-d29922')
+          s = s.replace('DONE-222%2F222-1f6feb', 'DONE-222%2F226-1f6feb')
+          s = s.replace('STATUS-V10.3%20QUALIFIED-2ea043', 'STATUS-V10.4%20IN%20PROGRESS-d29922')
+          s = s.replace('████████████████████ 100.0%', '████████████████████ 98.2%', 1)
+          s = s.replace('| **222** | **0** | **222** | **100.0%** |', '| **222** | **4** | **226** | **98.2%** |', 1)
+          block = '''\n## v10.4 — High Command Reserves, Feint Operations & Counter-Intelligence War — IN PROGRESS\n- [ ] High Command converts the v10.3 counter-doctrine into a bounded two-axis operation with one real main effort and one feint across the existing three-lane Dynamic Frontline, keeping boss/end-sector rounds and existing campaign authority isolated.\n- [ ] Strategic reserve commitment is gameplay-real and attritional: existing Armor/Fire Support/EW reserve snapshots gate the strength of Heavy/Siege/Elite commitments, while all movement, damage and reserve loss continue through existing TacticalNavigationAgent, Projectile/Health and StrategicReserveAttrition systems.\n- [ ] Existing G SIGINT / H Recon from Command Network Hunt can identify the real axis during a short intelligence window; successful identification degrades the coming main effort, while no intelligence leaves the feint credible and the bounded assault at full strength.\n- [ ] Packaged Windows v10.4 deception-war gate validates axis selection, reserve/counter-intelligence caps, v10.3/v9.0/v8.5/v7.8 integration, runtime installation and exact EXE boot before qualification.\n'''
+          marker = '\n## Development rules\n'
+          assert marker in s
+          s = s.replace(marker, block + marker, 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Validate dashboard/checklist consistency
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s = Path('ROADMAP.md').read_text(encoding='utf-8')
+          done = len(re.findall(r'^- \[x\] ', s, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', s, re.M))
+          assert (done, open_) == (222, 4), (done, open_)
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<img alt="CI"' in s and '<img alt="Roadmap progress"' in s
+          assert '<img alt="Completed"' in s and '<img alt="Status"' in s
+          assert 'badge.svg?branch=dev-v10-4' in s
+          assert 'ROADMAP-98.2%25-d29922' in s
+          assert 'DONE-222%2F226' in s
+          assert 'STATUS-V10.4%20IN%20PROGRESS-d29922' in s
+          assert '| **222** | **4** | **226** | **98.2%** |' in s
+          assert '████████████████████ 98.2%' in s
+          bar = re.search(r'```text\n([^\n]+)\n```', s).group(1).split()[0]
+          assert len(bar) == 20, (bar, len(bar))
+      - name: Commit roadmap scope
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'roadmap(v10.4): register deception-war milestone'
+          git push origin HEAD:dev-v10-4

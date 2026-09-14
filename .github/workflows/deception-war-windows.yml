@@ -1,0 +1,143 @@
+name: High Command Deception War v10.4 Windows Gate
+
+on:
+  push:
+    branches:
+      - 'dev-v10-4'
+    paths:
+      - '.deception-war-v104-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-candidate:
+    name: Build exact v10.4 Windows x64 candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify v10.4 source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat VERSION)" = "v10.4.0-dev"
+          test -f Assets/Scripts/HighCommandDeceptionWarDirector.cs
+          test -f Assets/Scripts/HighCommandDeceptionWarCISmokeProbe.cs
+          grep -q 'HighCommandDeceptionWarDirector_v10_4' Assets/Scripts/HighCommandDeceptionWarDirector.cs
+          grep -q 'AdaptiveEnemyHighCommandDirector.Instance' Assets/Scripts/HighCommandDeceptionWarDirector.cs
+          grep -q 'StrategicReserveAttritionDirector.Instance' Assets/Scripts/HighCommandDeceptionWarDirector.cs
+          grep -q 'CommandNetworkHuntDirector.Instance' Assets/Scripts/HighCommandDeceptionWarDirector.cs
+          grep -q 'DynamicFrontlineTerritoryDirector.LanePosition' Assets/Scripts/HighCommandDeceptionWarDirector.cs
+          grep -q 'HighCommandNavigationDirective' Assets/Scripts/HighCommandDeceptionWarDirector.cs
+          grep -q 'SpawnProjectile' Assets/Scripts/HighCommandDeceptionWarDirector.cs
+          grep -q 'MaxCommittedCombatants = 4' Assets/Scripts/HighCommandDeceptionWarDirector.cs
+          grep -q 'MaxSupportShells = 2' Assets/Scripts/HighCommandDeceptionWarDirector.cs
+          grep -q '## v10.4 — High Command Reserves, Feint Operations & Counter-Intelligence War — IN PROGRESS' ROADMAP.md
+          grep -q 'DONE-222%2F226' ROADMAP.md
+          grep -q 'SWIR-ROADMAP-STANDARD:v1' ROADMAP.md
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: v104-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            v104-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+      - name: Build Windows x64 candidate
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Verify and package exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f build/StandaloneWindows64/TankRevivalOverdrive.exe
+          test -d build/StandaloneWindows64/TankRevivalOverdrive_Data
+          cd build/StandaloneWindows64
+          zip -r ../../TankRevivalOverdrive-v10.4-candidate-Windows-x64.zip .
+          cd ../..
+          test -s TankRevivalOverdrive-v10.4-candidate-Windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v10.4-candidate-Windows-x64
+          path: TankRevivalOverdrive-v10.4-candidate-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  packaged-exe-smoke:
+    name: Boot exact v10.4 candidate and validate deception war
+    needs: build-candidate
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v10.4-candidate-Windows-x64
+          path: candidate
+      - name: Extract exact candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevivalOverdrive-v10.4-candidate-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data directory missing after extraction' }
+      - name: Run v10.4 deception-war packaged smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item DECEPTION_WAR_PASS.txt, DECEPTION_WAR_FAIL.txt, DeceptionWarPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-deception-war-smoke','-logFile','DeceptionWarPlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'v10.4 deception war smoke timed out after 60 seconds'
+          }
+          if (Test-Path 'DECEPTION_WAR_FAIL.txt') {
+            Get-Content DECEPTION_WAR_FAIL.txt
+            if (Test-Path DeceptionWarPlayer.log) { Get-Content DeceptionWarPlayer.log -Tail 240 }
+            throw 'v10.4 deception war runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'DECEPTION_WAR_PASS.txt')) {
+            if (Test-Path DeceptionWarPlayer.log) { Get-Content DeceptionWarPlayer.log -Tail 240 }
+            throw "Runtime exited without v10.4 PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content DECEPTION_WAR_PASS.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Test-Path DeceptionWarPlayer.log) {
+            if (Select-String -Path DeceptionWarPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|Compilation failed' -Quiet) {
+              Get-Content DeceptionWarPlayer.log -Tail 260
+              throw 'Blocking exception signature found during v10.4 runtime smoke'
+            }
+          }
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v10.4-deception-war-diagnostics
+          path: |
+            candidate/runtime/DECEPTION_WAR_PASS.txt
+            candidate/runtime/DECEPTION_WAR_FAIL.txt
+            candidate/runtime/DeceptionWarPlayer.log
+          if-no-files-found: ignore
+          retention-days: 14
