@@ -1,0 +1,59 @@
+name: v8.3 Roadmap Lock Update
+
+on:
+  push:
+    branches:
+      - 'dev-v8-3'
+    paths:
+      - '.roadmap-v83-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  update-roadmap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v8-3
+      - name: Update locked roadmap
+        run: python .github/scripts/update_v83_roadmap.py
+      - name: Verify checklist math and lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '<!-- SWIR-ROADMAP-STANDARD:v1 -->' ROADMAP.md
+          grep -q '## 📊 Overall progress' ROADMAP.md
+          grep -q 'alt="CI"' ROADMAP.md
+          grep -q 'alt="Roadmap progress"' ROADMAP.md
+          grep -q 'alt="Completed"' ROADMAP.md
+          grep -q 'alt="Status"' ROADMAP.md
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          t=Path('ROADMAP.md').read_text(encoding='utf-8')
+          done=len(re.findall(r'^- \[x\]',t,re.M)); todo=len(re.findall(r'^- \[ \]',t,re.M)); total=done+todo
+          print(f'checklist done={done} todo={todo} total={total}')
+          if total != 158: raise SystemExit(f'expected 158 deliverables, got {total}')
+          mode=Path('.roadmap-v83-trigger').read_text().strip().lower()
+          if mode=='scope' and (done,todo)!=(154,4): raise SystemExit(f'scope mismatch {(done,todo)}')
+          if mode=='complete' and (done,todo)!=(158,0): raise SystemExit(f'complete mismatch {(done,todo)}')
+          block=t[t.index('```text')+7:t.index('```',t.index('```text')+7)]
+          segments=block.count('█')+block.count('░')
+          if segments!=20: raise SystemExit(f'expected 20 bar segments, got {segments}')
+          PY
+      - name: Commit roadmap update
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- ROADMAP.md; then
+            echo 'ROADMAP already in requested state.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          mode="$(tr -d '\r\n' < .roadmap-v83-trigger)"
+          git commit -m "docs(v8.3): roadmap ${mode}"
+          git push origin HEAD:dev-v8-3
