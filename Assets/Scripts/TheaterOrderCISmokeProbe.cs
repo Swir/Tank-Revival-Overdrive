@@ -47,7 +47,7 @@ namespace TankRevival
 
         public static bool ValidateMatrix(out string details)
         {
-            int[] expected = { 42, 56, 70, 84, 98 };
+            int[] expected = { 42, 56, 68, 84, 98 };
             for (int i = 0; i < expected.Length; i++)
             {
                 if (!TheaterOrderDirector.HasDecisionForRound(expected[i]))
@@ -55,9 +55,14 @@ namespace TankRevival
                     details = "expected decision missing at round " + expected[i];
                     return false;
                 }
+                if (expected[i] % 10 == 0 || CombinedArmsCampaignCommandDirector.HasCommandOperationForRound(expected[i]))
+                {
+                    details = "decision collides with boss/command operation at round " + expected[i];
+                    return false;
+                }
             }
 
-            int[] blocked = { 1, 40, 41, 50, 69, 80, 90, 100 };
+            int[] blocked = { 1, 40, 41, 50, 62, 69, 70, 76, 80, 83, 90, 97, 100 };
             for (int i = 0; i < blocked.Length; i++)
             {
                 if (TheaterOrderDirector.HasDecisionForRound(blocked[i]))
