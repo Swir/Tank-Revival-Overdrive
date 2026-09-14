@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v10-7"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v10-8"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-239%2F239-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V10.7%20QUALIFIED-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-244%2F244-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V10.8%20QUALIFIED-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **239** | **0** | **239** | **100.0%** |
+| **244** | **0** | **244** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -382,6 +382,14 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] The final sector gains materially different ENDGAME plans — COMMAND COLLAPSE, BREAKTHROUGH PURSUIT or DESPERATE DEFENSE — with authoritative projectile, Health, frontline, Orzełek and War Bond consequences under strict caps.
 - [x] Round 100 receives a boss-safe final-war modifier and player-readable campaign outcome derived from the accumulated war state, while all existing boss/AI/damage authority remains intact.
 - [x] Packaged Windows v10.7 endgame gate validates state resolution, rounds 90–100 branch scheduling, strict support/recovery caps, v10.6 integration, runtime installation and exact EXE boot before qualification.
+
+
+## v10.8 — High Command HQ, Final Objectives & Campaign Epilogues — COMPLETE
+- [x] The rounds 97–100 endgame gains a physical, destructible Enemy High Command HQ using authoritative Health/collision and lane placement instead of a text-only final-war modifier.
+- [x] ADVANTAGE / CONTESTED / CRISIS produce materially different final objectives — HQ assault, command isolation or evacuation denial — with strict projectile, reinforcement and recovery caps.
+- [x] HQ state is integrated with the existing v10.7 War State/Endgame plan and round-100 boss authority, so destroying, isolating or failing to stop High Command changes the campaign outcome without replacing the boss or core combat systems.
+- [x] A player-readable campaign epilogue summarizes the real final objective result and accumulated war state after the final battle, including bounded War Bond reward consequences.
+- [x] Packaged Windows v10.8 High Command HQ gate validates physical-HQ configuration, state/objective mapping, boss-safe round-100 integration, epilogue outcomes, strict caps, runtime installation and exact EXE boot before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
