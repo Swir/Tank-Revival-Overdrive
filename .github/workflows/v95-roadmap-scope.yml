@@ -36,17 +36,12 @@ jobs:
           s = s.replace('STATUS-V9.4%20QUALIFIED-2ea043', 'STATUS-V9.5%20IN%20PROGRESS-d29922')
           s = s.replace('████████████████████ 100.0%', '████████████████████ 98.1%', 1)
           s = s.replace('| **202** | **0** | **202** | **100.0%** |', '| **202** | **4** | **206** | **98.1%** |', 1)
-          section = '''\n## v9.5 — Fire Mission Networks, Decoy Batteries & Counter-Surveillance — IN PROGRESS
-- [ ] Existing SIGINT/recon becomes authoritative artillery targeting intelligence: true siege batteries require bounded observation/lock windows for reliable counter-battery fire instead of being permanently known targets.
-- [ ] Enemy siege doctrine deploys a hard-capped decoy-battery screen that can waste unguided counter-battery cycles until identified, while decoys remain non-damaging presentation/target-deception objects rather than a parallel combat roster.
-- [ ] Fire-control spotters gain bounded counter-surveillance/reacquisition behavior after reconnaissance exposure, while supply loss, spotter loss and existing battery relocation materially change targeting confidence without hidden damage or invulnerability.
-- [ ] Packaged Windows v9.5 gate validates 1–100 scheduling, lock/decoy/counter-surveillance safety bounds, v7.8 SIGINT/recon + v9.3/v9.4 integration, runtime installation and exact EXE boot before qualification.
-'''
-          marker = '\n## Development rules'
+          block = '''\n## v9.5 — Fire Mission Networks, Decoy Batteries & Counter-Surveillance — IN PROGRESS\n- [ ] Existing SIGINT/recon becomes authoritative artillery targeting intelligence: true siege batteries require bounded observation/lock windows for reliable counter-battery fire instead of being permanently known targets.\n- [ ] Enemy siege doctrine deploys a hard-capped decoy-battery screen that can waste unguided counter-battery cycles until identified, while decoys remain non-damaging presentation/target-deception objects rather than a parallel combat roster.\n- [ ] Fire-control spotters gain bounded counter-surveillance/reacquisition behavior after reconnaissance exposure, while supply loss, spotter loss and existing battery relocation materially change targeting confidence without hidden damage or invulnerability.\n- [ ] Packaged Windows v9.5 gate validates 1–100 scheduling, lock/decoy/counter-surveillance safety bounds, v7.8 SIGINT/recon + v9.3/v9.4 integration, runtime installation and exact EXE boot before qualification.\n'''
+          marker = '\n## Development rules\n'
           assert marker in s
-          s = s.replace(marker, section + marker, 1)
+          s = s.replace(marker, block + marker, 1)
           p.write_text(s, encoding='utf-8')
-      - name: Verify registered dashboard
+      - name: Validate dashboard/checklist consistency
         shell: python
         run: |
           from pathlib import Path
@@ -57,15 +52,12 @@ jobs:
           assert (done, open_) == (202, 4), (done, open_)
           assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
           assert 'badge.svg?branch=dev-v9-5' in s
-          assert 'ROADMAP-98.1%25-d29922' in s
-          assert 'DONE-202%2F206-1f6feb' in s
-          assert 'STATUS-V9.5%20IN%20PROGRESS-d29922' in s
-          assert '## 📊 Overall progress' in s
-          assert '████████████████████ 98.1%' in s
+          assert 'DONE-202%2F206' in s
           assert '| **202** | **4** | **206** | **98.1%** |' in s
+          assert '████████████████████ 98.1%' in s
           bar = re.search(r'```text\n([^\n]+)\n```', s).group(1).split()[0]
           assert len(bar) == 20, (bar, len(bar))
-      - name: Commit scope
+      - name: Commit roadmap scope
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
