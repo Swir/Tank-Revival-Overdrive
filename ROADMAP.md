@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-3"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-22c55e?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-158%2F158-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.3%20QUALIFIED-22c55e?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-4"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.5%25-f59e0b?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-158%2F162-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.4%20IN%20PROGRESS-f59e0b?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+███████████████████░ 97.5%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **158** | **0** | **158** | **100.0%** |
+| **158** | **4** | **162** | **97.5%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -259,6 +259,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Success/neutral/failure is derived from authoritative player and Orzełek health state; the next stage receives bounded encounter relief or escalation through CampaignEncounter without replacing TankGame, Health, Projectile, AI or economy authority.
 - [x] Winning at least two stages closes the sector operation as a victory with existing War Bond rewards, while setbacks preserve enemy initiative; boss rounds remain explicitly protected from chain mutation.
 - [x] Packaged Windows operation-chain gate boots the exact development EXE and verifies all 100 rounds, 30 chain rounds, consequence bounds, outcome rules, boss preservation, integration and v8.3 version identity.
+
+## v8.4 — War State, Sector Consequences & Campaign Memory — IN PROGRESS
+- [ ] Completed three-stage operations persist as a sector war-state result, creating bounded strategic momentum that survives beyond the local v8.3 chain instead of resetting immediately after Resolution.
+- [ ] Sector victory/defeat materially changes the remaining sector and its boss preparation through CampaignEncounter refinement while preserving TankGame, Health, Projectile, AI and boss authority.
+- [ ] The next sector inherits the previous result through bounded reinforcement pressure plus a real victory logistics benefit using existing Orzełek repair and War Economy paths; run reset clears all campaign-memory state safely.
+- [ ] Packaged Windows war-state gate boots the exact development EXE and verifies 10-sector memory, momentum bounds, post-operation/next-sector/boss consequences, reset safety, integration and v8.4 version identity.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
