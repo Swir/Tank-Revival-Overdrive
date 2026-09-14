@@ -161,8 +161,8 @@ namespace TankRevival
             {
                 if (lane == sp.StrongpointLane || lane == avoid) continue;
                 if (ReadLaneState(frontline, lane) != FrontlineControlState.Friendly) continue;
-                float d = Vector2.Distance(player.transform.position, DynamicFrontlineTerritoryDirector.LanePosition(lane));
-                if (d < bestDistance) { bestDistance = d; best = lane; }
+                float distance = Vector2.Distance(player.transform.position, DynamicFrontlineTerritoryDirector.LanePosition(lane));
+                if (distance < bestDistance) { bestDistance = distance; best = lane; }
             }
             return best;
         }
@@ -178,9 +178,9 @@ namespace TankRevival
             Health hp = root.AddComponent<Health>();
             hp.Initialize(Team.Player, artillery ? ArtilleryHealth : RepairHealth);
             hp.Died += OnNodeDestroyed;
-            VisualFactory.Rect("Base", root.transform, new Vector2(1.05f, 0.7f), artillery ? new Color(0.30f,0.32f,0.28f) : new Color(0.18f,0.34f,0.30f), Vector3.zero, 8);
-            VisualFactory.Rect(artillery ? "Barrel" : "Crane", root.transform, artillery ? new Vector2(0.14f,1.0f) : new Vector2(0.12f,0.72f), artillery ? new Color(0.92f,0.72f,0.28f) : new Color(0.24f,0.95f,0.64f), new Vector3(0f,0.48f,0f), 9);
-            VisualFactory.RingPulse(pos, artillery ? new Color(1f,0.68f,0.18f) : new Color(0.18f,1f,0.58f), 1.45f);
+            VisualFactory.Rect("Base", root.transform, new Vector2(1.05f, 0.7f), artillery ? new Color(0.30f, 0.32f, 0.28f) : new Color(0.18f, 0.34f, 0.30f), Vector3.zero, 8);
+            VisualFactory.Rect(artillery ? "Barrel" : "Crane", root.transform, artillery ? new Vector2(0.14f, 1.0f) : new Vector2(0.12f, 0.72f), artillery ? new Color(0.92f, 0.72f, 0.28f) : new Color(0.24f, 0.95f, 0.64f), new Vector3(0f, 0.48f, 0f), 9);
+            VisualFactory.RingPulse(pos, artillery ? new Color(1f, 0.68f, 0.18f) : new Color(0.18f, 1f, 0.58f), 1.45f);
             if (artillery) { _artillery = root; _artilleryHealth = hp; _artilleryLane = lane; }
             else { _repair = root; _repairHealth = hp; _repairLane = lane; }
             AdjustLaneControl(lane, 5f);
@@ -206,9 +206,9 @@ namespace TankRevival
         {
             EnemyTank target = FindPriorityEnemy(_artillery.transform.position, 9.5f);
             if (target == null) return;
-            Vector2 origin = (Vector2)_artillery.transform.position + new Vector2(0f,0.55f);
+            Vector2 origin = (Vector2)_artillery.transform.position + new Vector2(0f, 0.55f);
             Vector2 dir = ((Vector2)target.transform.position - origin).normalized;
-            _game.SpawnProjectile(origin, dir, Team.Player, 2, 7.2f, new Color(1f,0.62f,0.16f), AmmoType.HE);
+            _game.SpawnProjectile(origin, dir, Team.Player, 2, 7.2f, new Color(1f, 0.62f, 0.16f), AmmoType.Explosive);
         }
 
         private void RepairPulse()
@@ -220,7 +220,7 @@ namespace TankRevival
             if (player.Health.Current >= player.Health.Maximum) return;
             player.Health.Heal(1);
             _repairPulses++;
-            VisualFactory.RingPulse(player.transform.position, new Color(0.18f,1f,0.58f), 1f);
+            VisualFactory.RingPulse(player.transform.position, new Color(0.18f, 1f, 0.58f), 1f);
         }
 
         private void OrderBreakthrough()
@@ -233,15 +233,15 @@ namespace TankRevival
             {
                 for (int i = 0; i < enemies.Length && ordered < budget; i++)
                 {
-                    EnemyTank e = enemies[i];
-                    if (!ValidBreakthroughEnemy(e) || e.gameObject.name.EndsWith("_V92_BREAK", StringComparison.Ordinal)) continue;
-                    bool preferred = e.Kind == EnemyKind.Siege || e.Kind == EnemyKind.Heavy || e.Kind == EnemyKind.Elite;
+                    EnemyTank enemy = enemies[i];
+                    if (!ValidBreakthroughEnemy(enemy) || enemy.gameObject.name.EndsWith("_V92_BREAK", StringComparison.Ordinal)) continue;
+                    bool preferred = enemy.Kind == EnemyKind.Siege || enemy.Kind == EnemyKind.Heavy || enemy.Kind == EnemyKind.Elite;
                     if ((pass == 0 && !preferred) || (pass > 0 && preferred)) continue;
-                    TacticalNavigationAgent nav = e.GetComponent<TacticalNavigationAgent>();
+                    TacticalNavigationAgent nav = enemy.GetComponent<TacticalNavigationAgent>();
                     if (nav == null) continue;
                     nav.SetRole(ordered == 0 ? SquadTacticalRole.Breaker : SquadTacticalRole.Suppressor);
                     nav.SetOrder(target, 0.7f + ordered * 0.12f, 1.05f, enemies);
-                    e.gameObject.name += "_V92_BREAK";
+                    enemy.gameObject.name += "_V92_BREAK";
                     ordered++;
                 }
             }
@@ -254,17 +254,18 @@ namespace TankRevival
             int shots = 0;
             for (int i = 0; i < enemies.Length && shots < MaxBreakthroughShots; i++)
             {
-                EnemyTank e = enemies[i];
-                if (!ValidBreakthroughEnemy(e) || !e.gameObject.name.EndsWith("_V92_BREAK", StringComparison.Ordinal)) continue;
-                Vector2 origin = e.transform.position;
+                EnemyTank enemy = enemies[i];
+                if (!ValidBreakthroughEnemy(enemy) || !enemy.gameObject.name.EndsWith("_V92_BREAK", StringComparison.Ordinal)) continue;
+                Vector2 origin = enemy.transform.position;
                 if (Vector2.Distance(origin, target) > 8.3f) continue;
-                Vector2 dir = (target-origin).normalized;
-                _game.SpawnProjectile(origin + dir*0.4f, dir, Team.Enemy, 1, 6.6f, new Color(1f,0.22f,0.08f), e.Kind == EnemyKind.Siege ? AmmoType.HE : AmmoType.Basic);
+                Vector2 dir = (target - origin).normalized;
+                AmmoType ammo = enemy.Kind == EnemyKind.Siege ? AmmoType.Explosive : AmmoType.Basic;
+                _game.SpawnProjectile(origin + dir * 0.4f, dir, Team.Enemy, 1, 6.6f, new Color(1f, 0.22f, 0.08f), ammo);
                 shots++;
             }
         }
 
-        private static bool ValidBreakthroughEnemy(EnemyTank e) => e != null && e.Health != null && !e.Health.IsDead && e.Kind != EnemyKind.Boss && e.Kind != EnemyKind.Supply;
+        private static bool ValidBreakthroughEnemy(EnemyTank enemy) => enemy != null && enemy.Health != null && !enemy.Health.IsDead && enemy.Kind != EnemyKind.Boss && enemy.Kind != EnemyKind.Supply;
 
         private Vector2 WeakestNodePosition()
         {
@@ -275,19 +276,19 @@ namespace TankRevival
             return sp != null && sp.StrongpointLane >= 0 ? DynamicFrontlineTerritoryDirector.LanePosition(sp.StrongpointLane) : Vector2.zero;
         }
 
-        private static EnemyTank FindPriorityEnemy(Vector2 pos, float range)
+        private static EnemyTank FindPriorityEnemy(Vector2 position, float range)
         {
             EnemyTank[] enemies = RuntimeBattleRegistry.EnemySnapshot;
             EnemyTank best = null;
             float bestScore = float.MinValue;
-            for (int i=0;i<enemies.Length;i++)
+            for (int i = 0; i < enemies.Length; i++)
             {
-                EnemyTank e=enemies[i];
-                if (!ValidBreakthroughEnemy(e)) continue;
-                float d=Vector2.Distance(pos,e.transform.position);
-                if (d>range) continue;
-                float score=(e.Kind==EnemyKind.Siege?5f:e.Kind==EnemyKind.Heavy?4f:e.Kind==EnemyKind.Elite?3f:1f)-d*0.08f;
-                if (score>bestScore){bestScore=score;best=e;}
+                EnemyTank enemy = enemies[i];
+                if (!ValidBreakthroughEnemy(enemy)) continue;
+                float distance = Vector2.Distance(position, enemy.transform.position);
+                if (distance > range) continue;
+                float score = (enemy.Kind == EnemyKind.Siege ? 5f : enemy.Kind == EnemyKind.Heavy ? 4f : enemy.Kind == EnemyKind.Elite ? 3f : 1f) - distance * 0.08f;
+                if (score > bestScore) { bestScore = score; best = enemy; }
             }
             return best;
         }
@@ -314,12 +315,12 @@ namespace TankRevival
             if (_repairHealth != null) _repairHealth.Died -= OnNodeDestroyed;
             if (_artillery != null) Destroy(_artillery);
             if (_repair != null) Destroy(_repair);
-            _artillery=null; _artilleryHealth=null; _artilleryLane=-1;
-            _repair=null; _repairHealth=null; _repairLane=-1;
+            _artillery = null; _artilleryHealth = null; _artilleryLane = -1;
+            _repair = null; _repairHealth = null; _repairLane = -1;
         }
 
-        private void ResetRun(){CleanupNodes();_round=-1;_repairPulses=0;}
-        private void ShowStatus(string message){_status=message;_statusUntil=Time.unscaledTime+2.5f;}
-        private void OnGUI(){if(string.IsNullOrEmpty(_status)||Time.unscaledTime>_statusUntil)return;GUI.Label(new Rect(Screen.width*0.5f-260f,Screen.height-118f,520f,32f),_status);}
+        private void ResetRun() { CleanupNodes(); _round = -1; _repairPulses = 0; }
+        private void ShowStatus(string message) { _status = message; _statusUntil = Time.unscaledTime + 2.5f; }
+        private void OnGUI() { if (string.IsNullOrEmpty(_status) || Time.unscaledTime > _statusUntil) return; GUI.Label(new Rect(Screen.width * 0.5f - 260f, Screen.height - 118f, 520f, 32f), _status); }
     }
 }
