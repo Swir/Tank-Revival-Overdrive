@@ -1,0 +1,120 @@
+name: Strongpoint Warfare v9.1 Windows Gate
+
+on:
+  push:
+    branches:
+      - 'dev-v9-1'
+    paths:
+      - '.strongpoint-warfare-v91-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-strongpoints:
+    name: Build v9.1 Windows candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+      - name: Validate v9.1 source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v9.1.0-dev"
+          test -f Assets/Scripts/StrongpointTerritoryWarfareDirector.cs
+          test -f Assets/Scripts/StrongpointTerritoryWarfareCISmokeProbe.cs
+          grep -q "DynamicFrontlineTerritoryDirector" Assets/Scripts/StrongpointTerritoryWarfareDirector.cs
+          grep -q "WarEconomyDirector" Assets/Scripts/StrongpointTerritoryWarfareDirector.cs
+          grep -q "TacticalNavigationAgent" Assets/Scripts/StrongpointTerritoryWarfareDirector.cs
+          grep -q "SpawnProjectile" Assets/Scripts/StrongpointTerritoryWarfareDirector.cs
+          grep -q "Health" Assets/Scripts/StrongpointTerritoryWarfareDirector.cs
+          grep -q -- "-strongpoint-warfare-smoke" Assets/Scripts/StrongpointTerritoryWarfareCISmokeProbe.cs
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: StrongpointV91-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            StrongpointV91-Library-${{ runner.os }}-6000.3.17f1-
+            DynamicFrontlineV90-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+      - name: Build development Windows player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Verify and pack exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=build/StandaloneWindows64
+          test -f "$root/TankRevivalOverdrive.exe"
+          test -d "$root/TankRevivalOverdrive_Data"
+          cd "$root"
+          zip -r ../../TankRevival-v9.1-strongpoints-Windows-x64.zip .
+          cd ../..
+          test -s TankRevival-v9.1-strongpoints-Windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v9.1-strongpoints-Windows-x64
+          path: TankRevival-v9.1-strongpoints-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  runtime-smoke:
+    name: Boot exact v9.1 EXE on Windows
+    needs: build-strongpoints
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-v9.1-strongpoints-Windows-x64
+          path: candidate
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevival-v9.1-strongpoints-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+      - name: Run strongpoint warfare smoke probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item STRONGPOINT_WARFARE_PASS.txt, STRONGPOINT_WARFARE_FAIL.txt, StrongpointPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-strongpoint-warfare-smoke','-logFile','StrongpointPlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Strongpoint warfare smoke timed out after 60 seconds'
+          }
+          if (Test-Path 'STRONGPOINT_WARFARE_FAIL.txt') {
+            Get-Content STRONGPOINT_WARFARE_FAIL.txt
+            if (Test-Path StrongpointPlayer.log) { Get-Content StrongpointPlayer.log -Tail 320 }
+            throw 'Strongpoint warfare runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'STRONGPOINT_WARFARE_PASS.txt')) {
+            if (Test-Path StrongpointPlayer.log) { Get-Content StrongpointPlayer.log -Tail 320 }
+            throw 'Strongpoint warfare PASS marker missing'
+          }
+          Get-Content STRONGPOINT_WARFARE_PASS.txt
