@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v9-3"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-198%2F198-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V9.3%20QUALIFIED-2ea043?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v9-4"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.0%25-d29922?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-198%2F202-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V9.4%20IN%20PROGRESS-d29922?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+████████████████████ 98.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **198** | **0** | **198** | **100.0%** |
+| **198** | **4** | **202** | **98.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -319,6 +319,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Friendly artillery gains bounded counter-battery fire against live siege batteries while enemy batteries use authoritative HE projectiles to suppress fortified lanes and open temporary breach windows.
 - [x] Breach operations retask existing Heavy/Siege/Elite units through TacticalNavigationAgent toward defended lanes, with strict actor/shot/cadence budgets and no parallel enemy roster or damage authority.
 - [x] Packaged Windows v9.3 gate validates siege scheduling, battery/counter-battery/breach safety bounds, runtime installation and exact EXE boot before qualification.
+
+## v9.4 — Siege Logistics, Fire-Control Recon & Mobile Batteries — IN PROGRESS
+- [ ] Eligible siege operations deploy one physical ammunition convoy with authoritative Health/collision, making battery sustain a destroyable battlefield objective rather than an invisible cadence modifier.
+- [ ] Existing live support-capable enemies provide bounded fire-control spotting; removing supply and/or the spotter materially reduces siege fire cadence through the existing v9.3 siege authority.
+- [ ] Counter-battery damage can force surviving batteries into bounded mobile displacement without healing, respawning or replacing authoritative Health/projectile/frontline state.
+- [ ] Packaged Windows v9.4 gate validates scheduling, supply/spotter/fire-control/relocation bounds, runtime installation and exact EXE boot before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
