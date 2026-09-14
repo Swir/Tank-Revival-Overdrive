@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v10-6"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-234%2F234-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V10.6%20QUALIFIED-2ea043?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v10-7"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.9%25-d29922?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-234%2F239-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V10.7%20IN%20PROGRESS-d29922?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+████████████████████ 97.9%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **234** | **0** | **234** | **100.0%** |
+| **234** | **5** | **239** | **97.9%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -375,6 +375,13 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Successful BLOCK, COUNTERATTACK and DEEP STRIKE outcomes seed distinct next-sector counter-offensive plans with real combat support, captured-intelligence effects and persistent but capped operational momentum.
 - [x] Failed counter-orders can trigger bounded High Command evacuation/recovery pressure, while captured intelligence and command-collapse state remain integrated with existing enemy roster, Health, frontline, War Bonds and projectile authority.
 - [x] Packaged Windows v10.6 counter-offensive gate validates outcome assessment, next-sector carryover, strict caps, v10.5/v10.4 integration, runtime installation and exact EXE boot before qualification.
+
+## v10.7 — War State Director, Dynamic Operation Chains & Campaign Endgame Reforge — IN PROGRESS
+- [ ] A run-level War State Director converts v10.6 outcome, operational momentum and captured intelligence into bounded ADVANTAGE / CONTESTED / CRISIS campaign states without replacing existing combat authority.
+- [ ] Dynamic operation chains turn rounds 90–99 into a branching endgame arc whose objectives and support pressure depend on the live war state instead of a fixed late-game sequence.
+- [ ] The final sector gains materially different ENDGAME plans — COMMAND COLLAPSE, BREAKTHROUGH PURSUIT or DESPERATE DEFENSE — with authoritative projectile, Health, frontline, Orzełek and War Bond consequences under strict caps.
+- [ ] Round 100 receives a boss-safe final-war modifier and player-readable campaign outcome derived from the accumulated war state, while all existing boss/AI/damage authority remains intact.
+- [ ] Packaged Windows v10.7 endgame gate validates state resolution, rounds 90–100 branch scheduling, strict support/recovery caps, v10.6 integration, runtime installation and exact EXE boot before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
