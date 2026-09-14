@@ -22,28 +22,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 <<'PY'
+          python3 - <<'PY'
           from pathlib import Path
           p = Path('Assets/Scripts/ForwardRecoveryFrontlineDirector.cs')
           text = p.read_text(encoding='utf-8')
-          old = '''            _baseHealth = _base.AddComponent<Health>();
-            int maximum = BaseHealthForRound(_activeRound);
-            _baseHealth.Initialize(Team.Player, maximum);
-            if (carryHealth < ConvoyHealthForRound(_activeRound))
-                _baseHealth.Hit(Mathf.Clamp(ConvoyHealthForRound(_activeRound) - carryHealth, 0, maximum - 1));
-            _baseHealth.Died += OnBaseDied;'''
-          new = '''            _baseHealth = _base.AddComponent<Health>();
-            int maximum = BaseHealthForRound(_activeRound);
-            int convoyMaximum = ConvoyHealthForRound(_activeRound);
-            int damageTaken = Mathf.Max(0, convoyMaximum - carryHealth);
-            int inheritedHealth = Mathf.Clamp(maximum - damageTaken, 1, maximum);
-            _baseHealth.Initialize(Team.Player, maximum, inheritedHealth);
-            _baseHealth.Died += OnBaseDied;'''
+          old = '_baseHealth.Hit(Mathf.Clamp(ConvoyHealthForRound(_activeRound) - carryHealth, 0, maximum - 1));'
+          new = '_baseHealth.Damage(Mathf.Clamp(ConvoyHealthForRound(_activeRound) - carryHealth, 0, maximum - 1), Team.Enemy);'
           if old not in text:
-              raise SystemExit('expected invalid Health block not found')
+              raise SystemExit('expected invalid Health.Hit call not found')
           text = text.replace(old, new, 1)
-          if '.Hit(' in text:
-              raise SystemExit('unexpected Health.Hit call remains')
+          if '_baseHealth.Hit(' in text:
+              raise SystemExit('invalid Health.Hit call remains')
           p.write_text(text, encoding='utf-8')
           PY
       - name: Commit compile fix
@@ -52,5 +41,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add Assets/Scripts/ForwardRecoveryFrontlineDirector.cs
-          git commit -m 'fix(v8.9): preserve convoy damage with Health initialization'
+          git commit -m 'fix(v8.9): use authoritative Health damage API'
           git push origin HEAD:dev-v8-9
