@@ -1,0 +1,121 @@
+name: Siege Line v9.3 Windows Gate
+
+on:
+  push:
+    branches:
+      - 'dev-v9-3'
+    paths:
+      - '.siege-line-v93-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-siege-line:
+    name: Build v9.3 Windows candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+      - name: Validate v9.3 source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v9.3.0-dev"
+          test -f Assets/Scripts/SiegeLineWarfareDirector.cs
+          test -f Assets/Scripts/SiegeLineWarfareCISmokeProbe.cs
+          grep -q "FortificationNetworkDirector" Assets/Scripts/SiegeLineWarfareDirector.cs
+          grep -q "StrongpointTerritoryWarfareDirector" Assets/Scripts/SiegeLineWarfareDirector.cs
+          grep -q "TacticalNavigationAgent" Assets/Scripts/SiegeLineWarfareDirector.cs
+          grep -q "SpawnProjectile" Assets/Scripts/SiegeLineWarfareDirector.cs
+          grep -q "AmmoType.Explosive" Assets/Scripts/SiegeLineWarfareDirector.cs
+          grep -q -- "-siege-line-smoke" Assets/Scripts/SiegeLineWarfareCISmokeProbe.cs
+          grep -q "## v9.3 — Siege Lines, Counter-Battery Warfare & Breach Operations — IN PROGRESS" ROADMAP.md
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: SiegeV93-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            SiegeV93-Library-${{ runner.os }}-6000.3.17f1-
+            FortificationV92-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+      - name: Build development Windows player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Verify and pack exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=build/StandaloneWindows64
+          test -f "$root/TankRevivalOverdrive.exe"
+          test -d "$root/TankRevivalOverdrive_Data"
+          cd "$root"
+          zip -r ../../TankRevival-v9.3-siege-line-Windows-x64.zip .
+          cd ../..
+          test -s TankRevival-v9.3-siege-line-Windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v9.3-siege-line-Windows-x64
+          path: TankRevival-v9.3-siege-line-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  runtime-smoke:
+    name: Boot exact v9.3 EXE on Windows
+    needs: build-siege-line
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-v9.3-siege-line-Windows-x64
+          path: candidate
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevival-v9.3-siege-line-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+      - name: Run siege-line smoke probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item SIEGE_LINE_PASS.txt, SIEGE_LINE_FAIL.txt, SiegeLinePlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-siege-line-smoke','-logFile','SiegeLinePlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Siege-line smoke timed out after 60 seconds'
+          }
+          if (Test-Path 'SIEGE_LINE_FAIL.txt') {
+            Get-Content SIEGE_LINE_FAIL.txt
+            if (Test-Path SiegeLinePlayer.log) { Get-Content SiegeLinePlayer.log -Tail 320 }
+            throw 'Siege-line runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'SIEGE_LINE_PASS.txt')) {
+            if (Test-Path SiegeLinePlayer.log) { Get-Content SiegeLinePlayer.log -Tail 320 }
+            throw 'Siege-line PASS marker missing'
+          }
+          Get-Content SIEGE_LINE_PASS.txt
