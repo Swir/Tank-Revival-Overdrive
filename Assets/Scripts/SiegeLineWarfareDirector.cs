@@ -134,6 +134,8 @@ namespace TankRevival
             _batteries[index].transform.position = position;
             _batteryLanes[index] = lane;
             VisualFactory.RingPulse(position, new Color(1f, 0.30f, 0.08f), 0.95f);
+            FireMissionNetworkDirector fireMission = FireMissionNetworkDirector.Instance;
+            if (fireMission != null) fireMission.NotifyBatteryRelocated();
             return true;
         }
 
@@ -210,9 +212,22 @@ namespace TankRevival
             StrongpointTerritoryWarfareDirector strongpoint = StrongpointTerritoryWarfareDirector.Instance;
             if (network == null || !network.HasArtillery || strongpoint == null || !strongpoint.HasStrongpoint) return;
 
+            Vector2 origin = DynamicFrontlineTerritoryDirector.LanePosition(strongpoint.StrongpointLane) + new Vector2(0f, 0.55f);
+            FireMissionNetworkDirector fireMission = FireMissionNetworkDirector.Instance;
+            if (fireMission != null && FireMissionNetworkDirector.IsFireMissionRound(_round))
+            {
+                if (fireMission.TryConsumeDecoy(out Vector2 falseTarget))
+                {
+                    Vector2 falseDir = (falseTarget - origin).normalized;
+                    _game.SpawnProjectile(origin, falseDir, Team.Player, 2, 7.4f, new Color(1f, 0.72f, 0.18f), AmmoType.Explosive);
+                    VisualFactory.RingPulse(falseTarget, new Color(1f, 0.42f, 0.10f), 0.85f);
+                    return;
+                }
+                if (!fireMission.CanEngageTrueBattery()) return;
+            }
+
             int targetIndex = LowestHealthBattery();
             if (targetIndex < 0) return;
-            Vector2 origin = DynamicFrontlineTerritoryDirector.LanePosition(strongpoint.StrongpointLane) + new Vector2(0f, 0.55f);
             Vector2 target = _batteries[targetIndex].transform.position;
             Vector2 dir = (target - origin).normalized;
             _game.SpawnProjectile(origin, dir, Team.Player, 2, 7.4f, new Color(1f, 0.72f, 0.18f), AmmoType.Explosive);
