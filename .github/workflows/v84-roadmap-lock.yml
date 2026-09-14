@@ -1,0 +1,118 @@
+name: v8.4 Roadmap Lock Update
+
+on:
+  push:
+    branches:
+      - 'dev-v8-4'
+    paths:
+      - '.roadmap-v84-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  roadmap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v8-4
+          fetch-depth: 0
+      - name: Apply locked v8.4 roadmap state
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('ROADMAP.md')
+          text = path.read_text(encoding='utf-8')
+          mode = Path('.roadmap-v84-trigger').read_text(encoding='utf-8').strip().lower()
+          marker = '<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          start_token = '<!-- ROADMAP-PROGRESS:START -->'
+          end_token = '<!-- ROADMAP-PROGRESS:END -->'
+          required = [marker, start_token, end_token, '## 📊 Overall progress']
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'missing locked roadmap token: {token}')
+
+          title = '## v8.4 — War State, Sector Consequences & Campaign Memory'
+          section = '''## v8.4 — War State, Sector Consequences & Campaign Memory — IN PROGRESS
+          - [ ] Completed three-stage operations persist as a sector war-state result, creating bounded strategic momentum that survives beyond the local v8.3 chain instead of resetting immediately after Resolution.
+          - [ ] Sector victory/defeat materially changes the remaining sector and its boss preparation through CampaignEncounter refinement while preserving TankGame, Health, Projectile, AI and boss authority.
+          - [ ] The next sector inherits the previous result through bounded reinforcement pressure plus a real victory logistics benefit using existing Orzełek repair and War Economy paths; run reset clears all campaign-memory state safely.
+          - [ ] Packaged Windows war-state gate boots the exact development EXE and verifies 10-sector memory, momentum bounds, post-operation/next-sector/boss consequences, reset safety, integration and v8.4 version identity.
+
+          '''
+          if title not in text:
+              text = text.replace('## Development rules', section + '## Development rules')
+
+          if mode == 'scope':
+              status = 'V8.4 IN PROGRESS'
+              completed, total, pct = 158, 162, '97.5'
+              color = 'f59e0b'
+              bar = '███████████████████░'
+          elif mode == 'complete':
+              text = text.replace(title + ' — IN PROGRESS', title + ' — COMPLETE')
+              a = text.index(title)
+              b = text.index('## Development rules', a)
+              block = text[a:b].replace('- [ ]', '- [x]')
+              text = text[:a] + block + text[b:]
+              status = 'V8.4 QUALIFIED'
+              completed, total, pct = 162, 162, '100.0'
+              color = '22c55e'
+              bar = '████████████████████'
+          else:
+              raise SystemExit(f'unknown roadmap mode: {mode}')
+
+          remaining = total - completed
+          dashboard = f'''<!-- ROADMAP-PROGRESS:START -->
+          <p align="center">
+            <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-4"></a>
+            <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-{pct}%25-{color}?style=for-the-badge">
+            <img alt="Completed" src="https://img.shields.io/badge/DONE-{completed}%2F{total}-1f6feb?style=for-the-badge">
+            <img alt="Status" src="https://img.shields.io/badge/STATUS-{status.replace(' ', '%20')}-{color}?style=for-the-badge">
+          </p>
+
+          ## 📊 Overall progress
+
+          ```text
+          {bar} {pct}%
+          ```
+
+          | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
+          |---:|---:|---:|---:|
+          | **{completed}** | **{remaining}** | **{total}** | **{pct}%** |
+
+          > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
+          <!-- ROADMAP-PROGRESS:END -->'''
+          start = text.index(start_token)
+          end = text.index(end_token) + len(end_token)
+          text = text[:start] + dashboard + text[end:]
+          path.write_text(text, encoding='utf-8')
+
+          check = path.read_text(encoding='utf-8')
+          for token in required:
+              if token not in check:
+                  raise SystemExit(f'roadmap lock lost after mutation: {token}')
+          checks = len(re.findall(r'^- \[x\] ', check, flags=re.M))
+          opens = len(re.findall(r'^- \[ \] ', check, flags=re.M))
+          if checks != completed or checks + opens != total:
+              raise SystemExit(f'checklist mismatch: completed={checks}, open={opens}, expected={completed}/{total}')
+          m = re.search(r'```text\n([^\n]+)\n```', check)
+          if not m or m.group(1).count('█') + m.group(1).count('░') != 20:
+              raise SystemExit('progress bar is not exactly 20 segments')
+          PY
+      - name: Commit roadmap mutation
+        shell: bash
+        run: |
+          if git diff --quiet -- ROADMAP.md; then
+            echo 'ROADMAP already in requested state.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m "docs(v8.4): apply locked roadmap state"
+          git push origin HEAD:dev-v8-4
