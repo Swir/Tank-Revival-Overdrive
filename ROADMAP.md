@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v10-8"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-0"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-244%2F244-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V10.8%20QUALIFIED-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-249%2F249-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.0%20QUALIFIED-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **244** | **0** | **244** | **100.0%** |
+| **249** | **0** | **249** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -390,6 +390,14 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] HQ state is integrated with the existing v10.7 War State/Endgame plan and round-100 boss authority, so destroying, isolating or failing to stop High Command changes the campaign outcome without replacing the boss or core combat systems.
 - [x] A player-readable campaign epilogue summarizes the real final objective result and accumulated war state after the final battle, including bounded War Bond reward consequences.
 - [x] Packaged Windows v10.8 High Command HQ gate validates physical-HQ configuration, state/objective mapping, boss-safe round-100 integration, epilogue outcomes, strict caps, runtime installation and exact EXE boot before qualification.
+
+
+## v11.0 — Tactical Combat Reforge, Cover, Suppression & Formation AI — COMPLETE
+- [x] Existing squad/navigation/terrain systems are unified into bounded combat platoons with a real leader, class-aware assault/flank/suppress/break roles and coordinated objectives instead of independent per-tank behavior.
+- [x] Real incoming damage drives a suppression model with decay, under-fire relocation and cover-aware regroup orders through TacticalNavigationAgent/TerrainIntelligence rather than a second movement AI.
+- [x] Platoons react to leader loss with a short, bounded cohesion break, successor election and regroup/reformation behavior while respecting High Command directives and boss authority.
+- [x] Tactical combat state becomes readable through lightweight world/HUD cues and fixed-cadence/capped processing so the reforge remains usable during late-round mass battles.
+- [x] Packaged Windows v11.0 Tactical Combat Reforge gate validates role/platoon limits, suppression/decay, leader-loss recovery, directive arbitration, runtime installation and exact EXE boot before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.

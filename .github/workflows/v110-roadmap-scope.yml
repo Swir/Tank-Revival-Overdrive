@@ -1,0 +1,80 @@
+name: ROADMAP v11.0 Scope Registration
+
+on:
+  push:
+    branches:
+      - 'dev-v11-0'
+    paths:
+      - '.roadmap-v110-scope-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v11-0
+          fetch-depth: 0
+      - name: Register v11.0 milestone before implementation
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('ROADMAP.md')
+          s = p.read_text(encoding='utf-8')
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<!-- ROADMAP-PROGRESS:START -->' in s and '<!-- ROADMAP-PROGRESS:END -->' in s
+          assert '## v11.0 — Tactical Combat Reforge, Cover, Suppression & Formation AI' not in s
+          marker = '\n## Development rules'
+          assert marker in s
+          lines = [
+              '',
+              '## v11.0 — Tactical Combat Reforge, Cover, Suppression & Formation AI — IN PROGRESS',
+              '- [ ] Existing squad/navigation/terrain systems are unified into bounded combat platoons with a real leader, class-aware assault/flank/suppress/break roles and coordinated objectives instead of independent per-tank behavior.',
+              '- [ ] Real incoming damage drives a suppression model with decay, under-fire relocation and cover-aware regroup orders through TacticalNavigationAgent/TerrainIntelligence rather than a second movement AI.',
+              '- [ ] Platoons react to leader loss with a short, bounded cohesion break, successor election and regroup/reformation behavior while respecting High Command directives and boss authority.',
+              '- [ ] Tactical combat state becomes readable through lightweight world/HUD cues and fixed-cadence/capped processing so the reforge remains usable during late-round mass battles.',
+              '- [ ] Packaged Windows v11.0 Tactical Combat Reforge gate validates role/platoon limits, suppression/decay, leader-loss recovery, directive arbitration, runtime installation and exact EXE boot before qualification.',
+              ''
+          ]
+          s = s.replace(marker, '\n' + '\n'.join(lines) + marker, 1)
+          s = s.replace('badge.svg?branch=dev-v10-8', 'badge.svg?branch=dev-v11-0', 1)
+          s = s.replace('ROADMAP-100.0%25-2ea043', 'ROADMAP-98.0%25-d29922', 1)
+          s = s.replace('DONE-244%2F244-1f6feb', 'DONE-244%2F249-1f6feb', 1)
+          s = s.replace('STATUS-V10.8%20QUALIFIED-2ea043', 'STATUS-V11.0%20IN%20PROGRESS-d29922', 1)
+          s = s.replace('████████████████████ 100.0%', '████████████████████ 98.0%', 1)
+          s = s.replace('| **244** | **0** | **244** | **100.0%** |', '| **244** | **5** | **249** | **98.0%** |', 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Verify scope and dashboard consistency
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s = Path('ROADMAP.md').read_text(encoding='utf-8')
+          done = len(re.findall(r'^- \[x\] ', s, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', s, re.M))
+          assert (done, open_) == (244, 5), (done, open_)
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<img alt="CI"' in s and '<img alt="Roadmap progress"' in s
+          assert '<img alt="Completed"' in s and '<img alt="Status"' in s
+          assert 'badge.svg?branch=dev-v11-0' in s
+          assert 'ROADMAP-98.0%25-d29922' in s
+          assert 'DONE-244%2F249-1f6feb' in s
+          assert 'STATUS-V11.0%20IN%20PROGRESS-d29922' in s
+          assert '████████████████████ 98.0%' in s
+          assert '| **244** | **5** | **249** | **98.0%** |' in s
+          assert s.count('## v11.0 — Tactical Combat Reforge, Cover, Suppression & Formation AI — IN PROGRESS') == 1
+      - name: Commit registered roadmap scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git diff --cached --quiet && exit 0
+          git commit -m 'roadmap(v11.0): register Tactical Combat Reforge scope'
+          git push origin HEAD:dev-v11-0
