@@ -123,7 +123,7 @@ namespace TankRevival
             if (counter == null || counter.ActiveOrder == PlayerCounterOrder.None) return;
 
             int sector = HighCommandDeceptionWarDirector.SectorForRound(round);
-            if (_trackedOperationSector == sector || _assessmentResolved) return;
+            if (_trackedOperationSector == sector) return;
 
             _trackedOperationSector = sector;
             _sourceSector = sector;
