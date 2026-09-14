@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v10-4"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.2%25-d29922?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-222%2F226-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V10.4%20IN%20PROGRESS-d29922?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-226%2F226-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V10.4%20QUALIFIED-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 98.2%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **222** | **4** | **226** | **98.2%** |
+| **226** | **0** | **226** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -356,11 +356,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Sector war plans are hard-capped and player-readable: at most four retasked combatants and two counter-fire shells per response beat, active only in the mid/late sector window so v10.2 consequences and boss rounds retain their own authority.
 - [x] Packaged Windows v10.3 high-command gate validates doctrine mapping/history weighting, round windows/caps, v10.2 and tactical-navigation integration, runtime installation and exact EXE boot before qualification.
 
-## v10.4 — High Command Reserves, Feint Operations & Counter-Intelligence War — IN PROGRESS
-- [ ] High Command converts the v10.3 counter-doctrine into a bounded two-axis operation with one real main effort and one feint across the existing three-lane Dynamic Frontline, keeping boss/end-sector rounds and existing campaign authority isolated.
-- [ ] Strategic reserve commitment is gameplay-real and attritional: existing Armor/Fire Support/EW reserve snapshots gate the strength of Heavy/Siege/Elite commitments, while all movement, damage and reserve loss continue through existing TacticalNavigationAgent, Projectile/Health and StrategicReserveAttrition systems.
-- [ ] Existing G SIGINT / H Recon from Command Network Hunt can identify the real axis during a short intelligence window; successful identification degrades the coming main effort, while no intelligence leaves the feint credible and the bounded assault at full strength.
-- [ ] Packaged Windows v10.4 deception-war gate validates axis selection, reserve/counter-intelligence caps, v10.3/v9.0/v8.5/v7.8 integration, runtime installation and exact EXE boot before qualification.
+## v10.4 — High Command Reserves, Feint Operations & Counter-Intelligence War — COMPLETE
+- [x] High Command converts the v10.3 counter-doctrine into a bounded two-axis operation with one real main effort and one feint across the existing three-lane Dynamic Frontline, keeping boss/end-sector rounds and existing campaign authority isolated.
+- [x] Strategic reserve commitment is gameplay-real and attritional: existing Armor/Fire Support/EW reserve snapshots gate the strength of Heavy/Siege/Elite commitments, while all movement, damage and reserve loss continue through existing TacticalNavigationAgent, Projectile/Health and StrategicReserveAttrition systems.
+- [x] Existing G SIGINT / H Recon from Command Network Hunt can identify the real axis during a short intelligence window; successful identification degrades the coming main effort, while no intelligence leaves the feint credible and the bounded assault at full strength.
+- [x] Packaged Windows v10.4 deception-war gate validates axis selection, reserve/counter-intelligence caps, v10.3/v9.0/v8.5/v7.8 integration, runtime installation and exact EXE boot before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
