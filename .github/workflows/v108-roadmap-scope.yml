@@ -1,0 +1,80 @@
+name: ROADMAP v10.8 Scope Registration
+
+on:
+  push:
+    branches:
+      - 'dev-v10-8'
+    paths:
+      - '.roadmap-v108-scope-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v10-8
+          fetch-depth: 0
+      - name: Register v10.8 milestone before implementation
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('ROADMAP.md')
+          s = p.read_text(encoding='utf-8')
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<!-- ROADMAP-PROGRESS:START -->' in s and '<!-- ROADMAP-PROGRESS:END -->' in s
+          assert '## v10.8 — High Command HQ, Final Objectives & Campaign Epilogues' not in s
+          marker = '\n## Development rules'
+          assert marker in s
+          lines = [
+              '',
+              '## v10.8 — High Command HQ, Final Objectives & Campaign Epilogues — IN PROGRESS',
+              '- [ ] The rounds 97–100 endgame gains a physical, destructible Enemy High Command HQ using authoritative Health/collision and lane placement instead of a text-only final-war modifier.',
+              '- [ ] ADVANTAGE / CONTESTED / CRISIS produce materially different final objectives — HQ assault, command isolation or evacuation denial — with strict projectile, reinforcement and recovery caps.',
+              '- [ ] HQ state is integrated with the existing v10.7 War State/Endgame plan and round-100 boss authority, so destroying, isolating or failing to stop High Command changes the campaign outcome without replacing the boss or core combat systems.',
+              '- [ ] A player-readable campaign epilogue summarizes the real final objective result and accumulated war state after the final battle, including bounded War Bond reward consequences.',
+              '- [ ] Packaged Windows v10.8 High Command HQ gate validates physical-HQ configuration, state/objective mapping, boss-safe round-100 integration, epilogue outcomes, strict caps, runtime installation and exact EXE boot before qualification.',
+              ''
+          ]
+          s = s.replace(marker, '\n' + '\n'.join(lines) + marker, 1)
+          s = s.replace('badge.svg?branch=dev-v10-7', 'badge.svg?branch=dev-v10-8', 1)
+          s = s.replace('ROADMAP-100.0%25-2ea043', 'ROADMAP-98.0%25-d29922', 1)
+          s = s.replace('DONE-239%2F239-1f6feb', 'DONE-239%2F244-1f6feb', 1)
+          s = s.replace('STATUS-V10.7%20QUALIFIED-2ea043', 'STATUS-V10.8%20IN%20PROGRESS-d29922', 1)
+          s = s.replace('████████████████████ 100.0%', '████████████████████ 98.0%', 1)
+          s = s.replace('| **239** | **0** | **239** | **100.0%** |', '| **239** | **5** | **244** | **98.0%** |', 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Verify scope and dashboard consistency
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s = Path('ROADMAP.md').read_text(encoding='utf-8')
+          done = len(re.findall(r'^- \[x\] ', s, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', s, re.M))
+          assert (done, open_) == (239, 5), (done, open_)
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<img alt="CI"' in s and '<img alt="Roadmap progress"' in s
+          assert '<img alt="Completed"' in s and '<img alt="Status"' in s
+          assert 'badge.svg?branch=dev-v10-8' in s
+          assert 'ROADMAP-98.0%25-d29922' in s
+          assert 'DONE-239%2F244-1f6feb' in s
+          assert 'STATUS-V10.8%20IN%20PROGRESS-d29922' in s
+          assert '████████████████████ 98.0%' in s
+          assert '| **239** | **5** | **244** | **98.0%** |' in s
+          assert s.count('## v10.8 — High Command HQ, Final Objectives & Campaign Epilogues — IN PROGRESS') == 1
+      - name: Commit registered roadmap scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git diff --cached --quiet && exit 0
+          git commit -m 'roadmap(v10.8): register High Command HQ scope'
+          git push origin HEAD:dev-v10-8
