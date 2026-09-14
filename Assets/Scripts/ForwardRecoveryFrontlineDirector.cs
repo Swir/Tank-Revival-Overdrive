@@ -310,7 +310,7 @@ namespace TankRevival
             int maximum = BaseHealthForRound(_activeRound);
             _baseHealth.Initialize(Team.Player, maximum);
             if (carryHealth < ConvoyHealthForRound(_activeRound))
-                _baseHealth.Hit(Mathf.Clamp(ConvoyHealthForRound(_activeRound) - carryHealth, 0, maximum - 1));
+                _baseHealth.Damage(Mathf.Clamp(ConvoyHealthForRound(_activeRound) - carryHealth, 0, maximum - 1), Team.Enemy);
             _baseHealth.Died += OnBaseDied;
             _phase = ForwardRecoveryPhase.Hold;
             _holdRemaining = HoldDuration;
