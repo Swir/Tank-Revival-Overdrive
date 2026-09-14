@@ -1,0 +1,74 @@
+name: ROADMAP v10.1 Scope Registrar
+
+on:
+  push:
+    branches:
+      - 'dev-v10-1'
+    paths:
+      - '.roadmap-v101-scope-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v10-1
+      - name: Register unchecked v10.1 scope and preserve SWIR standard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('ROADMAP.md')
+          s = p.read_text(encoding='utf-8')
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<!-- ROADMAP-PROGRESS:START -->' in s and '<!-- ROADMAP-PROGRESS:END -->' in s
+          assert '## 📊 Overall progress' in s
+          assert '## v10.0 — Combined Arms Campaign Command & 100-Round War Reforge — COMPLETE' in s
+          assert '## v10.1 — Theater Orders, Operation Branching & Campaign Consequences' not in s
+          assert len(re.findall(r'^- \[x\] ', s, re.M)) == 210
+          assert len(re.findall(r'^- \[ \] ', s, re.M)) == 0
+          s = s.replace('badge.svg?branch=dev-v10-0', 'badge.svg?branch=dev-v10-1')
+          s = s.replace('ROADMAP-100.0%25-2ea043', 'ROADMAP-98.1%25-d29922')
+          s = s.replace('DONE-210%2F210-1f6feb', 'DONE-210%2F214-1f6feb')
+          s = s.replace('STATUS-V10.0%20QUALIFIED-2ea043', 'STATUS-V10.1%20IN%20PROGRESS-d29922')
+          s = s.replace('████████████████████ 100.0%', '████████████████████ 98.1%', 1)
+          s = s.replace('| **210** | **0** | **210** | **100.0%** |', '| **210** | **4** | **214** | **98.1%** |', 1)
+          block = '''\n## v10.1 — Theater Orders, Operation Branching & Campaign Consequences — IN PROGRESS\n- [ ] Strategic command windows let the player choose ASSAULT, INTERDICTION or FORTIFY orders at bounded campaign checkpoints; every order persists for several subsequent rounds and changes live battlefield priorities instead of acting as a cosmetic menu choice.\n- [ ] ASSAULT commits bounded real projectile fire support against priority combat threats, INTERDICTION redirects fire missions toward enemy command/logistics infrastructure, and FORTIFY creates bounded Orzełek/player sustain and frontline defense benefits through existing Health, TankGame and war-economy authority.\n- [ ] Theater orders integrate with v10.0 campaign-command operations so active doctrine changes decisive support, command-relay pressure and post-operation payoff while preserving boss rounds, existing AI/spawn authority and strict late-round pressure caps.\n- [ ] Packaged Windows v10.1 theater-orders gate validates decision scheduling, order persistence/effect bounds, v10.0 integration, runtime installation and exact EXE boot before qualification.\n'''
+          marker = '\n## Development rules\n'
+          assert marker in s
+          s = s.replace(marker, block + marker, 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Validate dashboard/checklist consistency
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s = Path('ROADMAP.md').read_text(encoding='utf-8')
+          done = len(re.findall(r'^- \[x\] ', s, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', s, re.M))
+          assert (done, open_) == (210, 4), (done, open_)
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<img alt="Roadmap progress"' in s
+          assert '<img alt="Completed"' in s
+          assert '<img alt="Status"' in s
+          assert 'badge.svg?branch=dev-v10-1' in s
+          assert 'ROADMAP-98.1%25-d29922' in s
+          assert 'DONE-210%2F214' in s
+          assert 'STATUS-V10.1%20IN%20PROGRESS-d29922' in s
+          assert '| **210** | **4** | **214** | **98.1%** |' in s
+          assert '████████████████████ 98.1%' in s
+          bar = re.search(r'```text\n([^\n]+)\n```', s).group(1).split()[0]
+          assert len(bar) == 20, (bar, len(bar))
+      - name: Commit roadmap scope
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'roadmap(v10.1): register theater-orders milestone'
+          git push origin HEAD:dev-v10-1
