@@ -21,11 +21,10 @@ namespace TankRevival
         private Health _supplyHealth;
         private EnemyTank _spotter;
         private int _round = -1;
-        private int[] _lastBatteryHp = new int[SiegeLineWarfareDirector.MaxBatteries];
-        private int[] _relocations = new int[SiegeLineWarfareDirector.MaxBatteries];
-        private float[] _nextRelocation = new float[SiegeLineWarfareDirector.MaxBatteries];
+        private readonly int[] _lastBatteryHp = new int[SiegeLineWarfareDirector.MaxBatteries];
+        private readonly int[] _relocations = new int[SiegeLineWarfareDirector.MaxBatteries];
+        private readonly float[] _nextRelocation = new float[SiegeLineWarfareDirector.MaxBatteries];
         private Vector2 _supplyDirection = Vector2.right;
-        private bool _supplyLost;
         private bool _spotterLost;
         private string _status = string.Empty;
         private float _statusUntil;
@@ -66,7 +65,6 @@ namespace TankRevival
 
             MoveSupply();
             RefreshSpotter();
-            ApplyInterdictionConsequences();
             DetectCounterBatteryPressure();
         }
 
@@ -92,7 +90,6 @@ namespace TankRevival
             CleanupSupply();
             _round = round;
             _spotter = null;
-            _supplyLost = false;
             _spotterLost = false;
             for (int i = 0; i < _relocations.Length; i++)
             {
@@ -140,6 +137,7 @@ namespace TankRevival
             {
                 _spotterLost = true;
                 ShowStatus("FIRE-CONTROL SPOTTER DOWN // ENEMY ACCURACY DEGRADED");
+                return;
             }
             EnemyTank[] enemies = RuntimeBattleRegistry.EnemySnapshot;
             for (int pass = 0; pass < 2; pass++)
@@ -151,21 +149,10 @@ namespace TankRevival
                     bool preferred = enemy.Kind == EnemyKind.Sniper || enemy.Kind == EnemyKind.Elite;
                     if ((pass == 0 && !preferred) || (pass == 1 && preferred)) continue;
                     _spotter = enemy;
-                    _spotterLost = false;
                     VisualFactory.RingPulse(enemy.transform.position, new Color(1f, 0.34f, 0.10f), 0.7f);
                     return;
                 }
             }
-        }
-
-        private void ApplyInterdictionConsequences()
-        {
-            SiegeLineWarfareDirector siege = SiegeLineWarfareDirector.Instance;
-            if (siege == null || siege.ActiveBatteryCount <= 0) return;
-            float penalty = 0f;
-            if (!SupplyAlive) penalty += SupplyPenaltySeconds;
-            if (!SpotterAlive) penalty += SpotterPenaltySeconds;
-            if (penalty > 0f) siege.ApplyExternalFireDelay(penalty * Time.deltaTime);
         }
 
         private void DetectCounterBatteryPressure()
@@ -192,7 +179,6 @@ namespace TankRevival
 
         private void OnSupplyDestroyed(Health hp)
         {
-            _supplyLost = true;
             ShowStatus("SIEGE AMMUNITION INTERDICTED // ENEMY FIRE RATE CUT");
         }
 
