@@ -1,0 +1,84 @@
+name: V9.0 Roadmap Scope Register
+
+on:
+  push:
+    branches:
+      - 'dev-v9-0'
+    paths:
+      - '.roadmap-v90-scope-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v9-0
+          fetch-depth: 0
+      - name: Register v9.0 scope and recalculate dashboard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('ROADMAP.md')
+          text = p.read_text(encoding='utf-8')
+          if '<!-- SWIR-ROADMAP-STANDARD:v1 -->' not in text:
+              raise SystemExit('SWIR roadmap marker missing')
+          if '## v9.0 — Dynamic Frontline, Territory Control & Multi-Objective Warfare' in text:
+              raise SystemExit('v9.0 scope already registered')
+          lines = [
+              '## v9.0 — Dynamic Frontline, Territory Control & Multi-Objective Warfare — IN PROGRESS',
+              '- [ ] Three persistent battlefield control lanes create a live friendly/contested/enemy frontline that reacts to real player presence, enemy presence and secured Forward Recovery Bases without replacing TankGame or movement authority.',
+              '- [ ] Selected non-boss rounds run bounded multi-objective operations that combine territory capture, existing battlefield objectives and Orzełek/forward-base defense into one readable 2-of-3 combat decision instead of independent HUD tasks.',
+              '- [ ] Territory ownership has real but bounded consequences for friendly recovery/logistics access, Orzełek support and enemy reinforcement/fire-support pressure through existing campaign, economy, Health and encounter authority.',
+              '- [ ] Packaged Windows dynamic-frontline gate boots the exact development EXE and verifies 1–100 scheduling, control-state transitions, multi-objective scoring, consequence bounds, runtime integration and v9.0 version identity.',
+              '',
+          ]
+          text = text.replace('## Development rules', '\n'.join(lines) + '\n## Development rules', 1)
+          completed = len(re.findall(r'^- \[x\] ', text, flags=re.M))
+          remaining = len(re.findall(r'^- \[ \] ', text, flags=re.M))
+          total = completed + remaining
+          if (completed, remaining, total) != (182, 4, 186):
+              raise SystemExit(f'unexpected scope state {completed}/{total} remaining={remaining}')
+          pct = completed / total * 100
+          filled = max(0, min(20, round(pct / 5.0)))
+          bar = '█' * filled + '░' * (20 - filled)
+          text = re.sub(r'badge\.svg\?branch=[^\"\)]+', 'badge.svg?branch=dev-v9-0', text, count=1)
+          text = re.sub(r'https://img\.shields\.io/badge/ROADMAP-[^\"]+', f'https://img.shields.io/badge/ROADMAP-{pct:.1f}%25-f59e0b?style=for-the-badge', text, count=1)
+          text = re.sub(r'https://img\.shields\.io/badge/DONE-[^\"]+', 'https://img.shields.io/badge/DONE-182%2F186-1f6feb?style=for-the-badge', text, count=1)
+          text = re.sub(r'https://img\.shields\.io/badge/STATUS-[^\"]+', 'https://img.shields.io/badge/STATUS-V9.0%20IN%20PROGRESS-f59e0b?style=for-the-badge', text, count=1)
+          text = re.sub(r'(?m)^[█░]{20} [0-9.]+%$', f'{bar} {pct:.1f}%', text, count=1)
+          text = re.sub(r'\| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9.]+%\*\* \|', f'| **182** | **4** | **186** | **{pct:.1f}%** |', text, count=1)
+          p.write_text(text, encoding='utf-8')
+          PY
+      - name: Verify scope registration
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '<!-- SWIR-ROADMAP-STANDARD:v1 -->' ROADMAP.md
+          grep -q 'badge.svg?branch=dev-v9-0' ROADMAP.md
+          grep -q 'DONE-182%2F186' ROADMAP.md
+          grep -q 'STATUS-V9.0%20IN%20PROGRESS' ROADMAP.md
+          grep -q '## v9.0 — Dynamic Frontline, Territory Control & Multi-Objective Warfare — IN PROGRESS' ROADMAP.md
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('ROADMAP.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^- \[x\] ', text, flags=re.M)) == 182
+          assert len(re.findall(r'^- \[ \] ', text, flags=re.M)) == 4
+          m=re.search(r'(?m)^([█░]+) ([0-9.]+)%$', text)
+          assert m and len(m.group(1)) == 20
+          PY
+      - name: Commit scope
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'docs(v9.0): register milestone scope'
+          git push origin HEAD:dev-v9-0
