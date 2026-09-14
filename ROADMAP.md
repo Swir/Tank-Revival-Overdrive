@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v10-0"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v10-1"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-210%2F210-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V10.0%20QUALIFIED-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-214%2F214-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V10.1%20QUALIFIED-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **210** | **0** | **210** | **100.0%** |
+| **214** | **0** | **214** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -337,6 +337,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Selected non-boss command operations create a physical destroyable command relay plus bounded specialist response waves using authoritative Health, collision, TankGame spawning and the existing enemy roster; success or failure carries bounded command momentum into later operations.
 - [x] Command momentum materially changes later operation pressure, friendly support availability and War Bond payoff while preserving boss rounds, TankGame round authority, Projectile damage, existing campaign memory and strategic reserves; the player-facing command brief remains compact and readable.
 - [x] Packaged Windows v10.0 campaign-command gate validates 1–100 scheduling, phase, momentum, pressure and reward safety bounds, required v8.x/v9.x integration services, runtime installation and exact EXE boot before qualification.
+
+## v10.1 — Theater Orders, Operation Branching & Campaign Consequences — COMPLETE
+- [x] Strategic command windows let the player choose ASSAULT, INTERDICTION or FORTIFY orders at bounded campaign checkpoints; every order persists for several subsequent rounds and changes live battlefield priorities instead of acting as a cosmetic menu choice.
+- [x] ASSAULT commits bounded real projectile fire support against priority combat threats, INTERDICTION redirects fire missions toward enemy command/logistics infrastructure, and FORTIFY creates bounded Orzełek/player sustain and frontline defense benefits through existing Health, TankGame and war-economy authority.
+- [x] Theater orders integrate with v10.0 campaign-command operations so active doctrine changes decisive support, command-relay pressure and post-operation payoff while preserving boss rounds, existing AI/spawn authority and strict late-round pressure caps.
+- [x] Packaged Windows v10.1 theater-orders gate validates decision scheduling, order persistence/effect bounds, v10.0 integration, runtime installation and exact EXE boot before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
