@@ -4,9 +4,9 @@ using UnityEngine;
 namespace TankRevival
 {
     /// <summary>
-    /// v1.7 campaign layer for persistent battlefield salvage, field module repair and
-    /// anti-armor threat deployment. It observes the existing combat loop rather than
-    /// replacing TankGame, so previous campaign/Orzelek systems remain authoritative.
+    /// Campaign layer for persistent battlefield salvage, field module repair and
+    /// anti-armor threat deployment. v11.1 also exposes concise armor-zone/component
+    /// state without replacing Health, Projectile or TankGame authority.
     /// </summary>
     public sealed class ArmoredWarfareDirector : MonoBehaviour
     {
@@ -136,7 +136,7 @@ namespace TankRevival
             }
 
             int chassis = Mathf.Clamp(PlayerPrefs.GetInt("TankRevival.Garage.Chassis", 0), 0, 3);
-            int cost = chassis == 1 ? 3 : 4; // Bastion maintenance doctrine.
+            int cost = chassis == 1 ? 3 : 4;
             if (_salvage < cost)
             {
                 Announce($"FIELD REPAIR // NEED {cost} SALVAGE");
@@ -187,7 +187,14 @@ namespace TankRevival
 
         private GUIStyle IntegrityStyle(int value)
         {
-            return value <= 35 ? _critical : value <= 65 ? _warning : _good;
+            return value <= ArmorSystem.CriticalThreshold ? _critical : value <= ArmorSystem.DamagedThreshold ? _warning : _good;
+        }
+
+        private static string ShortCondition(ModuleCondition condition)
+        {
+            return condition == ModuleCondition.Disabled ? "DISABLED" :
+                   condition == ModuleCondition.Critical ? "CRIT" :
+                   condition == ModuleCondition.Damaged ? "DMG" : "OK";
         }
 
         private void OnGUI()
@@ -195,22 +202,25 @@ namespace TankRevival
             if (_game == null || !_game.IsPlaying || _armor == null) return;
             EnsureStyles();
 
-            float width = 330f;
+            float width = 350f;
             float x = Mathf.Max(10f, Screen.width - width - 14f);
             float y = 12f;
             GUI.color = new Color(0.018f, 0.030f, 0.050f, 0.93f);
-            GUI.Box(new Rect(x, y, width, 142f), string.Empty);
+            GUI.Box(new Rect(x, y, width, 174f), string.Empty);
             GUI.color = Color.white;
 
             GUI.Label(new Rect(x + 12f, y + 8f, width - 24f, 20f), "ARMORED WARFARE // DAMAGE CONTROL", _title);
-            GUI.Label(new Rect(x + 12f, y + 31f, 150f, 18f), $"ENGINE  {_armor.EngineIntegrity}%", IntegrityStyle(_armor.EngineIntegrity));
-            GUI.Label(new Rect(x + 170f, y + 31f, 150f, 18f), $"TRACKS  {_armor.TrackIntegrity}%", IntegrityStyle(_armor.TrackIntegrity));
-            GUI.Label(new Rect(x + 12f, y + 53f, 150f, 18f), $"GUN     {_armor.GunIntegrity}%", IntegrityStyle(_armor.GunIntegrity));
-            GUI.Label(new Rect(x + 170f, y + 53f, 150f, 18f), $"AMMO    {_armor.AmmoRackIntegrity}%", IntegrityStyle(_armor.AmmoRackIntegrity));
+            GUI.Label(new Rect(x + 12f, y + 31f, 160f, 18f), $"ENGINE {_armor.EngineIntegrity}% {ShortCondition(_armor.EngineCondition)}", IntegrityStyle(_armor.EngineIntegrity));
+            GUI.Label(new Rect(x + 178f, y + 31f, 160f, 18f), $"TRACKS {_armor.TrackIntegrity}% {ShortCondition(_armor.TrackCondition)}", IntegrityStyle(_armor.TrackIntegrity));
+            GUI.Label(new Rect(x + 12f, y + 53f, 160f, 18f), $"GUN    {_armor.GunIntegrity}% {ShortCondition(_armor.GunCondition)}", IntegrityStyle(_armor.GunIntegrity));
+            GUI.Label(new Rect(x + 178f, y + 53f, 160f, 18f), $"AMMO   {_armor.AmmoRackIntegrity}% {ShortCondition(_armor.AmmoRackCondition)}", IntegrityStyle(_armor.AmmoRackIntegrity));
             GUI.Label(new Rect(x + 12f, y + 79f, width - 24f, 18f), $"SALVAGE {_salvage}   //   K FIELD REPAIR", _body);
             GUI.Label(new Rect(x + 12f, y + 101f, width - 24f, 18f), $"MOBILITY {Mathf.RoundToInt(_armor.MobilityMultiplier * 100f)}%   RELOAD {Mathf.RoundToInt(_armor.ReloadMultiplier * 100f)}%", _body);
+            GUI.Label(new Rect(x + 12f, y + 123f, width - 24f, 18f), $"LAST ARMOR {_armor.LastZone.ToString().ToUpperInvariant()} // {AmmoDatabase.ShortName(_armor.LastAmmo)}" + (_armor.LastOvermatch ? " // OVERMATCH" : string.Empty), _body);
             if (_armor.LastCritical && _armor.LastDamagedModule != TankModule.None)
-                GUI.Label(new Rect(x + 12f, y + 121f, width - 24f, 18f), $"LAST CRITICAL // {_armor.LastDamagedModule.ToString().ToUpperInvariant()}", _critical);
+                GUI.Label(new Rect(x + 12f, y + 145f, width - 24f, 18f), $"LAST CRITICAL // {_armor.LastDamagedModule.ToString().ToUpperInvariant()}", _critical);
+            else if (_armor.IsMobilityKilled || _armor.IsWeaponDisabled)
+                GUI.Label(new Rect(x + 12f, y + 145f, width - 24f, 18f), _armor.IsMobilityKilled ? "MOBILITY KILL // FIELD REPAIR ADVISED" : "WEAPON SYSTEM CRITICAL", _critical);
 
             if (Time.unscaledTime < _toastUntil)
                 GUI.Label(new Rect(0f, Screen.height - 92f, Screen.width, 24f), _toast, _warning);
