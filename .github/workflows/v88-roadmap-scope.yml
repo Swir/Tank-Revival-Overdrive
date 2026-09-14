@@ -19,24 +19,25 @@ jobs:
           ref: dev-v8-8
           fetch-depth: 0
       - name: Register v8.8 scope and recalculate dashboard
-        shell: python
+        shell: bash
         run: |
+          set -euo pipefail
+          python3 <<'PY'
           from pathlib import Path
           import re
 
           p = Path('ROADMAP.md')
           text = p.read_text(encoding='utf-8')
-          marker = '<!-- SWIR-ROADMAP-STANDARD:v1 -->'
-          if marker not in text:
+          if '<!-- SWIR-ROADMAP-STANDARD:v1 -->' not in text:
               raise SystemExit('SWIR roadmap marker missing')
 
-          section = '''## v8.8 — Battlefield Salvage, Field Resupply & Logistics Counteroffensive — IN PROGRESS
-- [ ] High-value destroyed enemy units and interdicted logistics create bounded battlefield salvage opportunities tied to real death/logistics outcomes instead of a parallel loot spawn economy.
-- [ ] Nearby salvage offers a player-readable FIELD vs STRATEGIC recovery choice: immediate repair/ammunition or War Bond/denial value through existing PlayerTank, Orzełek, ammo and economy authority.
-- [ ] Enemy counter-recovery teams retask real surviving combat units through TacticalNavigationAgent to reclaim unsecured salvage and restore a bounded matching strategic reserve, creating an active race over battlefield resources.
-- [ ] Packaged Windows salvage gate boots the exact development EXE and verifies salvage eligibility/budgets, recovery-choice rewards, enemy reclaim bounds, authoritative integration and v8.8 version identity.
+          section = """## v8.8 — Battlefield Salvage, Field Resupply & Logistics Counteroffensive — IN PROGRESS
+          - [ ] High-value destroyed enemy units and interdicted logistics create bounded battlefield salvage opportunities tied to real death/logistics outcomes instead of a parallel loot spawn economy.
+          - [ ] Nearby salvage offers a player-readable FIELD vs STRATEGIC recovery choice: immediate repair/ammunition or War Bond/denial value through existing PlayerTank, Orzełek, ammo and economy authority.
+          - [ ] Enemy counter-recovery teams retask real surviving combat units through TacticalNavigationAgent to reclaim unsecured salvage and restore a bounded matching strategic reserve, creating an active race over battlefield resources.
+          - [ ] Packaged Windows salvage gate boots the exact development EXE and verifies salvage eligibility/budgets, recovery-choice rewards, enemy reclaim bounds, authoritative integration and v8.8 version identity.
 
-'''
+          """.replace('\n          ', '\n')
           if '## v8.8 — Battlefield Salvage' not in text:
               needle = '## Development rules\n'
               if needle not in text:
@@ -47,7 +48,7 @@ jobs:
           remaining = len(re.findall(r'^- \[ \] ', text, flags=re.M))
           total = completed + remaining
           pct = completed / total * 100 if total else 0.0
-          filled = round(pct / 5.0)
+          filled = max(0, min(20, round(pct / 5.0)))
           bar = '█' * filled + '░' * (20 - filled)
 
           text = re.sub(r'badge\.svg\?branch=[^\"\)]+', 'badge.svg?branch=dev-v8-8', text, count=1)
@@ -58,17 +59,26 @@ jobs:
           text = re.sub(r'\| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9.]+%\*\* \|', f'| **{completed}** | **{remaining}** | **{total}** | **{pct:.1f}%** |', text, count=1)
           p.write_text(text, encoding='utf-8')
           print(f'ROADMAP scope registered: {completed}/{total} = {pct:.1f}% | {bar}')
+          PY
       - name: Verify roadmap standard and honest scope
         shell: bash
         run: |
           set -euo pipefail
           grep -q '<!-- SWIR-ROADMAP-STANDARD:v1 -->' ROADMAP.md
           grep -q '## 📊 Overall progress' ROADMAP.md
-          grep -q 'ROADMAP-' ROADMAP.md
-          grep -q 'DONE-' ROADMAP.md
           grep -q 'STATUS-V8.8%20IN%20PROGRESS' ROADMAP.md
           grep -q '## v8.8 — Battlefield Salvage' ROADMAP.md
           test "$(grep -c '^- \[ \] ' ROADMAP.md)" -ge 4
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          text = Path('ROADMAP.md').read_text(encoding='utf-8')
+          m = re.search(r'(?m)^([█░]+) ([0-9.]+)%$', text)
+          assert m and len(m.group(1)) == 20
+          done = len(re.findall(r'^- \[x\] ', text, flags=re.M))
+          todo = len(re.findall(r'^- \[ \] ', text, flags=re.M))
+          assert done == 174 and todo == 4 and done + todo == 178
+          PY
       - name: Commit roadmap scope
         shell: bash
         run: |
