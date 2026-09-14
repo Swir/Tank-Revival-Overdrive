@@ -82,7 +82,8 @@ namespace TankRevival
 
             if (ActiveBatteryCount > 0 && Time.time >= _nextBatteryFire)
             {
-                _nextBatteryFire = Time.time + BatteryFireInterval;
+                float fireControl = ResolveFireControlMultiplier();
+                _nextBatteryFire = Time.time + BatteryFireInterval / Mathf.Max(0.5f, fireControl);
                 FireSiegeVolley();
             }
             if (ActiveBatteryCount > 0 && Time.time >= _nextCounterBattery)
@@ -110,6 +111,37 @@ namespace TankRevival
         public static int BreachTeamSizeForRound(int round)
         {
             return Mathf.Clamp(2 + Mathf.Max(0, round - EarliestRound) / 28, 2, MaxBreachActors);
+        }
+
+        public bool TryGetBatteryState(int index, out Vector2 position, out int lane, out int hp)
+        {
+            position = Vector2.zero;
+            lane = -1;
+            hp = 0;
+            if (!BatteryAlive(index)) return false;
+            position = _batteries[index].transform.position;
+            lane = _batteryLanes[index];
+            hp = _batteryHealth[index].Current;
+            return true;
+        }
+
+        public bool TryRelocateBattery(int index, int lane, Vector2 position)
+        {
+            if (!BatteryAlive(index)) return false;
+            if (lane < 0 || lane > 2) return false;
+            position.x = Mathf.Clamp(position.x, -4.8f, 4.8f);
+            position.y = Mathf.Clamp(position.y, 3.65f, 4.65f);
+            _batteries[index].transform.position = position;
+            _batteryLanes[index] = lane;
+            VisualFactory.RingPulse(position, new Color(1f, 0.30f, 0.08f), 0.95f);
+            return true;
+        }
+
+        private float ResolveFireControlMultiplier()
+        {
+            SiegeLogisticsFireControlDirector logistics = SiegeLogisticsFireControlDirector.Instance;
+            if (logistics == null || !SiegeLogisticsFireControlDirector.IsLogisticsSiegeRound(_round)) return 1f;
+            return SiegeLogisticsFireControlDirector.FireControlMultiplier(logistics.SupplyAlive, logistics.SpotterAlive);
         }
 
         private void BeginRound(int round)
