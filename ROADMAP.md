@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v9-5"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v10-0"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-206%2F206-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V9.5%20QUALIFIED-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-210%2F210-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V10.0%20QUALIFIED-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **206** | **0** | **206** | **100.0%** |
+| **210** | **0** | **210** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -331,6 +331,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Enemy siege doctrine deploys a hard-capped decoy-battery screen that can waste unguided counter-battery cycles until identified, while decoys remain non-damaging presentation/target-deception objects rather than a parallel combat roster.
 - [x] Fire-control spotters gain bounded counter-surveillance/reacquisition behavior after reconnaissance exposure, while supply loss, spotter loss and existing battery relocation materially change targeting confidence without hidden damage or invulnerability.
 - [x] Packaged Windows v9.5 gate validates 1–100 scheduling, lock/decoy/counter-surveillance safety bounds, v7.8 SIGINT/recon + v9.3/v9.4 integration, runtime installation and exact EXE boot before qualification.
+
+## v10.0 — Combined Arms Campaign Command & 100-Round War Reforge — COMPLETE
+- [x] Campaign-command layer orchestrates deterministic multi-stage operations across the 100-round war, sequencing reconnaissance, interdiction and decisive-action beats around existing frontline, logistics, SIGINT and fortification authorities instead of adding disconnected round modifiers.
+- [x] Selected non-boss command operations create a physical destroyable command relay plus bounded specialist response waves using authoritative Health, collision, TankGame spawning and the existing enemy roster; success or failure carries bounded command momentum into later operations.
+- [x] Command momentum materially changes later operation pressure, friendly support availability and War Bond payoff while preserving boss rounds, TankGame round authority, Projectile damage, existing campaign memory and strategic reserves; the player-facing command brief remains compact and readable.
+- [x] Packaged Windows v10.0 campaign-command gate validates 1–100 scheduling, phase, momentum, pressure and reward safety bounds, required v8.x/v9.x integration services, runtime installation and exact EXE boot before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
