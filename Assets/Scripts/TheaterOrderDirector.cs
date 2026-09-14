@@ -15,7 +15,6 @@ namespace TankRevival
     public sealed class TheaterOrderDirector : MonoBehaviour
     {
         public const int FirstDecisionRound = 42;
-        public const int DecisionInterval = 14;
         public const int OrderDurationRounds = 4;
         public const float DecisionSeconds = 9f;
         public const int AssaultShellsEarly = 1;
@@ -48,7 +47,7 @@ namespace TankRevival
 
         public static bool ConfigurationValid =>
             FirstDecisionRound >= 40 && FirstDecisionRound <= 50 &&
-            DecisionInterval >= 12 && DecisionInterval <= 16 &&
+            EligibleDecisionCount() == 5 &&
             OrderDurationRounds >= 3 && OrderDurationRounds <= 5 &&
             DecisionSeconds >= 6f && DecisionSeconds <= 12f &&
             AssaultShellsEarly >= 1 && AssaultShellsLate <= MaxAssaultShellsPerRound &&
@@ -125,8 +124,9 @@ namespace TankRevival
 
         public static bool HasDecisionForRound(int round)
         {
-            if (round < FirstDecisionRound || round > 100 || round % 10 == 0) return false;
-            return (round - FirstDecisionRound) % DecisionInterval == 0;
+            // Deliberately explicit so strategic decisions never collide with boss rounds
+            // or v10.0 theater-command operation start rounds.
+            return round == 42 || round == 56 || round == 68 || round == 84 || round == 98;
         }
 
         public static int EligibleDecisionCount()
