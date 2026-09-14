@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-6"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-22c55e?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-170%2F170-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.6%20QUALIFIED-22c55e?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-7"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.7%25-f59e0b?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-170%2F174-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.7%20IN%20DEVELOPMENT-f59e0b?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+███████████████████░ 97.7%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **170** | **0** | **170** | **100.0%** |
+| **170** | **4** | **174** | **97.7%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -277,6 +277,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Destroying logistics nodes consumes matching Armor/Fire Support/EW reserves and builds bounded sector interdiction; surviving nodes restore a limited amount of the matching reserve, so battlefield outcomes directly control enemy replenishment.
 - [x] Logistics integrity refines later CampaignEncounter pressure with bounded endurance/support/champion effects while preserving TankGame, Health, Projectile, boss and reserve authority; nodes remain readable through compact markers/briefs rather than permanent HUD clutter.
 - [x] Packaged Windows logistics-network gate boots the exact development EXE and verifies node scheduling/types, destruction-vs-survival reserve ordering, interdiction bounds, encounter integration, runtime installation and v8.6 version identity.
+
+## v8.7 — Supply Routes, Escort Doctrine & Counter-Interdiction Warfare — IN DEVELOPMENT
+- [ ] Active enemy logistics nodes gain a bounded escort doctrine that assigns real existing combat units to defend depots, convoys and repair hubs through the existing tactical-navigation authority rather than spawning a parallel escort system.
+- [ ] Mobile supply convoys detect meaningful player pressure and execute deterministic emergency reroutes while repair teams can restore damaged surviving logistics nodes at a bounded cadence using authoritative Health healing.
+- [ ] Destroyed logistics nodes yield a limited captured-supplies benefit through existing player/Orzełek/economy paths, while surviving protected logistics strengthen enemy counter-interdiction without hidden damage or invulnerability.
+- [ ] Packaged Windows supply-routes gate boots the exact development EXE and verifies escort assignment, reroute/repair bounds, captured-supply rewards, runtime integration and v8.7 version identity.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
