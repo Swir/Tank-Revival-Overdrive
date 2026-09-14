@@ -1,0 +1,74 @@
+name: ROADMAP v10.0 Scope Registrar
+
+on:
+  push:
+    branches:
+      - 'dev-v10-0'
+    paths:
+      - '.roadmap-v100-scope-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v10-0
+      - name: Register unchecked v10.0 scope and preserve SWIR standard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('ROADMAP.md')
+          s = p.read_text(encoding='utf-8')
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<!-- ROADMAP-PROGRESS:START -->' in s and '<!-- ROADMAP-PROGRESS:END -->' in s
+          assert '## 📊 Overall progress' in s
+          assert '## v9.5 — Fire Mission Networks, Decoy Batteries & Counter-Surveillance — COMPLETE' in s
+          assert '## v10.0 — Combined Arms Campaign Command & 100-Round War Reforge' not in s
+          assert len(re.findall(r'^- \[x\] ', s, re.M)) == 206
+          assert len(re.findall(r'^- \[ \] ', s, re.M)) == 0
+          s = s.replace('badge.svg?branch=dev-v9-5', 'badge.svg?branch=dev-v10-0')
+          s = s.replace('ROADMAP-100.0%25-2ea043', 'ROADMAP-98.1%25-d29922')
+          s = s.replace('DONE-206%2F206-1f6feb', 'DONE-206%2F210-1f6feb')
+          s = s.replace('STATUS-V9.5%20QUALIFIED-2ea043', 'STATUS-V10.0%20IN%20PROGRESS-d29922')
+          s = s.replace('████████████████████ 100.0%', '████████████████████ 98.1%', 1)
+          s = s.replace('| **206** | **0** | **206** | **100.0%** |', '| **206** | **4** | **210** | **98.1%** |', 1)
+          block = '''\n## v10.0 — Combined Arms Campaign Command & 100-Round War Reforge — IN PROGRESS\n- [ ] Campaign-command layer orchestrates deterministic multi-stage operations across the 100-round war, sequencing reconnaissance, interdiction and decisive-action beats around existing frontline, logistics, SIGINT and fortification authorities instead of adding disconnected round modifiers.\n- [ ] Selected non-boss command operations create a physical destroyable command relay plus bounded specialist response waves using authoritative Health, collision, TankGame spawning and the existing enemy roster; success or failure carries bounded command momentum into later operations.\n- [ ] Command momentum materially changes later operation pressure, friendly support availability and War Bond payoff while preserving boss rounds, TankGame round authority, Projectile damage, existing campaign memory and strategic reserves; the player-facing command brief remains compact and readable.\n- [ ] Packaged Windows v10.0 campaign-command gate validates 1–100 scheduling, phase, momentum, pressure and reward safety bounds, required v8.x/v9.x integration services, runtime installation and exact EXE boot before qualification.\n'''
+          marker = '\n## Development rules\n'
+          assert marker in s
+          s = s.replace(marker, block + marker, 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Validate dashboard/checklist consistency
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s = Path('ROADMAP.md').read_text(encoding='utf-8')
+          done = len(re.findall(r'^- \[x\] ', s, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', s, re.M))
+          assert (done, open_) == (206, 4), (done, open_)
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '<img alt="Roadmap progress"' in s
+          assert '<img alt="Completed"' in s
+          assert '<img alt="Status"' in s
+          assert 'badge.svg?branch=dev-v10-0' in s
+          assert 'ROADMAP-98.1%25-d29922' in s
+          assert 'DONE-206%2F210' in s
+          assert 'STATUS-V10.0%20IN%20PROGRESS-d29922' in s
+          assert '| **206** | **4** | **210** | **98.1%** |' in s
+          assert '████████████████████ 98.1%' in s
+          bar = re.search(r'```text\n([^\n]+)\n```', s).group(1).split()[0]
+          assert len(bar) == 20, (bar, len(bar))
+      - name: Commit roadmap scope
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'roadmap(v10.0): register combined-arms campaign command milestone'
+          git push origin HEAD:dev-v10-0
