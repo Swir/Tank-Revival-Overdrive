@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-9"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.8%25-f59e0b?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-178%2F182-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.9%20IN%20PROGRESS-f59e0b?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-22c55e?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-182%2F182-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.9%20QUALIFIED-22c55e?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 97.8%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **178** | **4** | **182** | **97.8%** |
+| **182** | **0** | **182** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -290,11 +290,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Enemy counter-recovery teams retask real surviving combat units through TacticalNavigationAgent to reclaim unsecured salvage and restore a bounded matching strategic reserve, creating an active race over battlefield resources.
 - [x] Packaged Windows salvage gate boots the exact development EXE and verifies salvage eligibility/budgets, recovery-choice rewards, enemy reclaim bounds, authoritative integration and v8.8 version identity.
 
-## v8.9 — Forward Recovery Bases, Salvage Convoys & Frontline Control — IN PROGRESS
-- [ ] Strategic salvage can be committed to a bounded forward-recovery objective, creating a temporary frontline base only after a real delivery/hold sequence instead of instant conversion.
-- [ ] Forward Recovery Bases provide limited repair, reserve-matched ammunition and Orzełek support through existing Health, PlayerTank, ammo and economy authority, with hard per-round/cooldown budgets.
-- [ ] Enemy counteroffensive teams retask real surviving units through TacticalNavigationAgent to contest or destroy the recovery base while friendly salvage convoys reposition captured materiel without introducing a parallel combat roster.
-- [ ] Packaged Windows frontline-recovery gate boots the exact development EXE and verifies scheduling, delivery/hold/counterattack/reward bounds, runtime integration and v8.9 version identity.
+## v8.9 — Forward Recovery Bases, Salvage Convoys & Frontline Control — COMPLETE
+- [x] Strategic salvage can be committed to a bounded forward-recovery objective, creating a temporary frontline base only after a real delivery/hold sequence instead of instant conversion.
+- [x] Forward Recovery Bases provide limited repair, reserve-matched ammunition and Orzełek support through existing Health, PlayerTank, ammo and economy authority, with hard per-round/cooldown budgets.
+- [x] Enemy counteroffensive teams retask real surviving units through TacticalNavigationAgent to contest or destroy the recovery base while friendly salvage convoys reposition captured materiel without introducing a parallel combat roster.
+- [x] Packaged Windows frontline-recovery gate boots the exact development EXE and verifies scheduling, delivery/hold/counterattack/reward bounds, runtime integration and v8.9 version identity.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
