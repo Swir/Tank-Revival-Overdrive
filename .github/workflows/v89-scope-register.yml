@@ -27,21 +27,20 @@ jobs:
           import re
           p = Path('ROADMAP.md')
           text = p.read_text(encoding='utf-8')
-          marker = '<!-- SWIR-ROADMAP-STANDARD:v1 -->'
-          if marker not in text:
+          if '<!-- SWIR-ROADMAP-STANDARD:v1 -->' not in text:
               raise SystemExit('SWIR roadmap marker missing')
           if '## v8.9 — Forward Recovery Bases, Salvage Convoys & Frontline Control' in text:
               raise SystemExit('v8.9 scope already registered')
-          insert = '''## v8.9 — Forward Recovery Bases, Salvage Convoys & Frontline Control — IN PROGRESS
-- [ ] Strategic salvage can be committed to a bounded forward-recovery objective, creating a temporary frontline base only after a real delivery/hold sequence instead of instant conversion.
-- [ ] Forward Recovery Bases provide limited repair, reserve-matched ammunition and Orzełek support through existing Health, PlayerTank, ammo and economy authority, with hard per-round/cooldown budgets.
-- [ ] Enemy counteroffensive teams retask real surviving units through TacticalNavigationAgent to contest or destroy the recovery base while friendly salvage convoys reposition captured materiel without introducing a parallel combat roster.
-- [ ] Packaged Windows frontline-recovery gate boots the exact development EXE and verifies scheduling, delivery/hold/counterattack/reward bounds, runtime integration and v8.9 version identity.
-
-'''
+          lines = [
+              '## v8.9 — Forward Recovery Bases, Salvage Convoys & Frontline Control — IN PROGRESS',
+              '- [ ] Strategic salvage can be committed to a bounded forward-recovery objective, creating a temporary frontline base only after a real delivery/hold sequence instead of instant conversion.',
+              '- [ ] Forward Recovery Bases provide limited repair, reserve-matched ammunition and Orzełek support through existing Health, PlayerTank, ammo and economy authority, with hard per-round/cooldown budgets.',
+              '- [ ] Enemy counteroffensive teams retask real surviving units through TacticalNavigationAgent to contest or destroy the recovery base while friendly salvage convoys reposition captured materiel without introducing a parallel combat roster.',
+              '- [ ] Packaged Windows frontline-recovery gate boots the exact development EXE and verifies scheduling, delivery/hold/counterattack/reward bounds, runtime integration and v8.9 version identity.',
+              '',
+          ]
+          insert = '\n'.join(lines) + '\n'
           anchor = '## Development rules'
-          if anchor not in text:
-              raise SystemExit('Development rules anchor missing')
           text = text.replace(anchor, insert + anchor, 1)
           completed = len(re.findall(r'^- \[x\] ', text, flags=re.M))
           remaining = len(re.findall(r'^- \[ \] ', text, flags=re.M))
