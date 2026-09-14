@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-9"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-22c55e?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-182%2F182-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V8.9%20QUALIFIED-22c55e?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v9-0"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-186%2F186-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V9.0%20QUALIFIED-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **182** | **0** | **182** | **100.0%** |
+| **186** | **0** | **186** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -295,6 +295,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Forward Recovery Bases provide limited repair, reserve-matched ammunition and Orzełek support through existing Health, PlayerTank, ammo and economy authority, with hard per-round/cooldown budgets.
 - [x] Enemy counteroffensive teams retask real surviving units through TacticalNavigationAgent to contest or destroy the recovery base while friendly salvage convoys reposition captured materiel without introducing a parallel combat roster.
 - [x] Packaged Windows frontline-recovery gate boots the exact development EXE and verifies scheduling, delivery/hold/counterattack/reward bounds, runtime integration and v8.9 version identity.
+
+## v9.0 — Dynamic Frontline, Territory Control & Multi-Objective Warfare — COMPLETE
+- [x] Three persistent battlefield control lanes create a live friendly/contested/enemy frontline that reacts to real player presence, enemy presence and secured Forward Recovery Bases without replacing TankGame or movement authority.
+- [x] Selected non-boss rounds run bounded multi-objective operations that combine territory capture, existing battlefield objectives and Orzełek/forward-base defense into one readable 2-of-3 combat decision instead of independent HUD tasks.
+- [x] Territory ownership has real but bounded consequences for friendly recovery/logistics access, Orzełek support and enemy reinforcement/fire-support pressure through existing campaign, economy, Health and encounter authority.
+- [x] Packaged Windows dynamic-frontline gate boots the exact development EXE and verifies 1–100 scheduling, control-state transitions, multi-objective scoring, consequence bounds, runtime integration and v9.0 version identity.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
