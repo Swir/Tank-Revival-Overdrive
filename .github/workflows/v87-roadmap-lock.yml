@@ -1,0 +1,115 @@
+name: v8.7 Roadmap Lock Update
+
+on:
+  push:
+    branches:
+      - 'dev-v8-7'
+    paths:
+      - '.roadmap-v87-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  roadmap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v8-7
+          fetch-depth: 0
+      - name: Apply locked v8.7 roadmap state
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('ROADMAP.md')
+          text = path.read_text(encoding='utf-8')
+          mode = Path('.roadmap-v87-trigger').read_text(encoding='utf-8').strip().lower()
+          marker = '<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          start_token = '<!-- ROADMAP-PROGRESS:START -->'
+          end_token = '<!-- ROADMAP-PROGRESS:END -->'
+          required = [marker, start_token, end_token, '## 📊 Overall progress']
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'missing locked roadmap token: {token}')
+
+          title = '## v8.7 — Supply Routes, Escort Doctrine & Counter-Interdiction Warfare'
+          deliverables = '''\n## v8.7 — Supply Routes, Escort Doctrine & Counter-Interdiction Warfare — IN DEVELOPMENT\n- [ ] Active enemy logistics nodes gain a bounded escort doctrine that assigns real existing combat units to defend depots, convoys and repair hubs through the existing tactical-navigation authority rather than spawning a parallel escort system.\n- [ ] Mobile supply convoys detect meaningful player pressure and execute deterministic emergency reroutes while repair teams can restore damaged surviving logistics nodes at a bounded cadence using authoritative Health healing.\n- [ ] Destroyed logistics nodes yield a limited captured-supplies benefit through existing player/Orzełek/economy paths, while surviving protected logistics strengthen enemy counter-interdiction without hidden damage or invulnerability.\n- [ ] Packaged Windows supply-routes gate boots the exact development EXE and verifies escort assignment, reroute/repair bounds, captured-supply rewards, runtime integration and v8.7 version identity.\n'''
+          if title not in text:
+              anchor = '\n## Development rules'
+              if anchor not in text:
+                  raise SystemExit('Development rules anchor missing')
+              text = text.replace(anchor, deliverables + anchor, 1)
+
+          if mode == 'scope':
+              status = 'V8.7 IN DEVELOPMENT'
+              completed, total, pct = 170, 174, '97.7'
+              color = 'f59e0b'
+              bar = '███████████████████░'
+          elif mode == 'complete':
+              text = text.replace(title + ' — IN DEVELOPMENT', title + ' — COMPLETE')
+              a = text.index(title)
+              b = text.index('## Development rules', a)
+              block = text[a:b].replace('- [ ]', '- [x]')
+              text = text[:a] + block + text[b:]
+              status = 'V8.7 QUALIFIED'
+              completed, total, pct = 174, 174, '100.0'
+              color = '22c55e'
+              bar = '████████████████████'
+          else:
+              raise SystemExit(f'unknown roadmap mode: {mode}')
+
+          remaining = total - completed
+          dashboard = f'''<!-- ROADMAP-PROGRESS:START -->
+          <p align="center">
+            <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v8-7"></a>
+            <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-{pct}%25-{color}?style=for-the-badge">
+            <img alt="Completed" src="https://img.shields.io/badge/DONE-{completed}%2F{total}-1f6feb?style=for-the-badge">
+            <img alt="Status" src="https://img.shields.io/badge/STATUS-{status.replace(' ', '%20')}-{color}?style=for-the-badge">
+          </p>
+
+          ## 📊 Overall progress
+
+          ```text
+          {bar} {pct}%
+          ```
+
+          | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
+          |---:|---:|---:|---:|
+          | **{completed}** | **{remaining}** | **{total}** | **{pct}%** |
+
+          > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
+          <!-- ROADMAP-PROGRESS:END -->'''
+          start = text.index(start_token)
+          end = text.index(end_token) + len(end_token)
+          text = text[:start] + dashboard + text[end:]
+          path.write_text(text, encoding='utf-8')
+
+          check = path.read_text(encoding='utf-8')
+          for token in required:
+              if token not in check:
+                  raise SystemExit(f'roadmap lock lost after mutation: {token}')
+          checks = len(re.findall(r'^- \[x\] ', check, flags=re.M))
+          opens = len(re.findall(r'^- \[ \] ', check, flags=re.M))
+          if checks != completed or checks + opens != total:
+              raise SystemExit(f'checklist mismatch: completed={checks}, open={opens}, expected={completed}/{total}')
+          m = re.search(r'```text\n([^\n]+)\n```', check)
+          if not m or m.group(1).count('█') + m.group(1).count('░') != 20:
+              raise SystemExit('progress bar is not exactly 20 segments')
+          PY
+      - name: Commit roadmap mutation
+        shell: bash
+        run: |
+          if git diff --quiet -- ROADMAP.md; then
+            echo 'ROADMAP already in requested state.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m "docs(v8.7): apply locked roadmap state"
+          git push origin HEAD:dev-v8-7
