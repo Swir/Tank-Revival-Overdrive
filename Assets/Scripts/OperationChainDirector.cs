@@ -58,7 +58,6 @@ namespace TankRevival
         private int _lastRound;
         private int _trackedRound;
         private float _eagleStartRatio = 1f;
-        private float _playerStartRatio = 1f;
         private OperationChainOutcome _carryOutcome;
         private int _chainSuccesses;
         private OperationChainProfile _active;
@@ -184,7 +183,7 @@ namespace TankRevival
 
             return new RoundEncounterProfile(
                 baseline.Round, baseline.Sector, baseline.SectorRound, baseline.Archetype,
-                baseline.Codename + suffix, baseline.Directive,
+                baseline.Codename + suffix, baseline.Objective,
                 health, support, cadence, champion, strikes, baseline.BossRound);
         }
 
@@ -242,8 +241,6 @@ namespace TankRevival
         private void SnapshotHealth()
         {
             _eagleStartRatio = HealthRatio(CombatRoster.Eagle);
-            PlayerTank player = CombatRoster.Player;
-            _playerStartRatio = player != null ? HealthRatio(player.Health) : 1f;
         }
 
         private static float HealthRatio(Health health)
@@ -269,7 +266,6 @@ namespace TankRevival
             _carryOutcome = OperationChainOutcome.Neutral;
             _chainSuccesses = 0;
             _eagleStartRatio = 1f;
-            _playerStartRatio = 1f;
         }
 
         private void EnsureStyles()
