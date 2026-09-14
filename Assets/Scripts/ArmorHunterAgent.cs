@@ -3,9 +3,9 @@ using UnityEngine;
 namespace TankRevival
 {
     /// <summary>
-    /// Extra anti-armor behavior for advanced enemy classes. Hunters telegraph precision
-    /// attacks, inspect the player's current module state and choose ammunition that
-    /// pressures damaged systems instead of blindly adding raw fire rate.
+    /// Anti-armor behavior for advanced enemy classes. v11.1 reads explicit component
+    /// conditions and recent armor exposure, choosing ammunition that pressures damaged
+    /// systems instead of blindly adding raw fire rate.
     /// </summary>
     public sealed class ArmorHunterAgent : MonoBehaviour
     {
@@ -79,24 +79,32 @@ namespace TankRevival
 
             ArmorSystem playerArmor = player.GetComponent<ArmorSystem>();
             bool mobilityWeak = playerArmor != null && playerArmor.IsMobilityCritical;
+            bool mobilityKilled = playerArmor != null && playerArmor.IsMobilityKilled;
             bool weaponWeak = playerArmor != null && playerArmor.IsWeaponCritical;
+            bool weaponDisabled = playerArmor != null && playerArmor.IsWeaponDisabled;
+            bool rackVolatile = playerArmor != null && playerArmor.IsAmmoRackVolatile;
+            bool exposedSideRear = playerArmor != null && Time.time - playerArmor.LastImpactAt <= ComponentDamageTacticsDirector.RearExposureWindow && playerArmor.LastZone != ArmorZone.Front;
 
             if (_enemy.Kind == EnemyKind.Siege)
-                _plannedAmmo = AmmoType.Explosive;
-            else if (_enemy.Kind == EnemyKind.Elite && mobilityWeak)
+                _plannedAmmo = mobilityWeak ? AmmoType.Explosive : AmmoType.ArmorPiercing;
+            else if ((_enemy.Kind == EnemyKind.Elite || _enemy.Kind == EnemyKind.Sniper) && (mobilityWeak || mobilityKilled))
                 _plannedAmmo = AmmoType.EMP;
-            else if (_enemy.Kind == EnemyKind.Boss && _round >= 70 && weaponWeak)
+            else if ((_enemy.Kind == EnemyKind.Boss || _enemy.Kind == EnemyKind.Elite) && (weaponDisabled || rackVolatile))
                 _plannedAmmo = AmmoType.Plasma;
+            else if (exposedSideRear || weaponWeak)
+                _plannedAmmo = AmmoType.ArmorPiercing;
             else
                 _plannedAmmo = AmmoType.ArmorPiercing;
 
             _plannedDamage = _enemy.Kind == EnemyKind.Boss ? 3 : _round >= 60 ? 2 : 1;
             if (_plannedAmmo == AmmoType.Plasma) _plannedDamage += 1;
+            if (exposedSideRear && _plannedAmmo == AmmoType.ArmorPiercing) _plannedDamage += _round >= 70 ? 1 : 0;
             _plannedSpeed = 10.5f + _round * 0.025f;
             if (_plannedAmmo == AmmoType.ArmorPiercing) _plannedSpeed *= 1.18f;
 
             _charging = true;
             float telegraph = _enemy.Kind == EnemyKind.Sniper ? 0.72f : _enemy.Kind == EnemyKind.Boss ? 0.85f : 1.05f;
+            if (mobilityKilled || weaponDisabled) telegraph += 0.12f; // extra counterplay when exploiting a crippled tank.
             _fireAt = Time.time + telegraph;
 
             Color c = AmmoDatabase.Color(_plannedAmmo);
