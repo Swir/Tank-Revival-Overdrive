@@ -28,21 +28,22 @@ namespace TankRevival
             bool dynamicBattlefield = FindAnyObjectByType<DynamicBattlefieldDirector>() != null;
             bool navigation = TacticalNavigationDirector.Instance != null;
             bool recovery = ForwardRecoveryFrontlineDirector.Instance != null;
+            bool recoveryTerritoryBridge = FindAnyObjectByType<FrontlineRecoveryTerritoryBridge>() != null && FrontlineRecoveryTerritoryBridge.ConfigurationValid;
             bool config = DynamicFrontlineTerritoryDirector.ConfigurationValid;
             bool bridge = DynamicFrontlineTerritoryDirector.BridgeAvailable;
             bool matrix = ValidateMatrix(out string details);
             bool version = Application.version == "9.0.0-dev";
 
-            if (game && frontline && dynamicBattlefield && navigation && recovery && config && bridge && matrix && version)
+            if (game && frontline && dynamicBattlefield && navigation && recovery && recoveryTerritoryBridge && config && bridge && matrix && version)
             {
-                WriteMarker(true, $"game={game} frontline={frontline} battlefield={dynamicBattlefield} navigation={navigation} recovery={recovery} config={config} bridge={bridge} matrix={matrix} {details} version={Application.version}");
+                WriteMarker(true, $"game={game} frontline={frontline} battlefield={dynamicBattlefield} navigation={navigation} recovery={recovery} recoveryBridge={recoveryTerritoryBridge} config={config} bridge={bridge} matrix={matrix} {details} version={Application.version}");
                 Application.Quit(0);
                 return;
             }
 
             if (Time.realtimeSinceStartup - _startedAt >= TimeoutSeconds)
             {
-                WriteMarker(false, $"game={game} frontline={frontline} battlefield={dynamicBattlefield} navigation={navigation} recovery={recovery} config={config} bridge={bridge} matrix={matrix} {details} version={Application.version}");
+                WriteMarker(false, $"game={game} frontline={frontline} battlefield={dynamicBattlefield} navigation={navigation} recovery={recovery} recoveryBridge={recoveryTerritoryBridge} config={config} bridge={bridge} matrix={matrix} {details} version={Application.version}");
                 Application.Quit(50);
             }
         }
@@ -108,7 +109,15 @@ namespace TankRevival
                 return false;
             }
 
-            details = $"lanes={west.x:F1}/{center.x:F1}/{east.x:F1} scheduled={scheduled} carry={carriedFriendly:F1}/{carriedEnemy:F1} reward={earlyReward}/{lateReward} duration={DynamicFrontlineTerritoryDirector.OperationDuration:F0}s";
+            if (FrontlineRecoveryTerritoryBridge.RecoveryLaneInfluence <= 0f ||
+                FrontlineRecoveryTerritoryBridge.FriendlyTerritorySupportExtension <= 0f ||
+                FrontlineRecoveryTerritoryBridge.FriendlyTerritorySupportExtension > FrontlineRecoveryTerritoryBridge.MaxTerritorySupportExtension)
+            {
+                details = "recovery territory bounds failed";
+                return false;
+            }
+
+            details = $"lanes={west.x:F1}/{center.x:F1}/{east.x:F1} scheduled={scheduled} carry={carriedFriendly:F1}/{carriedEnemy:F1} reward={earlyReward}/{lateReward} recoveryInfluence={FrontlineRecoveryTerritoryBridge.RecoveryLaneInfluence:F1} recoveryExtension={FrontlineRecoveryTerritoryBridge.FriendlyTerritorySupportExtension:F1}s duration={DynamicFrontlineTerritoryDirector.OperationDuration:F0}s";
             return true;
         }
 
