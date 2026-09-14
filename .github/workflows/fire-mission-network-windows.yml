@@ -1,0 +1,120 @@
+name: Fire Mission Network v9.5 Windows Gate
+
+on:
+  push:
+    branches:
+      - 'dev-v9-5'
+    paths:
+      - '.fire-mission-v95-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-fire-mission:
+    name: Build v9.5 Windows candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+      - name: Validate v9.5 source gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "v9.5.0-dev"
+          test -f Assets/Scripts/FireMissionNetworkDirector.cs
+          test -f Assets/Scripts/FireMissionNetworkCISmokeProbe.cs
+          grep -q "CommandNetworkHuntDirector" Assets/Scripts/FireMissionNetworkDirector.cs
+          grep -q "TryConsumeDecoy" Assets/Scripts/FireMissionNetworkDirector.cs
+          grep -q "CanEngageTrueBattery" Assets/Scripts/SiegeLineWarfareDirector.cs
+          grep -q "NotifyBatteryRelocated" Assets/Scripts/SiegeLineWarfareDirector.cs
+          grep -q -- "-fire-mission-network-smoke" Assets/Scripts/FireMissionNetworkCISmokeProbe.cs
+          grep -q "## v9.5 — Fire Mission Networks, Decoy Batteries & Counter-Surveillance — IN PROGRESS" ROADMAP.md
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: FireMissionV95-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            FireMissionV95-Library-${{ runner.os }}-6000.3.17f1-
+            SiegeV94-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+      - name: Build development Windows player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Verify and pack exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=build/StandaloneWindows64
+          test -f "$root/TankRevivalOverdrive.exe"
+          test -d "$root/TankRevivalOverdrive_Data"
+          cd "$root"
+          zip -r ../../TankRevival-v9.5-fire-mission-network-Windows-x64.zip .
+          cd ../..
+          test -s TankRevival-v9.5-fire-mission-network-Windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v9.5-fire-mission-network-Windows-x64
+          path: TankRevival-v9.5-fire-mission-network-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  runtime-smoke:
+    name: Boot exact v9.5 EXE on Windows
+    needs: build-fire-mission
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-v9.5-fire-mission-network-Windows-x64
+          path: candidate
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevival-v9.5-fire-mission-network-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+      - name: Run fire-mission-network smoke probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item FIRE_MISSION_NETWORK_PASS.txt, FIRE_MISSION_NETWORK_FAIL.txt, FireMissionPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-fire-mission-network-smoke','-logFile','FireMissionPlayer.log' -PassThru
+          if (!$p.WaitForExit(60000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'Fire-mission-network smoke timed out after 60 seconds'
+          }
+          if (Test-Path 'FIRE_MISSION_NETWORK_FAIL.txt') {
+            Get-Content FIRE_MISSION_NETWORK_FAIL.txt
+            if (Test-Path FireMissionPlayer.log) { Get-Content FireMissionPlayer.log -Tail 320 }
+            throw 'Fire-mission-network runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'FIRE_MISSION_NETWORK_PASS.txt')) {
+            if (Test-Path FireMissionPlayer.log) { Get-Content FireMissionPlayer.log -Tail 320 }
+            throw 'Fire-mission-network PASS marker missing'
+          }
+          Get-Content FIRE_MISSION_NETWORK_PASS.txt
