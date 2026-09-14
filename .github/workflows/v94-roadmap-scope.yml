@@ -1,0 +1,60 @@
+name: ROADMAP v9.4 Scope Registrar
+
+on:
+  push:
+    branches:
+      - 'dev-v9-4'
+    paths:
+      - '.roadmap-v94-scope-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v9-4
+      - name: Register unchecked v9.4 scope and preserve SWIR standard
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('ROADMAP.md')
+          s = p.read_text(encoding='utf-8')
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '## v9.3 — Siege Lines, Counter-Battery Warfare & Breach Operations — COMPLETE' in s
+          assert '## v9.4 — Siege Logistics, Fire-Control Recon & Mobile Batteries' not in s
+          s = s.replace('badge.svg?branch=dev-v9-3', 'badge.svg?branch=dev-v9-4')
+          s = s.replace('ROADMAP-100.0%25-2ea043', 'ROADMAP-98.0%25-d29922')
+          s = s.replace('DONE-198%2F198-1f6feb', 'DONE-198%2F202-1f6feb')
+          s = s.replace('STATUS-V9.3%20QUALIFIED-2ea043', 'STATUS-V9.4%20IN%20PROGRESS-d29922')
+          s = s.replace('████████████████████ 100.0%', '████████████████████ 98.0%', 1)
+          s = s.replace('| **198** | **0** | **198** | **100.0%** |', '| **198** | **4** | **202** | **98.0%** |', 1)
+          block = '''\n## v9.4 — Siege Logistics, Fire-Control Recon & Mobile Batteries — IN PROGRESS\n- [ ] Eligible siege operations deploy one physical ammunition convoy with authoritative Health/collision, making battery sustain a destroyable battlefield objective rather than an invisible cadence modifier.\n- [ ] Existing live support-capable enemies provide bounded fire-control spotting; removing supply and/or the spotter materially reduces siege fire cadence through the existing v9.3 siege authority.\n- [ ] Counter-battery damage can force surviving batteries into bounded mobile displacement without healing, respawning or replacing authoritative Health/projectile/frontline state.\n- [ ] Packaged Windows v9.4 gate validates scheduling, supply/spotter/fire-control/relocation bounds, runtime installation and exact EXE boot before qualification.\n'''
+          marker = '\n## Development rules\n'
+          assert marker in s
+          s = s.replace(marker, block + marker, 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Validate dashboard/checklist consistency
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s = Path('ROADMAP.md').read_text(encoding='utf-8')
+          done = len(re.findall(r'^- \[x\] ', s, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', s, re.M))
+          assert (done, open_) == (198, 4), (done, open_)
+          assert 'DONE-198%2F202' in s
+          assert '| **198** | **4** | **202** | **98.0%** |' in s
+          assert '████████████████████ 98.0%' in s
+      - name: Commit roadmap scope
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'roadmap(v9.4): register siege logistics scope'
+          git push origin HEAD:dev-v9-4
