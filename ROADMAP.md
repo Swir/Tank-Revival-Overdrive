@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v10-5"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.3%25-d29922?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-226%2F230-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V10.5%20IN%20PROGRESS-d29922?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-230%2F230-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V10.5%20QUALIFIED-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 98.3%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **226** | **4** | **230** | **98.3%** |
+| **230** | **0** | **230** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -363,11 +363,11 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Packaged Windows v10.4 deception-war gate validates axis selection, reserve/counter-intelligence caps, v10.3/v9.0/v8.5/v7.8 integration, runtime installation and exact EXE boot before qualification.
 
 
-## v10.5 — Player Counter-Orders, Reserve Traps & Operational Intelligence — IN PROGRESS
-- [ ] Confirmed v10.4 MAIN/FEINT intelligence opens one bounded player counter-order window with BLOCK, COUNTERATTACK and DEEP STRIKE choices instead of resolving the reveal automatically.
-- [ ] Counter-orders create materially different live battlefield consequences through existing Health, TankGame projectile, frontline and enemy-roster authority: main-axis defense, feint-axis reserve trap or high-value deep interdiction.
-- [ ] Operational intelligence remains boss-safe, hard-capped and player-readable; each deception operation accepts at most one order and all support fire/recovery/reward effects have explicit budgets and cooldowns.
-- [ ] Packaged Windows v10.5 counter-orders gate validates scheduling, choice/effect caps, v10.4/v7.8/v9.0 integration, runtime installation and exact EXE boot before qualification.
+## v10.5 — Player Counter-Orders, Reserve Traps & Operational Intelligence — COMPLETE
+- [x] Confirmed v10.4 MAIN/FEINT intelligence opens one bounded player counter-order window with BLOCK, COUNTERATTACK and DEEP STRIKE choices instead of resolving the reveal automatically.
+- [x] Counter-orders create materially different live battlefield consequences through existing Health, TankGame projectile, frontline and enemy-roster authority: main-axis defense, feint-axis reserve trap or high-value deep interdiction.
+- [x] Operational intelligence remains boss-safe, hard-capped and player-readable; each deception operation accepts at most one order and all support fire/recovery/reward effects have explicit budgets and cooldowns.
+- [x] Packaged Windows v10.5 counter-orders gate validates scheduling, choice/effect caps, v10.4/v7.8/v9.0 integration, runtime installation and exact EXE boot before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
