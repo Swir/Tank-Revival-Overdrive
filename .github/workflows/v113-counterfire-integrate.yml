@@ -1,0 +1,50 @@
+name: v11.3 Counter-Fire Integration Transaction
+
+on:
+  push:
+    branches: ['dev-v11-3']
+    paths: ['.v113-counterfire-integrate-trigger']
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: dev-v11-3 }
+      - name: Integrate real incoming-fire memory into EnemyTank
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('Assets/Scripts/EnemyTank.cs'); s=p.read_text(encoding='utf-8')
+          old='Health.Died+=_=>_game.OnEnemyDestroyed(this,transform.position,Kind);ChooseDirection(true);'
+          new='Health.Died+=_=>_game.OnEnemyDestroyed(this,transform.position,Kind);Health.Damaged+=OnDamaged;ChooseDirection(true);'
+          assert old in s; s=s.replace(old,new,1)
+          s=s.replace('bool doctrinePlayer=AdvancedGunneryDoctrineDirector.PreferPlayer(Kind,_round);Vector2 target;', 'bool doctrinePlayer=AdvancedGunneryDoctrineDirector.PreferPlayer(Kind,_round)||CounterFireThreatMemory.ShouldRetaliate(this,_round);Vector2 target;',1)
+          s=s.replace('bool doctrinePlayer=AdvancedGunneryDoctrineDirector.PreferPlayer(Kind,_round);bool baseHunt=', 'bool doctrinePlayer=AdvancedGunneryDoctrineDirector.PreferPlayer(Kind,_round)||CounterFireThreatMemory.ShouldRetaliate(this,_round);bool baseHunt=',1)
+          oldspread='AdvancedGunneryDoctrineDirector.SpreadMultiplier(Kind,_round);Vector2 dir='
+          newspread='AdvancedGunneryDoctrineDirector.SpreadMultiplier(Kind,_round)*CounterFireThreatMemory.AccuracyMultiplier(this);Vector2 dir='
+          assert oldspread in s; s=s.replace(oldspread,newspread,1)
+          anchor='        private void OnCollisionEnter2D(Collision2D c)'
+          assert anchor in s
+          s=s.replace(anchor,'        private void OnDamaged(Health health,int amount){if(amount>0)CounterFireThreatMemory.RecordPlayerHit(this);}\n'+anchor,1)
+          p.write_text(s,encoding='utf-8')
+      - name: Verify integration contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'Health.Damaged+=OnDamaged' Assets/Scripts/EnemyTank.cs
+          grep -q 'CounterFireThreatMemory.ShouldRetaliate' Assets/Scripts/EnemyTank.cs
+          grep -q 'CounterFireThreatMemory.AccuracyMultiplier' Assets/Scripts/EnemyTank.cs
+          grep -q 'MaxTrackedThreats = 12' Assets/Scripts/CounterFireThreatMemory.cs
+          git diff --check
+      - name: Commit playable integration
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Assets/Scripts/EnemyTank.cs
+          git commit -m 'feat(v11.3): integrate retaliation memory with enemy gunnery'
+          git push origin HEAD:dev-v11-3

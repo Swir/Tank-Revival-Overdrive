@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-2"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-3"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-259%2F259-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.2%20QUALIFIED-2ea043?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-264%2F264-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.3%20QUALIFIED-2ea043?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **259** | **0** | **259** | **100.0%** |
+| **264** | **0** | **264** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -414,6 +414,14 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Precision platoons gain bounded coordinated volley timing from round 35 with a hard 0.72 s hold cap, existing reload authority and no additional shots.
 - [x] Player-facing Fire Control HUD exposes live LOCKED / STABILIZING / UNSTABLE state from real movement and weapon-module condition without adding permanent debug clutter.
 - [x] Packaged Windows v11.2 Fire Control Ballistics gate validates campaign bootstrap, PlayerTank/ArmorSystem integration, predictive ballistics, HUD installation, volley eligibility/safety bounds and exact EXE boot before qualification.
+
+
+## v11.3 — Advanced Gunnery Doctrine & Counter-Fire Warfare — QUALIFIED
+- [x] Doctrine-aware gunnery maps live High Command strategy into bounded Hunter-Killer, Counter-Fire and Eagle-Breach targeting without replacing EnemyTank authority.
+- [x] Incoming-fire memory makes Heavy/Siege precision elements react to real player damage events with bounded retaliation windows and no hidden damage path.
+- [x] Counter-fire retaliation and doctrine-aware precision volleys materially alter target selection, aim quality and cadence while preserving reload/projectile authority.
+- [x] v11.3 runtime smoke validates doctrine selection, incoming-fire memory expiry, class eligibility and all safety caps in the packaged Windows EXE.
+- [x] Windows x64 qualification gate passes exact-candidate build, package and fresh-runner EXE smoke before v11.3 is marked complete.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.

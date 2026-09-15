@@ -1,0 +1,50 @@
+name: ROADMAP v11.3 Scope Registrar
+
+on:
+  push:
+    branches: ['dev-v11-3']
+    paths: ['.v113-roadmap-scope-trigger']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v11-3
+      - name: Register v11.3 scope without qualifying it
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          heading='## v11.3 — Advanced Gunnery Doctrine & Counter-Fire Warfare — IN DEVELOPMENT'
+          if heading not in s:
+              section='''\n## v11.3 — Advanced Gunnery Doctrine & Counter-Fire Warfare — IN DEVELOPMENT\n- [ ] Doctrine-aware gunnery maps live High Command strategy into bounded Hunter-Killer, Counter-Fire and Eagle-Breach targeting without replacing EnemyTank authority.\n- [ ] Incoming-fire memory makes Heavy/Siege precision elements react to real player damage events with bounded retaliation windows and no hidden damage path.\n- [ ] Counter-fire retaliation and doctrine-aware precision volleys materially alter target selection, aim quality and cadence while preserving reload/projectile authority.\n- [ ] v11.3 runtime smoke validates doctrine selection, incoming-fire memory expiry, class eligibility and all safety caps in the packaged Windows EXE.\n- [ ] Windows x64 qualification gate passes exact-candidate build, package and fresh-runner EXE smoke before v11.3 is marked complete.\n\n'''
+              s=s.replace('## Development rules',section+'## Development rules',1)
+          s=s.replace('badge.svg?branch=dev-v11-2','badge.svg?branch=dev-v11-3',1)
+          s=s.replace('ROADMAP-100.0%25-2ea043','ROADMAP-98.1%25-7c3aed',1)
+          s=s.replace('DONE-259%2F259-1f6feb','DONE-259%2F264-1f6feb',1)
+          s=s.replace('STATUS-V11.2%20QUALIFIED-2ea043','STATUS-V11.3%20IN%20DEVELOPMENT-7c3aed',1)
+          s=s.replace('████████████████████ 100.0%','████████████████████ 98.1%',1)
+          s=s.replace('| **259** | **0** | **259** | **100.0%** |','| **259** | **5** | **264** | **98.1%** |',1)
+          c=len(re.findall(r'^- \[x\] ',s,re.M)); r=len(re.findall(r'^- \[ \] ',s,re.M))
+          assert (c,r)==(259,5),(c,r)
+          assert 'DONE-259%2F264' in s and 'STATUS-V11.3%20IN%20DEVELOPMENT' in s
+          assert '████████████████████ 98.1%' in s
+          p.write_text(s,encoding='utf-8')
+      - name: Commit scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git diff --cached --check
+          git commit -m 'docs(v11.3): register advanced gunnery milestone scope'
+          git push origin HEAD:dev-v11-3
