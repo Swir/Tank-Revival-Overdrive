@@ -1,0 +1,88 @@
+name: Platoon Fire Mission v11.4 Windows Gate
+
+on:
+  push:
+    branches: ['dev-v11-4']
+    paths: ['.platoon-fire-mission-v114-trigger']
+  workflow_dispatch:
+
+jobs:
+  build-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify v11.4 source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Assets/Scripts/PlatoonFireMissionCoordinator.cs
+          test -f Assets/Scripts/PlatoonFireMissionCISmokeProbe.cs
+          grep -q 'PlatoonFireMissionCoordinator.PreferPlayer' Assets/Scripts/EnemyTank.cs
+          grep -q 'CounterFireThreatMemory.ShouldRetaliate' Assets/Scripts/EnemyTank.cs
+          grep -q 'FireMissionNetworkDirector.IsFireMissionRound' Assets/Scripts/PlatoonFireMissionCoordinator.cs
+          grep -q 'MaxActors = 24' Assets/Scripts/PlatoonFireMissionCoordinator.cs
+          grep -q 'MaxPrecisionCommitmentsPerTarget = 2' Assets/Scripts/PlatoonFireMissionCoordinator.cs
+          grep -q 'ReservationSeconds = 1.35f' Assets/Scripts/PlatoonFireMissionCoordinator.cs
+          grep -q 'SWIR-ROADMAP-STANDARD:v1' ROADMAP.md
+          grep -q 'DONE-264%2F269' ROADMAP.md
+          git diff --check
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"; test -n "$UNITY_EMAIL"; test -n "$UNITY_PASSWORD"
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: v114-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            v114-Library-${{ runner.os }}-6000.3.17f1-
+            v113-Library-${{ runner.os }}-6000.3.17f1-
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Package exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f build/StandaloneWindows64/TankRevivalOverdrive.exe
+          cd build/StandaloneWindows64
+          zip -r ../../TankRevivalOverdrive-v11.4-candidate-Windows-x64.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v11.4-candidate-Windows-x64
+          path: TankRevivalOverdrive-v11.4-candidate-Windows-x64.zip
+
+  packaged-exe-smoke:
+    needs: build-candidate
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v11.4-candidate-Windows-x64
+          path: candidate
+      - shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevivalOverdrive-v11.4-candidate-Windows-x64.zip' -DestinationPath runtime -Force
+          Set-Location runtime
+          $p=Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-platoon-fire-mission-v114-smoke','-logFile','PlatoonFireMissionPlayer.log' -PassThru
+          if(!$p.WaitForExit(60000)){Stop-Process -Id $p.Id -Force; throw 'smoke timeout'}
+          if(Test-Path 'PLATOON_FIRE_MISSION_V114_FAIL.txt'){Get-Content PLATOON_FIRE_MISSION_V114_FAIL.txt; throw 'runtime probe failed'}
+          if(!(Test-Path 'PLATOON_FIRE_MISSION_V114_PASS.txt')){throw 'PASS marker missing'}
+          if($p.ExitCode -ne 0){throw "runtime exit $($p.ExitCode)"}
+          if(Select-String -Path PlatoonFireMissionPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|Compilation failed' -Quiet){throw 'blocking exception signature'}
