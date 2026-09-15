@@ -9,324 +9,35 @@ namespace TankRevival
         public float FireDelay { get; private set; } = 0.34f;
         public float MoveSpeed { get; private set; } = 4.8f;
         public AmmoType ActiveAmmo { get; private set; } = AmmoType.Basic;
-
         public int EffectiveShotDamage => Mathf.Clamp(ShotDamage + _commanderCannonLevel, 1, 8);
         public float EffectiveFireDelay => Mathf.Max(0.075f, FireDelay * (1f - _commanderLoaderLevel * 0.085f));
         public float EffectiveMoveSpeed => Mathf.Min(9.2f, MoveSpeed + _commanderEngineLevel * 0.34f);
         public int CommanderArmorLevel => _commanderArmorLevel;
+        public float FireControlStabilization => FireControlBallisticsDirector.Stabilization(_move.sqrMagnitude > 0.01f ? 1f : 0f, _armor);
 
-        private TankGame _game;
-        private Rigidbody2D _body;
-        private TankTurretRig _turret;
-        private ArmorSystem _armor;
-        private Vector2 _move;
-        private Vector2 _facing = Vector2.up;
-        private Vector2 _gunDirection = Vector2.up;
-        private float _nextShot;
+        private TankGame _game; private Rigidbody2D _body; private TankTurretRig _turret; private ArmorSystem _armor;
+        private Vector2 _move, _facing = Vector2.up, _gunDirection = Vector2.up; private float _nextShot;
         private readonly int[] _ammo = new int[AmmoDatabase.AmmoTypeCount];
+        private int _commanderCannonLevel, _commanderLoaderLevel, _commanderEngineLevel, _commanderArmorLevel;
 
-        private int _commanderCannonLevel;
-        private int _commanderLoaderLevel;
-        private int _commanderEngineLevel;
-        private int _commanderArmorLevel;
-
-        public void Initialize(TankGame game)
-        {
-            _game = game;
-            ActiveAmmo = AmmoType.Basic;
-
-            VisualFactory.BuildTankSkin(transform, new Color(0.10f, 0.58f, 0.86f), new Color(0.78f, 0.96f, 1f));
-            gameObject.AddComponent<TrackDustEmitter>();
-
-            _turret = gameObject.AddComponent<TankTurretRig>();
-            _turret.Initialize();
-
-            var collider = gameObject.AddComponent<BoxCollider2D>();
-            collider.size = new Vector2(0.78f, 0.78f);
-
-            _body = gameObject.AddComponent<Rigidbody2D>();
-            _body.gravityScale = 0f;
-            _body.freezeRotation = true;
-            _body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            _body.interpolation = RigidbodyInterpolation2D.Interpolate;
-
-            Health = gameObject.AddComponent<Health>();
-            Health.Initialize(Team.Player, 3);
-            Health.Died += _ => _game.OnPlayerDestroyed(transform.position);
-
-            _armor = gameObject.AddComponent<ArmorSystem>();
-            _armor.InitializePlayer();
-        }
-
-        private void Update()
-        {
-            if (_game == null || !_game.IsPlaying)
-            {
-                BattleAudio.Instance?.SetEngineMoving(false, 0f);
-                return;
-            }
-
-            float x = 0f;
-            float y = 0f;
-
-            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) x -= 1f;
-            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) x += 1f;
-            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) y -= 1f;
-            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) y += 1f;
-
-            if (Mathf.Abs(x) > 0.01f)
-                _move = new Vector2(Mathf.Sign(x), 0f);
-            else if (Mathf.Abs(y) > 0.01f)
-                _move = new Vector2(0f, Mathf.Sign(y));
-            else
-                _move = Vector2.zero;
-
-            if (_move.sqrMagnitude > 0.01f)
-            {
-                _facing = _move;
-                ApplyFacingRotation();
-            }
-
-            UpdateTurretAim();
-
-            float moduleMobility = _armor != null ? _armor.MobilityMultiplier : 1f;
-            BattleAudio.Instance?.SetEngineMoving(_move.sqrMagnitude > 0.01f, (EffectiveMoveSpeed * moduleMobility) / 9.2f);
-            HandleAmmoSelection();
-
-            if ((Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.LeftControl) || Input.GetMouseButton(0)) && Time.time >= _nextShot)
-                Fire();
-        }
-
-        private void UpdateTurretAim()
-        {
-            Vector2 desired = _facing;
-            Camera cam = Camera.main;
-            if (cam != null)
-            {
-                Vector3 mouse;
-                bool projected = cam.orthographic
-                    ? TryLegacyMouseProjection(cam, out mouse)
-                    : Battlefield3DDirector.TryProjectToGameplayPlane(cam, Input.mousePosition, out mouse);
-
-                if (projected)
-                {
-                    Vector2 delta = (Vector2)mouse - (Vector2)transform.position;
-                    if (delta.sqrMagnitude > 0.10f)
-                        desired = delta.normalized;
-                }
-            }
-
-            _gunDirection = desired.normalized;
-            if (_turret != null)
-                _turret.SetAimDirection(_gunDirection);
-        }
-
-        private static bool TryLegacyMouseProjection(Camera cam, out Vector3 mouse)
-        {
-            mouse = cam.ScreenToWorldPoint(Input.mousePosition);
-            mouse.z = 0f;
-            return true;
-        }
-
-        private void FixedUpdate()
-        {
-            if (_game == null || !_game.IsPlaying || _body == null) return;
-            float moduleMobility = _armor != null ? _armor.MobilityMultiplier : 1f;
-            _body.MovePosition(_body.position + _move * (EffectiveMoveSpeed * moduleMobility * Time.fixedDeltaTime));
-        }
-
-        private void OnDisable()
-        {
-            BattleAudio.Instance?.SetEngineMoving(false, 0f);
-        }
-
-        private void HandleAmmoSelection()
-        {
-            if (Input.GetKeyDown(KeyCode.Q)) CycleAmmo(-1);
-            if (Input.GetKeyDown(KeyCode.E)) CycleAmmo(1);
-
-            if (Input.GetKeyDown(KeyCode.Alpha1)) SelectAmmo(AmmoType.Basic);
-            if (Input.GetKeyDown(KeyCode.Alpha2)) SelectAmmo(AmmoType.ArmorPiercing);
-            if (Input.GetKeyDown(KeyCode.Alpha3)) SelectAmmo(AmmoType.Explosive);
-            if (Input.GetKeyDown(KeyCode.Alpha4)) SelectAmmo(AmmoType.Incendiary);
-            if (Input.GetKeyDown(KeyCode.Alpha5)) SelectAmmo(AmmoType.EMP);
-            if (Input.GetKeyDown(KeyCode.Alpha6)) SelectAmmo(AmmoType.Twin);
-            if (Input.GetKeyDown(KeyCode.Alpha7)) SelectAmmo(AmmoType.Plasma);
-        }
-
-        private void SelectAmmo(AmmoType type)
-        {
-            if (type == AmmoType.Basic || GetAmmoCount(type) > 0)
-                ActiveAmmo = type;
-        }
-
-        private void CycleAmmo(int direction)
-        {
-            int current = (int)ActiveAmmo;
-            for (int step = 1; step <= AmmoDatabase.AmmoTypeCount; step++)
-            {
-                int index = (current + direction * step) % AmmoDatabase.AmmoTypeCount;
-                if (index < 0) index += AmmoDatabase.AmmoTypeCount;
-                var candidate = (AmmoType)index;
-                if (candidate == AmmoType.Basic || GetAmmoCount(candidate) > 0)
-                {
-                    ActiveAmmo = candidate;
-                    return;
-                }
-            }
-        }
-
-        private void ApplyFacingRotation()
-        {
-            float angle = 0f;
-            if (_facing == Vector2.right) angle = -90f;
-            else if (_facing == Vector2.down) angle = 180f;
-            else if (_facing == Vector2.left) angle = 90f;
-            transform.rotation = Quaternion.Euler(0f, 0f, angle);
-        }
-
-        private void Fire()
-        {
-            AmmoType ammo = ActiveAmmo;
-            int damage = EffectiveShotDamage + AmmoDatabase.BonusDamage(ammo);
-            float speed = 10.5f * AmmoDatabase.SpeedMultiplier(ammo) * (1f + _commanderCannonLevel * 0.025f);
-            Color color = AmmoDatabase.Color(ammo);
-            Vector2 direction = _gunDirection.sqrMagnitude > 0.001f ? _gunDirection.normalized : _facing;
-            Vector2 muzzle = (Vector2)transform.position + direction * 0.82f;
-            Vector2 side = new Vector2(-direction.y, direction.x);
-            float moduleReload = _armor != null ? _armor.ReloadMultiplier : 1f;
-
-            _nextShot = Time.time + EffectiveFireDelay * moduleReload * (ammo == AmmoType.Twin ? 1.08f : 1f);
-
-            if (ammo == AmmoType.Twin)
-            {
-                _game.SpawnProjectile(muzzle + side * 0.18f, direction, Team.Player, damage, speed, color, ammo);
-                _game.SpawnProjectile(muzzle - side * 0.18f, direction, Team.Player, damage, speed, color, ammo);
-            }
-            else
-            {
-                _game.SpawnProjectile(muzzle, direction, Team.Player, damage, speed, color, ammo);
-            }
-
-            _turret?.KickRecoil(ammo == AmmoType.Plasma ? 1.75f : ammo == AmmoType.Explosive || ammo == AmmoType.ArmorPiercing ? 1.35f : 1f);
-            VisualFactory.MuzzleFlash(muzzle, color, ammo == AmmoType.Plasma ? 1.35f : ammo == AmmoType.Explosive ? 1.15f : 0.90f);
-            _game.KickCamera(ammo == AmmoType.Plasma ? 0.085f : 0.050f, ammo == AmmoType.Plasma ? 0.060f : 0.038f);
-
-            if (ammo == AmmoType.Plasma)
-                BattleAudio.PlayGlobal(SoundCue.Plasma, 0.78f);
-            else if (ammo == AmmoType.Explosive || ammo == AmmoType.ArmorPiercing)
-                BattleAudio.PlayGlobal(SoundCue.HeavyShot, 0.72f);
-            else
-                BattleAudio.PlayGlobal(SoundCue.PlayerShot, 0.66f);
-
-            ConsumeAmmo(ammo);
-        }
-
-        private void ConsumeAmmo(AmmoType type)
-        {
-            if (type == AmmoType.Basic) return;
-            int index = (int)type;
-            _ammo[index] = Mathf.Max(0, _ammo[index] - 1);
-            if (_ammo[index] <= 0)
-                ActiveAmmo = AmmoType.Basic;
-        }
-
-        public void AddAmmo(AmmoType type, int amount)
-        {
-            if (type == AmmoType.Basic || amount <= 0) return;
-            int index = (int)type;
-            _ammo[index] = Mathf.Min(99, _ammo[index] + amount);
-            ActiveAmmo = type;
-        }
-
-        public int GetAmmoCount(AmmoType type)
-        {
-            if (type == AmmoType.Basic) return -1;
-            return _ammo[(int)type];
-        }
-
-        public int[] CopyAmmoInventory()
-        {
-            var copy = new int[_ammo.Length];
-            for (int i = 0; i < _ammo.Length; i++) copy[i] = _ammo[i];
-            return copy;
-        }
-
-        public void RestoreLoadout(int shotDamage, float fireDelay, float moveSpeed, int[] ammo, AmmoType activeAmmo)
-        {
-            ShotDamage = Mathf.Clamp(shotDamage, 1, 4);
-            FireDelay = Mathf.Clamp(fireDelay, 0.13f, 0.34f);
-            MoveSpeed = Mathf.Clamp(moveSpeed, 4.8f, 7.3f);
-
-            if (ammo != null)
-            {
-                int count = Mathf.Min(ammo.Length, _ammo.Length);
-                for (int i = 0; i < count; i++) _ammo[i] = Mathf.Clamp(ammo[i], 0, 99);
-            }
-
-            ActiveAmmo = activeAmmo == AmmoType.Basic || GetAmmoCount(activeAmmo) > 0 ? activeAmmo : AmmoType.Basic;
-        }
-
-        public void SetCommanderUpgrades(int cannonLevel, int loaderLevel, int engineLevel, int armorLevel)
-        {
-            cannonLevel = Mathf.Clamp(cannonLevel, 0, 3);
-            loaderLevel = Mathf.Clamp(loaderLevel, 0, 4);
-            engineLevel = Mathf.Clamp(engineLevel, 0, 4);
-            armorLevel = Mathf.Clamp(armorLevel, 0, 4);
-
-            int oldArmor = _commanderArmorLevel;
-            _commanderCannonLevel = cannonLevel;
-            _commanderLoaderLevel = loaderLevel;
-            _commanderEngineLevel = engineLevel;
-            _commanderArmorLevel = armorLevel;
-
-            if (Health != null)
-                Health.SetMaximum(3 + _commanderArmorLevel, _commanderArmorLevel > oldArmor);
-        }
-
-        public void ApplyPowerUp(PowerUpKind kind)
-        {
-            switch (kind)
-            {
-                case PowerUpKind.Repair:
-                    Health.Heal(2);
-                    _game.RepairEagle(1);
-                    break;
-                case PowerUpKind.RapidFire:
-                    FireDelay = Mathf.Max(0.13f, FireDelay - 0.055f);
-                    break;
-                case PowerUpKind.PowerShot:
-                    ShotDamage = Mathf.Min(4, ShotDamage + 1);
-                    break;
-                case PowerUpKind.Speed:
-                    MoveSpeed = Mathf.Min(7.3f, MoveSpeed + 0.45f);
-                    break;
-                case PowerUpKind.Shield:
-                    Health.InvulnerableUntil = Mathf.Max(Health.InvulnerableUntil, Time.time + 6f);
-                    break;
-            }
-        }
-
-        private void OnTriggerEnter2D(Collider2D other)
-        {
-            var ammoPickup = other.GetComponent<AmmoPickup>();
-            if (ammoPickup != null)
-            {
-                AmmoType kind = ammoPickup.Kind;
-                int amount = ammoPickup.Amount;
-                AddAmmo(kind, amount);
-                _game.OnAmmoCollected(kind, amount);
-                Destroy(ammoPickup.gameObject);
-                return;
-            }
-
-            var powerUp = other.GetComponent<PowerUp>();
-            if (powerUp != null)
-            {
-                ApplyPowerUp(powerUp.Kind);
-                _game.OnPowerUpCollected(powerUp.Kind);
-                Destroy(powerUp.gameObject);
-            }
-        }
+        public void Initialize(TankGame game){_game=game;ActiveAmmo=AmmoType.Basic;VisualFactory.BuildTankSkin(transform,new Color(0.10f,0.58f,0.86f),new Color(0.78f,0.96f,1f));gameObject.AddComponent<TrackDustEmitter>();_turret=gameObject.AddComponent<TankTurretRig>();_turret.Initialize();var c=gameObject.AddComponent<BoxCollider2D>();c.size=new Vector2(.78f,.78f);_body=gameObject.AddComponent<Rigidbody2D>();_body.gravityScale=0;_body.freezeRotation=true;_body.collisionDetectionMode=CollisionDetectionMode2D.Continuous;_body.interpolation=RigidbodyInterpolation2D.Interpolate;Health=gameObject.AddComponent<Health>();Health.Initialize(Team.Player,3);Health.Died+=_=>_game.OnPlayerDestroyed(transform.position);_armor=gameObject.AddComponent<ArmorSystem>();_armor.InitializePlayer();}
+        private void Update(){if(_game==null||!_game.IsPlaying){BattleAudio.Instance?.SetEngineMoving(false,0);return;}float x=0,y=0;if(Input.GetKey(KeyCode.A)||Input.GetKey(KeyCode.LeftArrow))x--;if(Input.GetKey(KeyCode.D)||Input.GetKey(KeyCode.RightArrow))x++;if(Input.GetKey(KeyCode.S)||Input.GetKey(KeyCode.DownArrow))y--;if(Input.GetKey(KeyCode.W)||Input.GetKey(KeyCode.UpArrow))y++;_move=Mathf.Abs(x)>.01f?new Vector2(Mathf.Sign(x),0):Mathf.Abs(y)>.01f?new Vector2(0,Mathf.Sign(y)):Vector2.zero;if(_move.sqrMagnitude>.01f){_facing=_move;ApplyFacingRotation();}UpdateTurretAim();float mm=_armor!=null?_armor.MobilityMultiplier:1;BattleAudio.Instance?.SetEngineMoving(_move.sqrMagnitude>.01f,(EffectiveMoveSpeed*mm)/9.2f);HandleAmmoSelection();if((Input.GetKey(KeyCode.Space)||Input.GetKey(KeyCode.LeftControl)||Input.GetMouseButton(0))&&Time.time>=_nextShot)Fire();}
+        private void UpdateTurretAim(){Vector2 desired=_facing;Camera cam=Camera.main;if(cam!=null){Vector3 mouse;bool projected=cam.orthographic?TryLegacyMouseProjection(cam,out mouse):Battlefield3DDirector.TryProjectToGameplayPlane(cam,Input.mousePosition,out mouse);if(projected){Vector2 d=(Vector2)mouse-(Vector2)transform.position;if(d.sqrMagnitude>.10f)desired=d.normalized;}}_gunDirection=desired.normalized;_turret?.SetAimDirection(_gunDirection);}
+        private static bool TryLegacyMouseProjection(Camera cam,out Vector3 mouse){mouse=cam.ScreenToWorldPoint(Input.mousePosition);mouse.z=0;return true;}
+        private void FixedUpdate(){if(_game==null||!_game.IsPlaying||_body==null)return;float mm=_armor!=null?_armor.MobilityMultiplier:1;_body.MovePosition(_body.position+_move*(EffectiveMoveSpeed*mm*Time.fixedDeltaTime));}
+        private void OnDisable(){BattleAudio.Instance?.SetEngineMoving(false,0);}
+        private void HandleAmmoSelection(){if(Input.GetKeyDown(KeyCode.Q))CycleAmmo(-1);if(Input.GetKeyDown(KeyCode.E))CycleAmmo(1);if(Input.GetKeyDown(KeyCode.Alpha1))SelectAmmo(AmmoType.Basic);if(Input.GetKeyDown(KeyCode.Alpha2))SelectAmmo(AmmoType.ArmorPiercing);if(Input.GetKeyDown(KeyCode.Alpha3))SelectAmmo(AmmoType.Explosive);if(Input.GetKeyDown(KeyCode.Alpha4))SelectAmmo(AmmoType.Incendiary);if(Input.GetKeyDown(KeyCode.Alpha5))SelectAmmo(AmmoType.EMP);if(Input.GetKeyDown(KeyCode.Alpha6))SelectAmmo(AmmoType.Twin);if(Input.GetKeyDown(KeyCode.Alpha7))SelectAmmo(AmmoType.Plasma);}
+        private void SelectAmmo(AmmoType t){if(t==AmmoType.Basic||GetAmmoCount(t)>0)ActiveAmmo=t;}
+        private void CycleAmmo(int dir){int current=(int)ActiveAmmo;for(int s=1;s<=AmmoDatabase.AmmoTypeCount;s++){int i=(current+dir*s)%AmmoDatabase.AmmoTypeCount;if(i<0)i+=AmmoDatabase.AmmoTypeCount;var c=(AmmoType)i;if(c==AmmoType.Basic||GetAmmoCount(c)>0){ActiveAmmo=c;return;}}}
+        private void ApplyFacingRotation(){float a=0;if(_facing==Vector2.right)a=-90;else if(_facing==Vector2.down)a=180;else if(_facing==Vector2.left)a=90;transform.rotation=Quaternion.Euler(0,0,a);}
+        private void Fire(){AmmoType ammo=ActiveAmmo;int damage=EffectiveShotDamage+AmmoDatabase.BonusDamage(ammo);float speed=10.5f*AmmoDatabase.SpeedMultiplier(ammo)*(1f+_commanderCannonLevel*.025f);Color color=AmmoDatabase.Color(ammo);Vector2 direction=_gunDirection.sqrMagnitude>.001f?_gunDirection.normalized:_facing;float spread=FireControlBallisticsDirector.SpreadDegrees(ammo,_move.sqrMagnitude>.01f?1f:0f,_armor);direction=FireControlBallisticsDirector.ApplySpread(direction,spread);Vector2 muzzle=(Vector2)transform.position+direction*.82f;Vector2 side=new Vector2(-direction.y,direction.x);float mr=_armor!=null?_armor.ReloadMultiplier:1;_nextShot=Time.time+EffectiveFireDelay*mr*(ammo==AmmoType.Twin?1.08f:1f);if(ammo==AmmoType.Twin){_game.SpawnProjectile(muzzle+side*.18f,direction,Team.Player,damage,speed,color,ammo);_game.SpawnProjectile(muzzle-side*.18f,direction,Team.Player,damage,speed,color,ammo);}else _game.SpawnProjectile(muzzle,direction,Team.Player,damage,speed,color,ammo);_turret?.KickRecoil(ammo==AmmoType.Plasma?1.75f:ammo==AmmoType.Explosive||ammo==AmmoType.ArmorPiercing?1.35f:1f);VisualFactory.MuzzleFlash(muzzle,color,ammo==AmmoType.Plasma?1.35f:ammo==AmmoType.Explosive?1.15f:.90f);_game.KickCamera(ammo==AmmoType.Plasma?.085f:.05f,ammo==AmmoType.Plasma?.06f:.038f);BattleAudio.PlayGlobal(ammo==AmmoType.Plasma?SoundCue.Plasma:ammo==AmmoType.Explosive||ammo==AmmoType.ArmorPiercing?SoundCue.HeavyShot:SoundCue.PlayerShot,.7f);ConsumeAmmo(ammo);}
+        private void ConsumeAmmo(AmmoType t){if(t==AmmoType.Basic)return;int i=(int)t;_ammo[i]=Mathf.Max(0,_ammo[i]-1);if(_ammo[i]<=0)ActiveAmmo=AmmoType.Basic;}
+        public void AddAmmo(AmmoType t,int amount){if(t==AmmoType.Basic||amount<=0)return;int i=(int)t;_ammo[i]=Mathf.Min(99,_ammo[i]+amount);ActiveAmmo=t;}
+        public int GetAmmoCount(AmmoType t)=>t==AmmoType.Basic?-1:_ammo[(int)t];
+        public int[] CopyAmmoInventory(){var c=new int[_ammo.Length];for(int i=0;i<_ammo.Length;i++)c[i]=_ammo[i];return c;}
+        public void RestoreLoadout(int d,float delay,float speed,int[] ammo,AmmoType active){ShotDamage=Mathf.Clamp(d,1,4);FireDelay=Mathf.Clamp(delay,.13f,.34f);MoveSpeed=Mathf.Clamp(speed,4.8f,7.3f);if(ammo!=null){int n=Mathf.Min(ammo.Length,_ammo.Length);for(int i=0;i<n;i++)_ammo[i]=Mathf.Clamp(ammo[i],0,99);}ActiveAmmo=active==AmmoType.Basic||GetAmmoCount(active)>0?active:AmmoType.Basic;}
+        public void SetCommanderUpgrades(int c,int l,int e,int a){c=Mathf.Clamp(c,0,3);l=Mathf.Clamp(l,0,4);e=Mathf.Clamp(e,0,4);a=Mathf.Clamp(a,0,4);int old=_commanderArmorLevel;_commanderCannonLevel=c;_commanderLoaderLevel=l;_commanderEngineLevel=e;_commanderArmorLevel=a;if(Health!=null)Health.SetMaximum(3+a,a>old);}
+        public void ApplyPowerUp(PowerUpKind k){switch(k){case PowerUpKind.Repair:Health.Heal(2);_game.RepairEagle(1);break;case PowerUpKind.RapidFire:FireDelay=Mathf.Max(.13f,FireDelay-.055f);break;case PowerUpKind.PowerShot:ShotDamage=Mathf.Min(4,ShotDamage+1);break;case PowerUpKind.Speed:MoveSpeed=Mathf.Min(7.3f,MoveSpeed+.45f);break;case PowerUpKind.Shield:Health.InvulnerableUntil=Mathf.Max(Health.InvulnerableUntil,Time.time+6);break;}}
+        private void OnTriggerEnter2D(Collider2D other){var ap=other.GetComponent<AmmoPickup>();if(ap!=null){var k=ap.Kind;int a=ap.Amount;AddAmmo(k,a);_game.OnAmmoCollected(k,a);Destroy(ap.gameObject);return;}var p=other.GetComponent<PowerUp>();if(p!=null){ApplyPowerUp(p.Kind);_game.OnPowerUpCollected(p.Kind);Destroy(p.gameObject);}}
     }
 }
