@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using UnityEngine;
 
 namespace TankRevival
@@ -9,6 +10,7 @@ namespace TankRevival
         private const string PassFile = "FIRE_CONTROL_BALLISTICS_PASS.txt";
         private const string FailFile = "FIRE_CONTROL_BALLISTICS_FAIL.txt";
         private float _deadline;
+        private bool _campaignStartRequested;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -23,7 +25,7 @@ namespace TankRevival
         {
             SafeDelete(PassFile);
             SafeDelete(FailFile);
-            _deadline = Time.realtimeSinceStartup + 14f;
+            _deadline = Time.realtimeSinceStartup + 24f;
         }
 
         private void Update()
@@ -31,11 +33,28 @@ namespace TankRevival
             try
             {
                 TankGame game = FindAnyObjectByType<TankGame>();
-                PlayerTank player = FindAnyObjectByType<PlayerTank>();
-                if (game == null || player == null)
+                if (game == null)
                 {
                     if (Time.realtimeSinceStartup < _deadline) return;
-                    Fail("TankGame/PlayerTank not available");
+                    Fail("TankGame not available");
+                    return;
+                }
+
+                PlayerTank player = FindAnyObjectByType<PlayerTank>();
+                if (player == null && !_campaignStartRequested)
+                {
+                    _campaignStartRequested = true;
+                    MethodInfo startCampaign = typeof(TankGame).GetMethod("StartCampaign", BindingFlags.Instance | BindingFlags.NonPublic);
+                    if (startCampaign == null)
+                        throw new MissingMethodException("TankGame.StartCampaign smoke bootstrap unavailable");
+                    startCampaign.Invoke(game, null);
+                    return;
+                }
+
+                if (player == null)
+                {
+                    if (Time.realtimeSinceStartup < _deadline) return;
+                    Fail("PlayerTank not available after campaign bootstrap");
                     return;
                 }
 
@@ -50,7 +69,8 @@ namespace TankRevival
                     ",maxSpread:" + FireControlBallisticsDirector.MaxSpreadDegrees +
                     ",maxLead:" + FireControlBallisticsDirector.MaxLeadSeconds +
                     ",volleyWindow:" + FireControlBallisticsDirector.CoordinatedVolleyWindow + "\n" +
-                    "integration=PlayerTank + ArmorSystem + TankGame + Projectile + Health\n");
+                    "integration=PlayerTank + ArmorSystem + TankGame + Projectile + Health\n" +
+                    "bootstrap=packaged smoke starts a real campaign when launched from menu\n");
                 Debug.Log("[CI] v11.2 Fire Control Ballistics smoke PASS");
                 Application.Quit(0);
                 enabled = false;
@@ -91,6 +111,11 @@ namespace TankRevival
 
         private static void ValidatePlayerIntegration(PlayerTank player)
         {
+            if (player.Health == null)
+                throw new InvalidOperationException("PlayerTank Health authority unavailable");
+            if (player.GetComponent<ArmorSystem>() == null)
+                throw new InvalidOperationException("PlayerTank ArmorSystem integration unavailable");
+
             float stabilization = player.FireControlStabilization;
             if (stabilization < FireControlBallisticsDirector.MinAccuracy || stabilization > 1.001f)
                 throw new InvalidOperationException("player stabilization outside safety bounds: " + stabilization);
