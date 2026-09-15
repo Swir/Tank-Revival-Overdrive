@@ -25,7 +25,7 @@ jobs:
           grep -q 'Health.Damaged+=OnDamaged' Assets/Scripts/EnemyTank.cs
           grep -q 'CounterFireThreatMemory.ShouldRetaliate' Assets/Scripts/EnemyTank.cs
           grep -q 'CounterFireThreatMemory.AccuracyMultiplier' Assets/Scripts/EnemyTank.cs
-          grep -q 'SWIR-ROADMAP-STANDARD:v1' ROADMAP.md
+          grep -q '^<!-- SWIR-ROADMAP-STANDARD:v1 -->$' ROADMAP.md
           grep -q 'DONE-259%2F264' ROADMAP.md
       - name: Qualify verified v11.3 roadmap deliverables
         shell: python
@@ -34,7 +34,7 @@ jobs:
           import re
           p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
           marker='<!-- SWIR-ROADMAP-STANDARD:v1 -->'
-          assert marker in s
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',s,re.M))==1
           heading='## v11.3 — Advanced Gunnery Doctrine & Counter-Fire Warfare — IN DEVELOPMENT'
           assert heading in s
           start=s.index(heading)
@@ -52,7 +52,7 @@ jobs:
           s=s.replace('| **259** | **5** | **264** | **98.1%** |','| **264** | **0** | **264** | **100.0%** |',1)
           c=len(re.findall(r'^- \[x\] ',s,re.M)); r=len(re.findall(r'^- \[ \] ',s,re.M))
           assert (c,r)==(264,0),(c,r)
-          assert s.count(marker)==1
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',s,re.M))==1
           assert 'DONE-264%2F264' in s and 'STATUS-V11.3%20QUALIFIED' in s
           assert '████████████████████ 100.0%' in s
           assert '| **264** | **0** | **264** | **100.0%** |' in s
@@ -63,7 +63,7 @@ jobs:
           from pathlib import Path
           import re
           s=Path('ROADMAP.md').read_text(encoding='utf-8')
-          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',s,re.M))==1
           assert '## 📊 Overall progress' in s
           assert 'DONE-264%2F264' in s
           assert 'ROADMAP-100.0%25' in s
