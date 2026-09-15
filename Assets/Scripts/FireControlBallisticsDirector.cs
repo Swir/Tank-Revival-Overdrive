@@ -7,6 +7,8 @@ namespace TankRevival
     {
         public const float MinAccuracy = 0.58f;
         public const float MaxSpreadDegrees = 7.5f;
+        public const float MaxLeadSeconds = 1.25f;
+        public const float CoordinatedVolleyWindow = 0.72f;
 
         public static float Stabilization(float movement01, ArmorSystem armor)
         {
@@ -24,6 +26,16 @@ namespace TankRevival
             return Mathf.Clamp(baseSpread + movement + damage, 0.35f, MaxSpreadDegrees);
         }
 
+        public static float EnemySpreadDegrees(EnemyKind kind, float movement01, ArmorSystem armor, bool coordinated)
+        {
+            float stabilization = Stabilization(movement01, armor);
+            float classSpread = kind == EnemyKind.Sniper ? 0.55f : kind == EnemyKind.Elite ? 0.82f : kind == EnemyKind.Heavy ? 1.12f : kind == EnemyKind.Siege ? 1.28f : 1.45f;
+            float movement = Mathf.Clamp01(movement01) * (kind == EnemyKind.Sniper ? 2.2f : 3.0f);
+            float damage = (1f - stabilization) * 4.8f;
+            float coordination = coordinated ? 0.72f : 1f;
+            return Mathf.Clamp((classSpread + movement + damage) * coordination, 0.30f, MaxSpreadDegrees);
+        }
+
         public static Vector2 ApplySpread(Vector2 direction, float degrees)
         {
             if (direction.sqrMagnitude < 0.001f) direction = Vector2.up;
@@ -35,9 +47,12 @@ namespace TankRevival
         {
             float distance = Vector2.Distance(shooter, target);
             float time = distance / Mathf.Max(2f, projectileSpeed);
-            return target + targetVelocity * Mathf.Clamp(time, 0f, 1.25f);
+            return target + targetVelocity * Mathf.Clamp(time, 0f, MaxLeadSeconds);
         }
 
-        public static bool ConfigurationValid => MinAccuracy >= 0.5f && MaxSpreadDegrees <= 8f;
+        public static bool ConfigurationValid =>
+            MinAccuracy >= 0.5f && MaxSpreadDegrees <= 8f &&
+            MaxLeadSeconds >= 0.75f && MaxLeadSeconds <= 1.5f &&
+            CoordinatedVolleyWindow >= 0.4f && CoordinatedVolleyWindow <= 1.0f;
     }
 }
