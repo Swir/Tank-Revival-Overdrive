@@ -14,6 +14,7 @@ namespace TankRevival
         public float EffectiveFireDelay => Mathf.Max(0.075f, FireDelay * (1f - _commanderLoaderLevel * 0.085f));
         public float EffectiveMoveSpeed => Mathf.Min(9.2f, MoveSpeed + _commanderEngineLevel * 0.34f);
         public int CommanderArmorLevel => _commanderArmorLevel;
+        public float FireControlStabilization => FireControlBallisticsDirector.Stabilization(_move.sqrMagnitude > 0.01f ? 1f : 0f, _armor);
 
         private TankGame _game;
         private Rigidbody2D _body;
@@ -192,6 +193,8 @@ namespace TankRevival
             float speed = 10.5f * AmmoDatabase.SpeedMultiplier(ammo) * (1f + _commanderCannonLevel * 0.025f);
             Color color = AmmoDatabase.Color(ammo);
             Vector2 direction = _gunDirection.sqrMagnitude > 0.001f ? _gunDirection.normalized : _facing;
+            float spread = FireControlBallisticsDirector.SpreadDegrees(ammo, _move.sqrMagnitude > 0.01f ? 1f : 0f, _armor);
+            direction = FireControlBallisticsDirector.ApplySpread(direction, spread);
             Vector2 muzzle = (Vector2)transform.position + direction * 0.82f;
             Vector2 side = new Vector2(-direction.y, direction.x);
             float moduleReload = _armor != null ? _armor.ReloadMultiplier : 1f;

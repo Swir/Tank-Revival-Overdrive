@@ -1,0 +1,51 @@
+name: v11.2 Roadmap Qualification
+
+on:
+  push:
+    branches: [dev-v11-2]
+    paths: ['.roadmap-v112-qualification-trigger']
+
+permissions:
+  contents: write
+
+jobs:
+  qualify-roadmap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v11-2
+      - name: Register qualified v11.2 and validate SWIR dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md')
+          s=p.read_text(encoding='utf-8')
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          assert '## v11.2 ' not in s
+          section='''\n## v11.2 — Fire Control, Stabilization & Ballistics Reforge — COMPLETE\n- [x] Shared fire-control ballistics adds bounded movement/module stabilization, ammo-aware precision identity and predictive lead while preserving Projectile, Health and ArmorSystem authority.\n- [x] Enemy gunnery consumes predictive lead and class-aware dispersion so Sniper/Elite/Heavy precision behavior materially differs from baseline enemies without hidden damage or extra projectiles.\n- [x] Precision platoons gain bounded coordinated volley timing from round 35 with a hard 0.72 s hold cap, existing reload authority and no additional shots.\n- [x] Player-facing Fire Control HUD exposes live LOCKED / STABILIZING / UNSTABLE state from real movement and weapon-module condition without adding permanent debug clutter.\n- [x] Packaged Windows v11.2 Fire Control Ballistics gate validates campaign bootstrap, PlayerTank/ArmorSystem integration, predictive ballistics, HUD installation, volley eligibility/safety bounds and exact EXE boot before qualification.\n\n'''
+          marker='## Development rules'
+          assert marker in s
+          s=s.replace(marker, section+marker, 1)
+          s=s.replace('badge.svg?branch=dev-v11-1','badge.svg?branch=dev-v11-2',1)
+          s=s.replace('ROADMAP-100.0%25-2ea043','ROADMAP-100.0%25-2ea043',1)
+          s=s.replace('DONE-254%2F254-1f6feb','DONE-259%2F259-1f6feb',1)
+          s=s.replace('STATUS-V11.1%20QUALIFIED-2ea043','STATUS-V11.2%20QUALIFIED-2ea043',1)
+          s=s.replace('| **254** | **0** | **254** | **100.0%** |','| **259** | **0** | **259** | **100.0%** |',1)
+          completed=len(re.findall(r'^- \[x\] ',s,re.M)); remaining=len(re.findall(r'^- \[ \] ',s,re.M)); total=completed+remaining
+          assert (completed,remaining,total)==(259,0,259),(completed,remaining,total)
+          assert s.count('<!-- SWIR-ROADMAP-STANDARD:v1 -->')==1
+          assert '████████████████████ 100.0%' in s
+          assert 'DONE-259%2F259' in s and 'STATUS-V11.2%20QUALIFIED' in s
+          p.write_text(s,encoding='utf-8')
+      - name: Commit roadmap qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git diff --cached --check
+          git commit -m 'docs(v11.2): qualify fire control milestone in canonical roadmap'
+          git push origin HEAD:dev-v11-2

@@ -1,0 +1,124 @@
+name: Fire Control Ballistics v11.2 Windows Gate
+
+on:
+  push:
+    branches: ['dev-v11-2']
+    paths: ['.fire-control-ballistics-v112-trigger']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-candidate:
+    name: Build exact v11.2 Windows x64 candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify v11.2 source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat VERSION)" = "v11.2.0-dev"
+          test -f Assets/Scripts/FireControlBallisticsDirector.cs
+          test -f Assets/Scripts/FireControlBallisticsCISmokeProbe.cs
+          test -f Assets/Scripts/FireControlCombatHUD.cs
+          test -f Assets/Scripts/FireControlVolleyCoordinator.cs
+          grep -q 'MinAccuracy = 0.58f' Assets/Scripts/FireControlBallisticsDirector.cs
+          grep -q 'MaxSpreadDegrees = 7.5f' Assets/Scripts/FireControlBallisticsDirector.cs
+          grep -q 'MaxLeadSeconds = 1.25f' Assets/Scripts/FireControlBallisticsDirector.cs
+          grep -q 'CoordinatedVolleyWindow = 0.72f' Assets/Scripts/FireControlBallisticsDirector.cs
+          grep -q 'SWIR-ROADMAP-STANDARD:v1' ROADMAP.md
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"; test -n "$UNITY_EMAIL"; test -n "$UNITY_PASSWORD"
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: v112-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            v112-Library-${{ runner.os }}-6000.3.17f1-
+            v111-Library-${{ runner.os }}-6000.3.17f1-
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Package exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f build/StandaloneWindows64/TankRevivalOverdrive.exe
+          cd build/StandaloneWindows64 && zip -r ../../TankRevivalOverdrive-v11.2-candidate-Windows-x64.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v11.2-candidate-Windows-x64
+          path: TankRevivalOverdrive-v11.2-candidate-Windows-x64.zip
+
+  packaged-exe-smoke:
+    needs: build-candidate
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v11.2-candidate-Windows-x64
+          path: candidate
+      - shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location candidate
+          Expand-Archive 'TankRevivalOverdrive-v11.2-candidate-Windows-x64.zip' -DestinationPath runtime -Force
+          Set-Location runtime
+          $p=Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-fire-control-ballistics-smoke','-logFile','FireControlPlayer.log' -PassThru
+          if(!$p.WaitForExit(60000)){Stop-Process -Id $p.Id -Force; throw 'smoke timeout'}
+          if(Test-Path 'FIRE_CONTROL_BALLISTICS_FAIL.txt'){Get-Content FIRE_CONTROL_BALLISTICS_FAIL.txt; throw 'runtime probe failed'}
+          if(!(Test-Path 'FIRE_CONTROL_BALLISTICS_PASS.txt')){throw 'PASS marker missing'}
+          if($p.ExitCode -ne 0){throw "runtime exit $($p.ExitCode)"}
+          if(Select-String -Path FireControlPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|Compilation failed' -Quiet){throw 'blocking exception signature'}
+
+  finalize-roadmap:
+    needs: packaged-exe-smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v11-2
+      - name: Qualify v11.2 in canonical SWIR roadmap
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in s
+          if '## v11.2 — Fire Control, Stabilization & Ballistics Reforge — COMPLETE' not in s:
+              section='''\n## v11.2 — Fire Control, Stabilization & Ballistics Reforge — COMPLETE\n- [x] Shared fire-control ballistics adds bounded movement/module stabilization, ammo-aware precision identity and predictive lead while preserving Projectile, Health and ArmorSystem authority.\n- [x] Enemy gunnery consumes predictive lead and class-aware dispersion so Sniper/Elite/Heavy precision behavior materially differs from baseline enemies without hidden damage or extra projectiles.\n- [x] Precision platoons gain bounded coordinated volley timing from round 35 with a hard 0.72 s hold cap, existing reload authority and no additional shots.\n- [x] Player-facing Fire Control HUD exposes live LOCKED / STABILIZING / UNSTABLE state from real movement and weapon-module condition without adding permanent debug clutter.\n- [x] Packaged Windows v11.2 Fire Control Ballistics gate validates campaign bootstrap, PlayerTank/ArmorSystem integration, predictive ballistics, HUD installation, volley eligibility/safety bounds and exact EXE boot before qualification.\n\n'''
+              s=s.replace('## Development rules',section+'## Development rules',1)
+          s=s.replace('badge.svg?branch=dev-v11-1','badge.svg?branch=dev-v11-2',1)
+          s=s.replace('DONE-254%2F254-1f6feb','DONE-259%2F259-1f6feb',1)
+          s=s.replace('STATUS-V11.1%20QUALIFIED-2ea043','STATUS-V11.2%20QUALIFIED-2ea043',1)
+          s=s.replace('| **254** | **0** | **254** | **100.0%** |','| **259** | **0** | **259** | **100.0%** |',1)
+          c=len(re.findall(r'^- \[x\] ',s,re.M)); r=len(re.findall(r'^- \[ \] ',s,re.M))
+          assert (c,r)==(259,0),(c,r)
+          assert '████████████████████ 100.0%' in s and 'DONE-259%2F259' in s and 'STATUS-V11.2%20QUALIFIED' in s
+          p.write_text(s,encoding='utf-8')
+      - shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git diff --cached --check
+          git commit -m 'docs(v11.2): qualify fire control milestone in canonical roadmap'
+          git push origin HEAD:dev-v11-2
