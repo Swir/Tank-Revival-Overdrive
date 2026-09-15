@@ -61,6 +61,8 @@ namespace TankRevival
                 ValidateConfiguration();
                 ValidateBallistics();
                 ValidatePlayerIntegration(player);
+                ValidateCombatHud();
+                ValidateVolleyCoordinator();
 
                 File.WriteAllText(PassFile,
                     "v11.2 Fire Control / Stabilization / Ballistics packaged smoke PASS\n" +
@@ -69,7 +71,7 @@ namespace TankRevival
                     ",maxSpread:" + FireControlBallisticsDirector.MaxSpreadDegrees +
                     ",maxLead:" + FireControlBallisticsDirector.MaxLeadSeconds +
                     ",volleyWindow:" + FireControlBallisticsDirector.CoordinatedVolleyWindow + "\n" +
-                    "integration=PlayerTank + ArmorSystem + TankGame + Projectile + Health\n" +
+                    "integration=PlayerTank + ArmorSystem + TankGame + Projectile + Health + FCS HUD + platoon volley coordinator\n" +
                     "bootstrap=packaged smoke starts a real campaign when launched from menu\n");
                 Debug.Log("[CI] v11.2 Fire Control Ballistics smoke PASS");
                 Application.Quit(0);
@@ -119,6 +121,39 @@ namespace TankRevival
             float stabilization = player.FireControlStabilization;
             if (stabilization < FireControlBallisticsDirector.MinAccuracy || stabilization > 1.001f)
                 throw new InvalidOperationException("player stabilization outside safety bounds: " + stabilization);
+        }
+
+        private static void ValidateCombatHud()
+        {
+            if (FindAnyObjectByType<FireControlCombatHUD>() == null)
+                throw new InvalidOperationException("FireControlCombatHUD runtime installation unavailable");
+        }
+
+        private static void ValidateVolleyCoordinator()
+        {
+            if (FireControlVolleyCoordinator.IsEligible(EnemyKind.Sniper, 34))
+                throw new InvalidOperationException("platoon volleys must not activate before round 35");
+            if (!FireControlVolleyCoordinator.IsEligible(EnemyKind.Sniper, 35) ||
+                !FireControlVolleyCoordinator.IsEligible(EnemyKind.Elite, 35) ||
+                !FireControlVolleyCoordinator.IsEligible(EnemyKind.Heavy, 35))
+                throw new InvalidOperationException("precision platoon eligibility catalog invalid");
+            if (FireControlVolleyCoordinator.IsEligible(EnemyKind.Basic, 100))
+                throw new InvalidOperationException("Basic enemies must not enter precision platoon volleys");
+            if (FireControlVolleyCoordinator.MaxHoldSeconds > FireControlBallisticsDirector.CoordinatedVolleyWindow + 0.001f)
+                throw new InvalidOperationException("volley hold exceeds coordinated fire safety window");
+
+            float maxObservedHold = 0f;
+            bool observedWindow = false;
+            for (int i = 0; i < 256; i++)
+            {
+                float hold = FireControlVolleyCoordinator.HoldForWindow(i * 0.03125f, 101, EnemyKind.Sniper, 50);
+                if (hold < -0.001f || hold > FireControlVolleyCoordinator.MaxHoldSeconds + 0.001f)
+                    throw new InvalidOperationException("volley coordinator returned unsafe hold: " + hold);
+                if (hold > 0f) observedWindow = true;
+                maxObservedHold = Mathf.Max(maxObservedHold, hold);
+            }
+            if (!observedWindow || maxObservedHold <= 0f)
+                throw new InvalidOperationException("volley coordinator never produced a bounded synchronization hold");
         }
 
         private static bool HasArg(string arg)
