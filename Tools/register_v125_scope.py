@@ -2,7 +2,7 @@ from pathlib import Path
 import re
 
 ROADMAP = Path("ROADMAP.md")
-MARKER = "<!-- SWIR-ROADMAP-STANDARD:v1 -->"
+MARKER_LINE = r"^<!-- SWIR-ROADMAP-STANDARD:v1 -->$"
 HEADING = "## v12.5 — Signals Intelligence Fire Support & Deception Raids — IN DEVELOPMENT"
 SECTION = """
 
@@ -18,7 +18,7 @@ SECTION = """
 """
 
 s = ROADMAP.read_text(encoding="utf-8")
-assert len(re.findall(r"^<!-- SWIR-ROADMAP-STANDARD:v1 -->$", s, re.M)) == 1
+assert len(re.findall(MARKER_LINE, s, re.M)) == 1
 assert "<!-- ROADMAP-PROGRESS:START -->" in s
 assert "<!-- ROADMAP-PROGRESS:END -->" in s
 assert "## 📊 Overall progress" in s
@@ -49,7 +49,7 @@ assert "DONE-343%2F351-1f6feb" in s
 assert "STATUS-V12.5%20IN%20DEVELOPMENT-7c3aed" in s
 assert "███████████████████░ 97.7%" in s
 assert "| **343** | **8** | **351** | **97.7%** |" in s
-assert s.count(MARKER) == 1
+assert len(re.findall(MARKER_LINE, s, re.M)) == 1
 
 ROADMAP.write_text(s, encoding="utf-8")
 print("Registered v12.5 scope: 343/351 = 97.7%, 8 remaining, 20-segment bar verified")
