@@ -1,0 +1,51 @@
+name: ROADMAP v11.7 Scope Registrar
+on:
+  push:
+    branches: [dev-v11-7]
+    paths: ['.v117-roadmap-scope-trigger']
+permissions:
+  contents: write
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v11-7
+      - name: Register v11.7 scope and verify SWIR v1 dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
+          marker='<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          assert sum(1 for line in s.splitlines() if line.strip()==marker)==1
+          heading='## v11.7 — Adaptive Assault Readability & Battlefield Presentation — IN DEVELOPMENT'
+          if heading not in s:
+              anchor='\n## Development rules\n'
+              block='''\n## v11.7 — Adaptive Assault Readability & Battlefield Presentation — IN DEVELOPMENT\n- [ ] Read-only maneuver presentation snapshots expose v11.6 encirclement phase, casualty recovery and role state without granting presentation code movement, damage or projectile authority.\n- [ ] Existing Heavy/Sniper/Siege/Elite actors receive bounded world-space role cues that make Commander/Hunter/FireSupport/Breacher intent readable without adding a parallel enemy roster.\n- [ ] Flank, frontal-pressure, standoff and casualty-reorganization telegraphs are driven by real AdaptivePlatoonManeuverDirector state and disappear cleanly when actors die or combat ends.\n- [ ] Tactical Combat HUD gains a compact assault-operation strip for ENVELOPMENT, REORGANIZING and COUNTER-FIRE displacement using live maneuver/doctrine state rather than scripted text.\n- [ ] Maneuver telegraphs consume a dedicated MassBattleFxBudget allowance so late-round readability degrades gracefully without suppressing gameplay events.\n- [ ] Runtime installation and smoke verification prove the presentation bridge remains additive and does not modify TankGame, Health, ArmorSystem, Projectile or EnemyTank movement authority.\n- [ ] v11.7 source-contract qualification validates bounded cue counts, tactical-state mapping, existing BattlefieldPresentationOverdrive/CombatFX3D integration and SWIR roadmap invariants.\n- [ ] Packaged Windows x64 v11.7 qualification gate builds and boots the exact candidate, executes the maneuver-presentation runtime probe and rejects blocking exception signatures before qualification.\n'''
+              assert anchor in s
+              s=s.replace(anchor,block+anchor,1)
+          completed=len(re.findall(r'^- \[x\] ',s,re.M)); remaining=len(re.findall(r'^- \[ \] ',s,re.M)); total=completed+remaining
+          assert (completed,remaining,total)==(279,8,287),(completed,remaining,total)
+          pct=round(completed*100/total,1); filled=round(20*completed/total); bar='█'*filled+'░'*(20-filled)
+          start=s.index('<!-- ROADMAP-PROGRESS:START -->'); end=s.index('<!-- ROADMAP-PROGRESS:END -->')+len('<!-- ROADMAP-PROGRESS:END -->')
+          dashboard=f'''<!-- ROADMAP-PROGRESS:START -->\n<p align="center">\n  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-7"></a>\n  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-{pct:.1f}%25-brightgreen?style=for-the-badge">\n  <img alt="Completed" src="https://img.shields.io/badge/DONE-{completed}%2F{total}-1f6feb?style=for-the-badge">\n  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.7%20IN%20DEVELOPMENT-yellow?style=for-the-badge">\n</p>\n\n## 📊 Overall progress\n\n```text\n{bar} {pct:.1f}%\n```\n\n| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |\n|---:|---:|---:|---:|\n| **{completed}** | **{remaining}** | **{total}** | **{pct:.1f}%** |\n\n> **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.\n<!-- ROADMAP-PROGRESS:END -->'''
+          s=s[:start]+dashboard+s[end:]
+          p.write_text(s,encoding='utf-8')
+          r=p.read_text(encoding='utf-8')
+          assert heading in r
+          assert 'DONE-279%2F287' in r
+          assert 'STATUS-V11.7%20IN%20DEVELOPMENT-yellow' in r
+          assert '███████████████████░ 97.2%' in r
+          assert '| **279** | **8** | **287** | **97.2%** |' in r
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',r,re.M))==1
+      - name: Commit roadmap scope
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'docs(v11.7): register adaptive assault presentation milestone'
+          git push
