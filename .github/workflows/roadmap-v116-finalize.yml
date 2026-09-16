@@ -1,0 +1,93 @@
+name: ROADMAP v11.6 Qualification Finalizer
+on:
+  push:
+    branches: ['dev-v11-6']
+    paths: ['.roadmap-v116-finalize-trigger']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify qualified implementation and roadmap contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          test -f Assets/Scripts/AdaptivePlatoonManeuverCISmokeProbe.cs
+          test -f Assets/Scripts/AdaptivePlatoonManeuverRuntimeBootstrap.cs
+          test -f .github/workflows/adaptive-platoon-maneuver-v116-windows.yml
+          grep -q 'HunterFlankBand = 4.8f' Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          grep -q 'SiegeMinStandoff = 5.4f' Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          grep -q 'CounterFireDisplaceBand = 7.2f' Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          grep -q 'ReorgSeconds = 3.5f' Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          grep -q 'EncirclementPhaseSeconds = 6.0f' Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          grep -q 'MaxTrackedActors = 24' Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          grep -q 'AdaptivePlatoonManeuverDirector.DesiredDirection' Assets/Scripts/EnemyTank.cs
+          grep -q 'V11.6_MANEUVER_SMOKE_OK' Assets/Scripts/AdaptivePlatoonManeuverCISmokeProbe.cs
+          test "$(grep -c '^<!-- SWIR-ROADMAP-STANDARD:v1 -->$' ROADMAP.md)" -eq 1
+          grep -q 'DONE-274%2F279' ROADMAP.md
+          grep -q 'STATUS-V11.6%20IN%20DEVELOPMENT-yellow' ROADMAP.md
+      - name: Finalize v11.6 checklist and dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p=Path('ROADMAP.md')
+          s=p.read_text(encoding='utf-8')
+          heading='## v11.6 — Adaptive Platoon Maneuver & Battlefield Encirclement — IN DEVELOPMENT'
+          start=s.index(heading)
+          end=s.index('\n## Development rules', start)
+          section=s[start:end]
+          if section.count('- [ ]') != 5:
+              raise SystemExit('Expected exactly five open v11.6 deliverables')
+          section=section.replace('— IN DEVELOPMENT','— QUALIFIED').replace('- [ ]','- [x]')
+          s=s[:start]+section+s[end:]
+
+          done=len(re.findall(r'^- \[x\] ',s,re.M))
+          open_=len(re.findall(r'^- \[ \] ',s,re.M))
+          total=done+open_
+          if (done,open_,total)!=(279,0,279):
+              raise SystemExit(f'Unexpected checklist counts after qualification: {(done,open_,total)}')
+          pct=round(done*100/total,1)
+          filled=round(20*done/total)
+          bar='█'*filled+'░'*(20-filled)
+
+          s=re.sub(r'ROADMAP-[0-9.]+%25-brightgreen',f'ROADMAP-{pct:.1f}%25-brightgreen',s,count=1)
+          s=re.sub(r'DONE-[0-9]+%2F[0-9]+',f'DONE-{done}%2F{total}',s,count=1)
+          s=re.sub(r'STATUS-V11\.6%20IN%20DEVELOPMENT-yellow',r'STATUS-V11.6%20QUALIFIED-brightgreen',s,count=1)
+          s=re.sub(r'\*\*Overall progress:\*\* `[^`]+` \*\*[0-9.]+%\*\* \([0-9]+/[0-9]+ tasks\)',
+                   f'**Overall progress:** `{bar}` **{pct:.1f}%** ({done}/{total} tasks)',s,count=1)
+          s=re.sub(r'\| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9.]+%\*\* \|',
+                   f'| **{done}** | **{open_}** | **{total}** | **{pct:.1f}%** |',s,count=1)
+          p.write_text(s,encoding='utf-8')
+      - name: Re-read and verify exact progress consistency
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s=Path('ROADMAP.md').read_text(encoding='utf-8')
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
+          assert (done,open_,total)==(279,0,279),(done,open_,total)
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',s,re.M)) == 1
+          for token in ['ROADMAP-100.0%25-brightgreen','DONE-279%2F279','STATUS-V11.6%20QUALIFIED-brightgreen','`████████████████████` **100.0%** (279/279 tasks)','| **279** | **0** | **279** | **100.0%** |']:
+              assert token in s,token
+          start=s.index('## v11.6 — Adaptive Platoon Maneuver & Battlefield Encirclement — QUALIFIED')
+          end=s.index('\n## Development rules',start)
+          assert s[start:end].count('- [x]')==5
+          assert s[start:end].count('- [ ]')==0
+      - name: Commit qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'docs(v11.6): qualify adaptive platoon maneuver milestone'
+          git push
