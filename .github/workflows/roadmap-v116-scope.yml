@@ -1,0 +1,47 @@
+name: ROADMAP v11.6 Scope Registrar
+on:
+  push:
+    branches: [dev-v11-6]
+    paths: ['.v116-roadmap-scope-trigger']
+permissions:
+  contents: write
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v11-6
+      - name: Register v11.6 scope and verify SWIR v1 dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
+          marker='<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          assert sum(1 for line in s.splitlines() if line.strip()==marker)==1
+          heading='## v11.6 — Adaptive Platoon Maneuver & Battlefield Encirclement — IN DEVELOPMENT'
+          if heading not in s:
+              anchor='\n## Development rules\n'
+              block='''\n## v11.6 — Adaptive Platoon Maneuver & Battlefield Encirclement — IN DEVELOPMENT\n- [ ] Role-aware maneuver orders turn Commander/Hunter/FireSupport/Breacher assignments into bounded movement intent without replacing EnemyTank Rigidbody2D authority.\n- [ ] Hunter/Elite flank lanes and crossfire spacing react to player position while Heavy/Breacher units maintain frontal pressure and avoid deterministic stacking.\n- [ ] Siege FireSupport maintains bounded standoff bands and repositions when threatened by real Counter-Fire instead of camping indefinitely.\n- [ ] Commander casualty adaptation reorganizes surviving specialist roles and maneuver pressure after actor loss with capped deterministic platoon state.\n- [ ] Packaged Windows v11.6 gate validates maneuver bounds, encirclement integration, late-round safety and exact EXE boot before qualification.\n'''
+              assert anchor in s
+              s=s.replace(anchor,block+anchor,1)
+          completed=len(re.findall(r'^- \[x\] ',s,re.M)); remaining=len(re.findall(r'^- \[ \] ',s,re.M)); total=completed+remaining
+          assert (completed,remaining,total)==(274,5,279),(completed,remaining,total)
+          pct=round(completed*100/total,1); filled=round(pct/5); bar='█'*filled+'░'*(20-filled)
+          start=s.index('<!-- ROADMAP-PROGRESS:START -->'); end=s.index('<!-- ROADMAP-PROGRESS:END -->')+len('<!-- ROADMAP-PROGRESS:END -->')
+          dashboard=f'''<!-- ROADMAP-PROGRESS:START -->\n<p align="center">\n  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-6"></a>\n  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-{pct:.1f}%25-brightgreen?style=for-the-badge">\n  <img alt="Completed" src="https://img.shields.io/badge/DONE-{completed}%2F{total}-1f6feb?style=for-the-badge">\n  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.6%20IN%20DEVELOPMENT-yellow?style=for-the-badge">\n</p>\n\n## 📊 Overall progress\n\n```text\n{bar} {pct:.1f}%\n```\n\n| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |\n|---:|---:|---:|---:|\n| **{completed}** | **{remaining}** | **{total}** | **{pct:.1f}%** |\n\n> **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.\n<!-- ROADMAP-PROGRESS:END -->'''
+          s=s[:start]+dashboard+s[end:]
+          p.write_text(s,encoding='utf-8')
+          r=p.read_text(encoding='utf-8')
+          assert heading in r and 'DONE-274%2F279' in r and 'V11.6%20IN%20DEVELOPMENT' in r
+          assert r.count('<!-- SWIR-ROADMAP-STANDARD:v1 -->')>=1
+      - name: Commit roadmap scope
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'docs(v11.6): register adaptive maneuver milestone'
+          git push

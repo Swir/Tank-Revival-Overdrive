@@ -1,0 +1,85 @@
+name: Adaptive Platoon Maneuver v11.6 Windows Gate
+on:
+  push:
+    branches: ['dev-v11-6']
+    paths: ['.adaptive-platoon-maneuver-v116-trigger']
+  workflow_dispatch:
+jobs:
+  build-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify v11.6 source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          test -f Assets/Scripts/AdaptivePlatoonManeuverCISmokeProbe.cs
+          grep -q 'HunterFlankBand = 4.8f' Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          grep -q 'SiegeMinStandoff = 5.4f' Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          grep -q 'SiegeMaxStandoff = 8.6f' Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          grep -q 'CounterFireDisplaceBand = 7.2f' Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          grep -q 'ReorgSeconds = 3.5f' Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          grep -q 'EncirclementPhaseSeconds = 6.0f' Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          grep -q 'NotifyLoss' Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          grep -q 'PlatoonFireMissionCoordinator.RoleFor' Assets/Scripts/AdaptivePlatoonManeuverDirector.cs
+          grep -q 'DONE-274%2F279' ROADMAP.md
+          grep -q 'SWIR-ROADMAP-STANDARD:v1' ROADMAP.md
+          git diff --check
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"; test -n "$UNITY_EMAIL"; test -n "$UNITY_PASSWORD"
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: v116-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            v116-Library-${{ runner.os }}-6000.3.17f1-
+            v115-Library-${{ runner.os }}-6000.3.17f1-
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Package exact candidate
+        shell: bash
+        run: |
+          test -f build/StandaloneWindows64/TankRevivalOverdrive.exe
+          cd build/StandaloneWindows64
+          zip -r ../../TankRevivalOverdrive-v11.6-candidate-Windows-x64.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v11.6-candidate-Windows-x64
+          path: TankRevivalOverdrive-v11.6-candidate-Windows-x64.zip
+  packaged-exe-smoke:
+    needs: build-candidate
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v11.6-candidate-Windows-x64
+          path: candidate
+      - shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevivalOverdrive-v11.6-candidate-Windows-x64.zip' -DestinationPath runtime -Force
+          Set-Location runtime
+          $p=Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-logFile','AdaptiveManeuverPlayer.log' -PassThru
+          Start-Sleep -Seconds 12
+          if(!$p.HasExited){Stop-Process -Id $p.Id -Force}
+          if(Select-String -Path AdaptiveManeuverPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|Compilation failed' -Quiet){throw 'blocking exception signature'}
+          if(!(Select-String -Path AdaptiveManeuverPlayer.log -Pattern 'V11.6_MANEUVER_SMOKE_OK' -Quiet)){throw 'v11.6 runtime probe marker missing'}
