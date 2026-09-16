@@ -1,0 +1,54 @@
+name: ROADMAP v12.2 Scope Registrar
+on:
+  push:
+    branches: [dev-v12-2]
+    paths: ['.v122-roadmap-scope-trigger']
+permissions:
+  contents: write
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v12-2
+      - name: Register v12.2 scope and verify SWIR v1 dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
+          marker='<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          assert len(re.findall(r'^'+re.escape(marker)+r'$',s,re.M))==1
+          heading='## v12.2 — Route Intelligence, Ambush & Decoy Warfare — IN DEVELOPMENT'
+          if heading not in s:
+              anchor='\n## Development rules\n'
+              block='''\n## v12.2 — Route Intelligence, Ambush & Decoy Warfare — IN DEVELOPMENT\n- [ ] A bounded route-intelligence director links v12.1 operational columns with existing mobile-front, terrain, breach and counter-breach state without creating a parallel movement or economy authority.\n- [ ] Operational columns gain three deterministic route plans with bounded waypoint/reroute logic so blocked or tactically exposed corridors can be avoided while OperationalSustainmentDirector/Rigidbody2D remain movement authority.\n- [ ] Enemy sustainment can deploy at most one physical decoy logistics contact using canonical Health/collision but zero manifest/support authority, creating real target-identification pressure without fake damage or rewards.\n- [ ] Proximity/recon intelligence progressively reveals route confidence and distinguishes the real sustainment column from a decoy through readable battlefield/HUD feedback rather than hidden omniscience.\n- [ ] Existing Fast/Elite/Sniper combatants can form bounded route screens and ambush cells through TacticalNavigationAgent, with fixed actor/order caps and no replacement of EnemyTank AI authority.\n- [ ] Route threat scoring reacts to player pressure plus fresh breach/counter-breach state, permits at most two tactical reroutes per operation and cleans all route/decoy state when the column resolves.\n- [ ] v12.2 runtime telemetry/smoke verifies route catalog, reroute caps, decoy/recon transitions, ambush caps, cleanup and unchanged Health/Projectile/TankGame authority.\n- [ ] Packaged Windows x64 v12.2 qualification builds and boots the exact candidate, executes route-intelligence smoke checks and rejects blocking exception signatures before qualification.\n'''
+              assert anchor in s
+              s=s.replace(anchor,block+anchor,1)
+          completed=len(re.findall(r'^- \[x\] ',s,re.M)); remaining=len(re.findall(r'^- \[ \] ',s,re.M)); total=completed+remaining
+          assert (completed,remaining,total)==(319,8,327),(completed,remaining,total)
+          pct=round(completed*100/total,1)
+          filled=20 if completed==total else min(19,int(20*completed/total))
+          bar='█'*filled+'░'*(20-filled)
+          start=s.index('<!-- ROADMAP-PROGRESS:START -->'); end=s.index('<!-- ROADMAP-PROGRESS:END -->')+len('<!-- ROADMAP-PROGRESS:END -->')
+          dashboard=f'''<!-- ROADMAP-PROGRESS:START -->\n<p align="center">\n  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-2"></a>\n  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-{pct:.1f}%25-brightgreen?style=for-the-badge">\n  <img alt="Completed" src="https://img.shields.io/badge/DONE-{completed}%2F{total}-1f6feb?style=for-the-badge">\n  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.2%20IN%20DEVELOPMENT-yellow?style=for-the-badge">\n</p>\n\n## 📊 Overall progress\n\n```text\n{bar} {pct:.1f}%\n```\n\n| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |\n|---:|---:|---:|---:|\n| **{completed}** | **{remaining}** | **{total}** | **{pct:.1f}%** |\n\n> **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.\n<!-- ROADMAP-PROGRESS:END -->'''
+          s=s[:start]+dashboard+s[end:]
+          p.write_text(s,encoding='utf-8')
+          r=p.read_text(encoding='utf-8')
+          assert heading in r
+          assert 'DONE-319%2F327' in r
+          assert 'STATUS-V12.2%20IN%20DEVELOPMENT-yellow' in r
+          assert '███████████████████░ 97.6%' in r
+          assert '| **319** | **8** | **327** | **97.6%** |' in r
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',r,re.M))==1
+      - name: Commit roadmap scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'docs(v12.2): register route intelligence milestone'
+          git push
