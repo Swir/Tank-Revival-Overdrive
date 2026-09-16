@@ -2,3 +2,4 @@ v11.6 qualified candidate: 175e3264b82bada97c71affdb18bc43a6eef212d
 source-contracts: success
 windows-build: success
 packaged-exe-smoke: success
+finalizer-retry: dashboard-standard-v1
