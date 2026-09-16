@@ -11,6 +11,7 @@ on:
       - 'Assets/Scripts/Projectile.cs'
       - 'Assets/Scripts/DamageSmokeEmitter.cs'
       - 'Assets/Scripts/BattleAudio.cs'
+      - 'Packages/manifest.json'
       - 'CHANGELOG_v12.7.md'
       - 'VERSION'
       - '.github/workflows/cinematic-combat-v127-windows.yml'
@@ -37,6 +38,7 @@ jobs:
           test -f Assets/Scripts/BattleAudio.cs
           test -f CHANGELOG_v12.7.md
           test "$(cat VERSION)" = 'v12.7.0-dev'
+          grep -q '"com.unity.modules.particlesystem": "1.0.0"' Packages/manifest.json
           grep -q 'PoolCapacity = 16' Assets/Scripts/CinematicCombatFeedbackDirector.cs
           grep -q 'MaxParticlesPerCue = 20' Assets/Scripts/CinematicCombatFeedbackDirector.cs
           grep -q 'ResolveImpactStyle' Assets/Scripts/CinematicCombatFeedbackDirector.cs
