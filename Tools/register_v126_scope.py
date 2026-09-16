@@ -4,8 +4,9 @@ ROADMAP = Path("ROADMAP.md")
 text = ROADMAP.read_text(encoding="utf-8")
 
 marker = "<!-- SWIR-ROADMAP-STANDARD:v1 -->"
-if text.count(marker) != 1:
-    raise SystemExit(f"Expected exactly one {marker}, found {text.count(marker)}")
+marker_line = f"\n{marker}\n"
+if text.count(marker_line) != 1:
+    raise SystemExit(f"Expected exactly one roadmap marker comment line {marker}, found {text.count(marker_line)}")
 
 replacements = {
     "badge.svg?branch=dev-v12-5": "badge.svg?branch=dev-v12-6",
@@ -53,7 +54,7 @@ ROADMAP.write_text(text, encoding="utf-8")
 # Re-read the written file and enforce SWIR ROADMAP STYLE LOCK v1.
 final_text = ROADMAP.read_text(encoding="utf-8")
 required = [
-    marker,
+    marker_line,
     "badge.svg?branch=dev-v12-6",
     "ROADMAP-97.8%25-yellow?style=for-the-badge",
     "DONE-351%2F359-1f6feb?style=for-the-badge",

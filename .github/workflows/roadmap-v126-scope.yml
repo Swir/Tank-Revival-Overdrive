@@ -30,7 +30,8 @@ jobs:
           from pathlib import Path
           text = Path("ROADMAP.md").read_text(encoding="utf-8")
           marker = "<!-- SWIR-ROADMAP-STANDARD:v1 -->"
-          assert text.count(marker) == 1
+          marker_line = f"\n{marker}\n"
+          assert text.count(marker_line) == 1
           assert "## 📊 Overall progress" in text
           assert "badge.svg?branch=dev-v12-6" in text
           assert "ROADMAP-97.8%25-yellow?style=for-the-badge" in text
