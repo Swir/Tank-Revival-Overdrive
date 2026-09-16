@@ -12,6 +12,8 @@ namespace TankRevival
         Plasma,
         Emp,
         Ricochet,
+        ImpactSoft,
+        ImpactHard,
         ExplosionSmall,
         ExplosionLarge,
         Pickup,
@@ -101,6 +103,8 @@ namespace TankRevival
             _clips[SoundCue.Plasma] = BuildSweep("Plasma", 0.28f, 520f, 1220f, 0.68f, true);
             _clips[SoundCue.Emp] = BuildSweep("Emp", 0.34f, 980f, 180f, 0.62f, false);
             _clips[SoundCue.Ricochet] = BuildRicochet();
+            _clips[SoundCue.ImpactSoft] = BuildImpact("ImpactSoft", 0.11f, 0.34f, 41, 118f);
+            _clips[SoundCue.ImpactHard] = BuildImpact("ImpactHard", 0.15f, 0.58f, 43, 188f);
             _clips[SoundCue.ExplosionSmall] = BuildExplosion("ExplosionSmall", 0.42f, 0.76f, 23);
             _clips[SoundCue.ExplosionLarge] = BuildExplosion("ExplosionLarge", 0.86f, 1.0f, 29);
             _clips[SoundCue.Pickup] = BuildSweep("Pickup", 0.20f, 420f, 860f, 0.45f, true);
@@ -129,6 +133,28 @@ namespace TankRevival
                 data[i] = Mathf.Clamp((body * env + n * (0.42f * env + 0.38f * crack)) * gain, -1f, 1f);
             }
 
+            return MakeClip(name, data);
+        }
+
+        private static AudioClip BuildImpact(string name, float duration, float gain, int seed, float bodyFrequency)
+        {
+            int count = Mathf.CeilToInt(duration * SampleRate);
+            var data = new float[count];
+            var rng = new System.Random(seed);
+            float low = 0f;
+            float phase = 0f;
+
+            for (int i = 0; i < count; i++)
+            {
+                float t = i / (float)SampleRate;
+                float u = Mathf.Clamp01(t / duration);
+                float env = Mathf.Exp(-u * 5.4f);
+                float noise = (float)(rng.NextDouble() * 2.0 - 1.0);
+                low = low * 0.82f + noise * 0.18f;
+                phase += Mathf.PI * 2f * Mathf.Lerp(bodyFrequency * 1.25f, bodyFrequency * 0.72f, u) / SampleRate;
+                float transient = u < 0.17f ? (1f - u / 0.17f) * noise : 0f;
+                data[i] = Mathf.Clamp((Mathf.Sin(phase) * 0.42f + low * 0.52f + transient * 0.34f) * env * gain, -1f, 1f);
+            }
             return MakeClip(name, data);
         }
 
