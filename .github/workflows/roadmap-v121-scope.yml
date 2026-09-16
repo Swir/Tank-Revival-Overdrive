@@ -1,0 +1,51 @@
+name: ROADMAP v12.1 Scope Registrar
+on:
+  push:
+    branches: [dev-v12-1]
+    paths: ['.v121-roadmap-scope-trigger']
+permissions:
+  contents: write
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v12-1
+      - name: Register v12.1 scope and verify SWIR v1 dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
+          marker='<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          assert sum(1 for line in s.splitlines() if line.strip()==marker)==1
+          heading='## v12.1 — Mobile Logistics Columns & Operational Sustainment — IN DEVELOPMENT'
+          if heading not in s:
+              anchor='\n## Development rules\n'
+              block='''\n## v12.1 — Mobile Logistics Columns & Operational Sustainment — IN DEVELOPMENT\n- [ ] A bounded operational-sustainment director links v12.0 mobile-front operations with the existing logistics, convoy, supply-route and strategic-reserve authorities instead of creating a parallel economy.\n- [ ] Physical friendly and enemy logistics columns use authoritative Health/collision plus finite fuel, ammunition and repair manifests while moving behind the active mobile front.\n- [ ] Existing Heavy/Elite/Fast specialists can escort operational columns through TacticalNavigationAgent with hard actor/order caps and no replacement of EnemyTank/Rigidbody2D movement authority.\n- [ ] Successful delivery restores bounded support, recovery or reserve readiness through existing systems; interception creates a temporary readable sustainment deficit rather than hidden direct damage.\n- [ ] Enemy sustainment deficits reduce Siege/engineering support cadence and replenishment capacity through bounded multipliers without bypassing Projectile, Health or existing fire-control authority.\n- [ ] Friendly sustainment reaching the Orzełek line grants finite repair/ammunition support, while lost friendly columns visibly reduce support availability without permanent campaign lockout.\n- [ ] v12.1 runtime telemetry/smoke verifies convoy/escort caps, finite manifest exhaustion, delivery/interception transitions, mobile-front routing, cleanup and authority/performance contracts.\n- [ ] Packaged Windows x64 v12.1 qualification builds and boots the exact candidate, executes operational-sustainment smoke checks and rejects blocking exception signatures before qualification.\n'''
+              assert anchor in s
+              s=s.replace(anchor,block+anchor,1)
+          completed=len(re.findall(r'^- \[x\] ',s,re.M)); remaining=len(re.findall(r'^- \[ \] ',s,re.M)); total=completed+remaining
+          assert (completed,remaining,total)==(311,8,319),(completed,remaining,total)
+          pct=round(completed*100/total,1); filled=round(20*completed/total); bar='█'*filled+'░'*(20-filled)
+          start=s.index('<!-- ROADMAP-PROGRESS:START -->'); end=s.index('<!-- ROADMAP-PROGRESS:END -->')+len('<!-- ROADMAP-PROGRESS:END -->')
+          dashboard=f'''<!-- ROADMAP-PROGRESS:START -->\n<p align="center">\n  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-1"></a>\n  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-{pct:.1f}%25-brightgreen?style=for-the-badge">\n  <img alt="Completed" src="https://img.shields.io/badge/DONE-{completed}%2F{total}-1f6feb?style=for-the-badge">\n  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.1%20IN%20DEVELOPMENT-yellow?style=for-the-badge">\n</p>\n\n## 📊 Overall progress\n\n```text\n{bar} {pct:.1f}%\n```\n\n| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |\n|---:|---:|---:|---:|\n| **{completed}** | **{remaining}** | **{total}** | **{pct:.1f}%** |\n\n> **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.\n<!-- ROADMAP-PROGRESS:END -->'''
+          s=s[:start]+dashboard+s[end:]
+          p.write_text(s,encoding='utf-8')
+          r=p.read_text(encoding='utf-8')
+          assert heading in r
+          assert 'DONE-311%2F319' in r
+          assert 'STATUS-V12.1%20IN%20DEVELOPMENT-yellow' in r
+          assert '███████████████████░ 97.5%' in r
+          assert '| **311** | **8** | **319** | **97.5%** |' in r
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',r,re.M))==1
+      - name: Commit roadmap scope
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'docs(v12.1): register operational sustainment milestone'
+          git push
