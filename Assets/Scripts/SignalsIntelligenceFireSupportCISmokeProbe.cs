@@ -51,6 +51,38 @@ namespace TankRevival
                 if (edgeLeft < SignalsIntelligenceFireSupportDirector.MinTriangulationQuality || edgeRight < SignalsIntelligenceFireSupportDirector.MinTriangulationQuality)
                 { Fail("Edge-route relay geometry cannot achieve a playable firing solution"); return; }
 
+                // Exercise the actual v12.3 relay-lane mapping against every v12.5 true-emitter lane,
+                // five mobile-front progress points and representative late-campaign rounds. This catches
+                // geometry regressions that a pair of hand-picked synthetic bearings can miss.
+                float[] progressCases = { 0f, 0.25f, 0.50f, 0.75f, 1f };
+                int[] rounds = { 72, 80, 90, 99 };
+                int liveGeometryCases = 0;
+                float minLiveGeometry = 1f;
+                float maxLiveGeometry = 0f;
+                for (int routeLane = 0; routeLane < DynamicFrontlineTerritoryDirector.LaneCount; routeLane++)
+                {
+                    Vector2 liveRelayA = ReconElectronicWarfareDirector.RelayAnchor(ReconElectronicWarfareDirector.RelayLaneForIndex(routeLane, 0), 0);
+                    Vector2 liveRelayB = ReconElectronicWarfareDirector.RelayAnchor(ReconElectronicWarfareDirector.RelayLaneForIndex(routeLane, 1), 1);
+                    for (int p = 0; p < progressCases.Length; p++)
+                    {
+                        for (int r = 0; r < rounds.Length; r++)
+                        {
+                            Vector2 liveTarget = SignalsIntelligenceFireSupportDirector.EmitterAnchor(routeLane, progressCases[p], rounds[r], false);
+                            float liveQuality = SignalsIntelligenceFireSupportDirector.TriangulationQualityForGeometry(liveRelayA, liveRelayB, liveTarget);
+                            minLiveGeometry = Mathf.Min(minLiveGeometry, liveQuality);
+                            maxLiveGeometry = Mathf.Max(maxLiveGeometry, liveQuality);
+                            liveGeometryCases++;
+                            if (liveQuality < SignalsIntelligenceFireSupportDirector.MinTriangulationQuality)
+                            {
+                                Fail("Live relay/emitter geometry fell below firing threshold: lane=" + routeLane + " progress=" + progressCases[p].ToString("0.00") + " round=" + rounds[r] + " quality=" + liveQuality.ToString("0.000"));
+                                return;
+                            }
+                        }
+                    }
+                }
+                if (liveGeometryCases != DynamicFrontlineTerritoryDirector.LaneCount * progressCases.Length * rounds.Length)
+                { Fail("Live SIGINT geometry coverage count invalid"); return; }
+
                 float qNear = SignalsIntelligenceFireSupportDirector.VerificationQualityForDistance(0f);
                 float qMid = SignalsIntelligenceFireSupportDirector.VerificationQualityForDistance(SignalsIntelligenceFireSupportDirector.VerificationRadius * 0.5f);
                 float qEdge = SignalsIntelligenceFireSupportDirector.VerificationQualityForDistance(SignalsIntelligenceFireSupportDirector.VerificationRadius);
@@ -58,8 +90,6 @@ namespace TankRevival
                 { Fail("Emitter verification quality is not monotonic/bounded"); return; }
 
                 int anchorCases = 0;
-                float[] progressCases = { 0f, 0.25f, 0.50f, 0.75f, 1f };
-                int[] rounds = { 72, 80, 90, 99 };
                 for (int lane = 0; lane < DynamicFrontlineTerritoryDirector.LaneCount; lane++)
                 {
                     for (int p = 0; p < progressCases.Length; p++)
@@ -122,7 +152,7 @@ namespace TankRevival
                     "v12.5 SIGINT fire-support smoke: PASS\n" +
                     "Version: " + Application.version + "\n" +
                     "emitters=" + SignalsIntelligenceFireSupportDirector.MaxEmitters + " guards=" + SignalsIntelligenceFireSupportDirector.MaxGuardActors + " maxSupportShells=" + (SignalsIntelligenceFireSupportDirector.MaxFireMissionsPerOperation * SignalsIntelligenceFireSupportDirector.ShellsPerMission) + "\n" +
-                    "triCoincident=" + coincident.ToString("0.00") + " triNarrow=" + narrow.ToString("0.00") + " triStrong=" + strong.ToString("0.00") + " edgeLeft=" + edgeLeft.ToString("0.00") + " edgeRight=" + edgeRight.ToString("0.00") + " anchorCases=" + anchorCases + "\n" +
+                    "triCoincident=" + coincident.ToString("0.00") + " triNarrow=" + narrow.ToString("0.00") + " triStrong=" + strong.ToString("0.00") + " edgeLeft=" + edgeLeft.ToString("0.00") + " edgeRight=" + edgeRight.ToString("0.00") + " liveGeom=" + liveGeometryCases + " liveMin=" + minLiveGeometry.ToString("0.00") + " liveMax=" + maxLiveGeometry.ToString("0.00") + " anchorCases=" + anchorCases + "\n" +
                     "hp72=" + hp72 + " hp99=" + hp99 + " scatterCases=" + scatterCases + " maxScatter=" + maxScatter.ToString("0.00") + "\n";
                 File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), PassMarker), report);
                 Debug.Log("[TankRevival] " + report.Replace("\n", " | "));
