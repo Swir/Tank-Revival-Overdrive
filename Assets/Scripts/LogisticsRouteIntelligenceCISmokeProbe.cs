@@ -34,6 +34,7 @@ namespace TankRevival
                 if (!OperationalSustainmentDirector.ConfigurationValid) { Fail("v12.1 operational sustainment dependency invalid"); return; }
                 if (!CombinedArmsMobileFrontDirector.ConfigurationValid) { Fail("v12.0 mobile-front dependency invalid"); return; }
                 if (!ReactiveCoverBreachDirector.ConfigurationValid) { Fail("Reactive breach dependency invalid"); return; }
+                if (!TerrainIntelligenceDirector.ConfigurationValid) { Fail("Terrain-intelligence dependency invalid"); return; }
                 if (LogisticsRouteIntelligenceDirector.Instance == null) { Fail("Route-intelligence runtime director not installed"); return; }
                 if (OperationalSustainmentDirector.Instance == null) { Fail("Operational sustainment runtime director not installed"); return; }
                 if (LogisticsRouteIntelligenceDirector.RouteCount != 3 || LogisticsRouteIntelligenceDirector.MaxReroutes != 2 || LogisticsRouteIntelligenceDirector.MaxDecoys != 1)
@@ -56,20 +57,28 @@ namespace TankRevival
                     { Fail("Alternate route failed to change lane for base lane " + baseLane); return; }
                 }
 
-                int decoyRounds = 0;
+                // Test the full deterministic (eligible round x possible active-front lane) route space.
+                // The previous probe incorrectly correlated baseLane=round%3, which algebraically made
+                // every sampled case a decoy even though live lane selection comes from the mobile front.
+                int decoyCases = 0;
+                int routeCases = 0;
                 int eligibleRounds = 0;
                 for (int round = OperationalSustainmentDirector.EarliestRound; round <= CombinedArmsMobileFrontDirector.LatestRound; round++)
                 {
                     if (!OperationalSustainmentDirector.CanLaunchForRound(round)) continue;
                     eligibleRounds++;
-                    LogisticsRoutePlan friendly = LogisticsRouteIntelligenceDirector.InitialPlanForRound(round, Team.Player, round % 3);
-                    LogisticsRoutePlan enemy = LogisticsRouteIntelligenceDirector.InitialPlanForRound(round, Team.Enemy, round % 3);
-                    if ((int)friendly < 0 || (int)friendly >= LogisticsRouteIntelligenceDirector.RouteCount || (int)enemy < 0 || (int)enemy >= LogisticsRouteIntelligenceDirector.RouteCount)
-                    { Fail("Deterministic route plan outside catalog at round " + round); return; }
-                    if (LogisticsRouteIntelligenceDirector.ShouldSpawnDecoy(round, round % 3)) decoyRounds++;
+                    for (int baseLane = 0; baseLane < DynamicFrontlineTerritoryDirector.LaneCount; baseLane++)
+                    {
+                        routeCases++;
+                        LogisticsRoutePlan friendly = LogisticsRouteIntelligenceDirector.InitialPlanForRound(round, Team.Player, baseLane);
+                        LogisticsRoutePlan enemy = LogisticsRouteIntelligenceDirector.InitialPlanForRound(round, Team.Enemy, baseLane);
+                        if ((int)friendly < 0 || (int)friendly >= LogisticsRouteIntelligenceDirector.RouteCount || (int)enemy < 0 || (int)enemy >= LogisticsRouteIntelligenceDirector.RouteCount)
+                        { Fail("Deterministic route plan outside catalog at round " + round + " lane " + baseLane); return; }
+                        if (LogisticsRouteIntelligenceDirector.ShouldSpawnDecoy(round, baseLane)) decoyCases++;
+                    }
                 }
-                if (eligibleRounds < 3 || decoyRounds < 1 || decoyRounds >= eligibleRounds)
-                { Fail("Decoy cadence lacks bounded variation: eligible=" + eligibleRounds + " decoy=" + decoyRounds); return; }
+                if (eligibleRounds < 3 || routeCases < eligibleRounds * 3 || decoyCases < 1 || decoyCases >= routeCases)
+                { Fail("Decoy route-space lacks bounded variation: eligible=" + eligibleRounds + " cases=" + routeCases + " decoy=" + decoyCases); return; }
 
                 float closeThreat = LogisticsRouteIntelligenceDirector.ProximityThreat(1f);
                 float midThreat = LogisticsRouteIntelligenceDirector.ProximityThreat(4f);
@@ -110,7 +119,7 @@ namespace TankRevival
                 string report =
                     "v12.2 route intelligence smoke: PASS\n" +
                     "Version: " + Application.version + "\n" +
-                    "eligibleColumns=" + eligibleRounds + " decoyEligible=" + decoyRounds + " routes=" + LogisticsRouteIntelligenceDirector.RouteCount + " rerouteCap=" + LogisticsRouteIntelligenceDirector.MaxReroutes + "\n" +
+                    "eligibleColumns=" + eligibleRounds + " routeCases=" + routeCases + " decoyCases=" + decoyCases + " routes=" + LogisticsRouteIntelligenceDirector.RouteCount + " rerouteCap=" + LogisticsRouteIntelligenceDirector.MaxReroutes + "\n" +
                     "ambushCap=" + LogisticsRouteIntelligenceDirector.MaxAmbushActors + " decoyCap=" + LogisticsRouteIntelligenceDirector.MaxDecoys + " hp60=" + hp60 + " hp99=" + hp99 + "\n" +
                     "threatNear=" + closeThreat.ToString("0.00") + " threatMid=" + midThreat.ToString("0.00") + " threatFar=" + farThreat.ToString("0.00") + "\n";
                 File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), PassMarker), report);
