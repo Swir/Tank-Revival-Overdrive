@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-7"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.2%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-279%2F287-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.7%20IN%20DEVELOPMENT-yellow?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-287%2F287-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.7%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-███████████████████░ 97.2%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **279** | **8** | **287** | **97.2%** |
+| **287** | **0** | **287** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -444,15 +444,15 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Commander casualty adaptation reorganizes surviving specialist roles and maneuver pressure after actor loss with capped deterministic platoon state.
 - [x] Packaged Windows v11.6 gate validates maneuver bounds, encirclement integration, late-round safety and exact EXE boot before qualification.
 
-## v11.7 — Adaptive Assault Readability & Battlefield Presentation — IN DEVELOPMENT
-- [ ] Read-only maneuver presentation snapshots expose v11.6 encirclement phase, casualty recovery and role state without granting presentation code movement, damage or projectile authority.
-- [ ] Existing Heavy/Sniper/Siege/Elite actors receive bounded world-space role cues that make Commander/Hunter/FireSupport/Breacher intent readable without adding a parallel enemy roster.
-- [ ] Flank, frontal-pressure, standoff and casualty-reorganization telegraphs are driven by real AdaptivePlatoonManeuverDirector state and disappear cleanly when actors die or combat ends.
-- [ ] Tactical Combat HUD gains a compact assault-operation strip for ENVELOPMENT, REORGANIZING and COUNTER-FIRE displacement using live maneuver/doctrine state rather than scripted text.
-- [ ] Maneuver telegraphs consume a dedicated MassBattleFxBudget allowance so late-round readability degrades gracefully without suppressing gameplay events.
-- [ ] Runtime installation and smoke verification prove the presentation bridge remains additive and does not modify TankGame, Health, ArmorSystem, Projectile or EnemyTank movement authority.
-- [ ] v11.7 source-contract qualification validates bounded cue counts, tactical-state mapping, existing BattlefieldPresentationOverdrive/CombatFX3D integration and SWIR roadmap invariants.
-- [ ] Packaged Windows x64 v11.7 qualification gate builds and boots the exact candidate, executes the maneuver-presentation runtime probe and rejects blocking exception signatures before qualification.
+## v11.7 — Adaptive Assault Readability & Battlefield Presentation — QUALIFIED
+- [x] Read-only maneuver presentation snapshots expose v11.6 encirclement phase, casualty recovery and role state without granting presentation code movement, damage or projectile authority.
+- [x] Existing Heavy/Sniper/Siege/Elite actors receive bounded world-space role cues that make Commander/Hunter/FireSupport/Breacher intent readable without adding a parallel enemy roster.
+- [x] Flank, frontal-pressure, standoff and casualty-reorganization telegraphs are driven by real AdaptivePlatoonManeuverDirector state and disappear cleanly when actors die or combat ends.
+- [x] Tactical Combat HUD gains a compact assault-operation strip for ENVELOPMENT, REORGANIZING and COUNTER-FIRE displacement using live maneuver/doctrine state rather than scripted text.
+- [x] Maneuver telegraphs consume a dedicated MassBattleFxBudget allowance so late-round readability degrades gracefully without suppressing gameplay events.
+- [x] Runtime installation and smoke verification prove the presentation bridge remains additive and does not modify TankGame, Health, ArmorSystem, Projectile or EnemyTank movement authority.
+- [x] v11.7 source-contract qualification validates bounded cue counts, tactical-state mapping, existing BattlefieldPresentationOverdrive/CombatFX3D integration and SWIR roadmap invariants.
+- [x] Packaged Windows x64 v11.7 qualification gate builds and boots the exact candidate, executes the maneuver-presentation runtime probe and rejects blocking exception signatures before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
