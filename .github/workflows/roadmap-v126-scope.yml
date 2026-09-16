@@ -1,0 +1,57 @@
+name: ROADMAP v12.6 Scope Registrar
+
+on:
+  push:
+    branches:
+      - dev-v12-6
+    paths:
+      - .v126-scope-trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          ref: dev-v12-6
+          fetch-depth: 0
+
+      - name: Register v12.6 milestone in canonical roadmap
+        run: python Tools/register_v126_scope.py
+
+      - name: Re-read and verify SWIR Roadmap Standard v1
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("ROADMAP.md").read_text(encoding="utf-8")
+          marker = "<!-- SWIR-ROADMAP-STANDARD:v1 -->"
+          marker_line = f"\n{marker}\n"
+          assert text.count(marker_line) == 1
+          assert "## 📊 Overall progress" in text
+          assert "badge.svg?branch=dev-v12-6" in text
+          assert "ROADMAP-97.8%25-yellow?style=for-the-badge" in text
+          assert "DONE-351%2F359-1f6feb?style=for-the-badge" in text
+          assert "STATUS-V12.6%20IN%20DEVELOPMENT-yellow?style=for-the-badge" in text
+          assert "███████████████████░ 97.8%" in text
+          assert "| **351** | **8** | **359** | **97.8%** |" in text
+          section = text.split("## v12.6 — Battlefield Presentation Overdrive & Unified Tactical HUD", 1)[1]
+          assert section.count("- [ ]") == 8
+          assert section.count("- [x]") == 0
+          print("ROADMAP v12.6 scope invariants: PASS")
+
+      - name: Commit roadmap scope
+        run: |
+          if git diff --quiet -- ROADMAP.md; then
+            echo "ROADMAP already contains v12.6 scope; no commit needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ROADMAP.md
+          git commit -m "docs(v12.6): register Battlefield Presentation milestone"
+          git push origin HEAD:dev-v12-6
