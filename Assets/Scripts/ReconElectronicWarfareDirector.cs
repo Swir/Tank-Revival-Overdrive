@@ -15,11 +15,9 @@ namespace TankRevival
 
     /// <summary>
     /// v12.3 reconnaissance/electronic-warfare layer for the existing v12.1/v12.2 logistics operation.
-    /// Two bounded player scout relays and one physical enemy jammer turn route intelligence into a
-    /// playable objective: approach distinct relays to collect packets, or destroy the jammer to break
-    /// interference. All physical assets use canonical Health/collision. Existing EnemyTank actors guard
-    /// the jammer through TacticalNavigationAgent only. This director never moves the real logistics
-    /// column, never spawns projectiles and never applies direct damage.
+    /// v12.4 extends the public bridge with bounded relay suppression, recovered-intelligence packets and
+    /// counter-jamming windows so mobile EW/counter-recon systems can interact without owning route,
+    /// projectile, tank-movement or damage authority. Physical assets continue to use canonical Health.
     /// </summary>
     [DefaultExecutionOrder(630)]
     public sealed class ReconElectronicWarfareDirector : MonoBehaviour
@@ -40,6 +38,11 @@ namespace TankRevival
         public const int JammerHealthMin = 6;
         public const int JammerHealthMax = 10;
         public const int JammerBondReward = 5;
+        public const float ExternalSuppressionMinSeconds = 1.0f;
+        public const float ExternalSuppressionMaxSeconds = 8.0f;
+        public const float CounterJamMinSeconds = 2.0f;
+        public const float CounterJamMaxSeconds = 12.0f;
+        public const float MobileJammingPulseMaxSeconds = 2.0f;
 
         private const BindingFlags PrivateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
         private static readonly MethodInfo RouteSetIntelMethod = typeof(LogisticsRouteIntelligenceDirector).GetMethod("SetIntel", PrivateInstance);
@@ -48,6 +51,7 @@ namespace TankRevival
         private readonly GameObject[] _relayObjects = new GameObject[MaxRelayNodes];
         private readonly Health[] _relayHealth = new Health[MaxRelayNodes];
         private readonly bool[] _relaySynced = new bool[MaxRelayNodes];
+        private readonly float[] _relaySuppressedUntil = new float[MaxRelayNodes];
         private readonly EnemyTank[] _guards = new EnemyTank[MaxGuardActors];
         private readonly float[] _guardDistances = new float[MaxGuardActors];
 
@@ -66,8 +70,12 @@ namespace TankRevival
         private int _intelForces;
         private int _guardOrders;
         private int _guardCount;
+        private int _externalSuppressions;
+        private int _recoveredPackets;
         private float _nextGuardOrder;
         private float _nextSignalPulse;
+        private float _counterJamUntil;
+        private float _mobileJammingUntil;
         private ReconEWState _state;
         private string _status = string.Empty;
         private float _statusUntil;
@@ -77,6 +85,9 @@ namespace TankRevival
         public static ReconElectronicWarfareDirector Instance => _instance;
         public bool OperationActive => _active && _route != null && _route.RouteActive && _sustainment != null && _sustainment.ColumnTeam == Team.Enemy;
         public bool JammerActive => _jammerObject != null && _jammerHealth != null && !_jammerHealth.IsDead;
+        public bool CounterJammingActive => OperationActive && Time.time < _counterJamUntil;
+        public bool ExternalMobileJammingActive => OperationActive && Time.time < _mobileJammingUntil;
+        public bool EffectiveJammerActive => OperationActive && (JammerActive || ExternalMobileJammingActive) && !CounterJammingActive;
         public int IntelPackets => _intelPackets;
         public int RelaySyncs => _relaySyncs;
         public int JammersDestroyed => _jammersDestroyed;
@@ -85,11 +96,19 @@ namespace TankRevival
         public int GuardCount => _guardCount;
         public int RouteLane => _routeLane;
         public int JammerLane => _jammerLane;
+        public int SuppressedRelays => SuppressedRelayCount();
+        public int ExternalSuppressions => _externalSuppressions;
+        public int RecoveredPackets => _recoveredPackets;
         public ReconEWState State => _state;
-        public float SignalQuality => SignalQualityForState(_intelPackets, JammerActive, LiveRelayCount());
-        public bool SpoofRisk => OperationActive && JammerActive && _intelPackets < RequiredPacketsForVerified;
+        public float CounterJamRemaining => CounterJammingActive ? Mathf.Max(0f, _counterJamUntil - Time.time) : 0f;
+        public float SignalQuality => SignalQualityForState(_intelPackets, EffectiveJammerActive, Mathf.Max(0, LiveRelayCount() - SuppressedRelayCount()));
+        public bool SpoofRisk => OperationActive && EffectiveJammerActive && _intelPackets < RequiredPacketsForVerified;
 
         public static bool BridgeAvailable => RouteSetIntelMethod != null;
+        public static bool ExternalWarfareBridgeValid =>
+            ExternalSuppressionMinSeconds > 0f && ExternalSuppressionMaxSeconds <= 8f && ExternalSuppressionMinSeconds < ExternalSuppressionMaxSeconds &&
+            CounterJamMinSeconds >= 1f && CounterJamMaxSeconds <= 12f && CounterJamMinSeconds < CounterJamMaxSeconds &&
+            MobileJammingPulseMaxSeconds > 0.5f && MobileJammingPulseMaxSeconds <= 2f;
 
         public static bool ConfigurationValid =>
             MaxRelayNodes == 2 && MaxJammers == 1 && MaxGuardActors >= 2 && MaxGuardActors <= 3 &&
@@ -101,7 +120,7 @@ namespace TankRevival
             SignalPulseSeconds >= 0.6f && SignalPulseSeconds <= 1.2f &&
             RelayHealthMin >= 3 && RelayHealthMax <= 8 && RelayHealthMin <= RelayHealthMax &&
             JammerHealthMin >= 5 && JammerHealthMax <= 12 && JammerHealthMin < JammerHealthMax &&
-            JammerBondReward >= 2 && JammerBondReward <= 8 && BridgeAvailable;
+            JammerBondReward >= 2 && JammerBondReward <= 8 && BridgeAvailable && ExternalWarfareBridgeValid;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -179,8 +198,14 @@ namespace TankRevival
             _jammerLane = JammerLaneForRoute(_routeLane, round);
             _intelPackets = 0;
             _guardCount = 0;
+            _counterJamUntil = 0f;
+            _mobileJammingUntil = 0f;
             _state = ReconEWState.Searching;
-            for (int i = 0; i < MaxRelayNodes; i++) _relaySynced[i] = false;
+            for (int i = 0; i < MaxRelayNodes; i++)
+            {
+                _relaySynced[i] = false;
+                _relaySuppressedUntil[i] = 0f;
+            }
             SpawnRelays(round);
             SpawnJammer(round);
             _nextGuardOrder = Time.time;
@@ -246,11 +271,11 @@ namespace TankRevival
         {
             PlayerTank player = CombatRoster.Player;
             if (player == null || player.Health == null || player.Health.IsDead) return;
-            float radius = JammerActive ? JammedRelaySyncRadius : RelaySyncRadius;
+            float radius = EffectiveJammerActive ? JammedRelaySyncRadius : RelaySyncRadius;
             float radiusSq = radius * radius;
             for (int i = 0; i < MaxRelayNodes; i++)
             {
-                if (_relaySynced[i]) continue;
+                if (_relaySynced[i] || IsRelaySuppressed(i)) continue;
                 GameObject relay = _relayObjects[i];
                 Health health = _relayHealth[i];
                 if (relay == null || health == null || health.IsDead) continue;
@@ -259,7 +284,7 @@ namespace TankRevival
                 _relaySynced[i] = true;
                 _intelPackets = Mathf.Clamp(_intelPackets + 1, 0, RequiredPacketsForVerified);
                 _relaySyncs++;
-                RouteIntelState intel = IntelForPackets(_intelPackets, JammerActive);
+                RouteIntelState intel = IntelForPackets(_intelPackets, EffectiveJammerActive);
                 RaiseRouteIntel(intel);
                 VisualFactory.RingPulse(relay.transform.position, new Color(0.18f, 1f, 0.64f), 1.0f);
                 BattleAudio.PlayGlobal(SoundCue.AmmoPickup, 0.20f, 0.02f);
@@ -271,23 +296,25 @@ namespace TankRevival
         {
             if (!_active) { _state = ReconEWState.Inactive; return; }
             if (LiveRelayCount() == 0) { _state = ReconEWState.RelayLost; return; }
-            RouteIntelState intel = IntelForPackets(_intelPackets, JammerActive);
+            RouteIntelState intel = IntelForPackets(_intelPackets, EffectiveJammerActive);
             if (intel == RouteIntelState.Verified) _state = ReconEWState.Verified;
             else if (intel == RouteIntelState.Contact) _state = ReconEWState.Contact;
-            else _state = JammerActive ? ReconEWState.Jammed : ReconEWState.Searching;
+            else _state = EffectiveJammerActive ? ReconEWState.Jammed : ReconEWState.Searching;
         }
 
         private void PulseSignals()
         {
             if (!_active) return;
-            Color relayColor = JammerActive ? new Color(0.16f, 0.66f, 0.92f) : new Color(0.18f, 1f, 0.64f);
+            Color relayColor = EffectiveJammerActive ? new Color(0.16f, 0.66f, 0.92f) : new Color(0.18f, 1f, 0.64f);
             for (int i = 0; i < MaxRelayNodes; i++)
             {
                 if (_relayObjects[i] == null || _relayHealth[i] == null || _relayHealth[i].IsDead) continue;
-                VisualFactory.RingPulse(_relayObjects[i].transform.position, relayColor, _relaySynced[i] ? 0.46f : 0.30f);
+                bool suppressed = IsRelaySuppressed(i);
+                Color color = suppressed ? new Color(1f, 0.45f, 0.08f) : relayColor;
+                VisualFactory.RingPulse(_relayObjects[i].transform.position, color, suppressed ? 0.54f : (_relaySynced[i] ? 0.46f : 0.30f));
             }
             if (JammerActive)
-                VisualFactory.RingPulse(_jammerObject.transform.position, new Color(1f, 0.18f, 0.42f), 0.42f);
+                VisualFactory.RingPulse(_jammerObject.transform.position, CounterJammingActive ? new Color(0.18f, 1f, 0.64f) : new Color(1f, 0.18f, 0.42f), 0.42f);
         }
 
         private void AssignEWGuards()
@@ -354,7 +381,12 @@ namespace TankRevival
 
         private void OnRelayDied(int index, Health health)
         {
-            if (index >= 0 && index < MaxRelayNodes) _relaySynced[index] = false;
+            if (index >= 0 && index < MaxRelayNodes)
+            {
+                if (_relaySynced[index]) _intelPackets = Mathf.Max(0, _intelPackets - 1);
+                _relaySynced[index] = false;
+                _relaySuppressedUntil[index] = 0f;
+            }
             ShowStatus("SCOUT RELAY " + (index + 1) + " LOST // RECON COVERAGE REDUCED", 3.0f);
         }
 
@@ -367,7 +399,7 @@ namespace TankRevival
         private void OnJammerDied(Health health)
         {
             _jammersDestroyed++;
-            RouteIntelState intel = IntelForPackets(_intelPackets, false);
+            RouteIntelState intel = IntelForPackets(_intelPackets, ExternalMobileJammingActive && !CounterJammingActive);
             RaiseRouteIntel(intel);
             WarEconomyDirector.AwardMissionBonds(JammerBondReward, "ENEMY EW JAMMER DESTROYED");
             if (_jammerObject != null)
@@ -384,6 +416,76 @@ namespace TankRevival
             if (_route.IntelState >= target) return;
             RouteSetIntelMethod.Invoke(_route, new object[] { target });
             _intelForces++;
+        }
+
+        public bool TryGetRelayPosition(int index, out Vector2 position)
+        {
+            position = Vector2.zero;
+            if (index < 0 || index >= MaxRelayNodes) return false;
+            GameObject relay = _relayObjects[index];
+            Health health = _relayHealth[index];
+            if (!_active || relay == null || health == null || health.IsDead) return false;
+            position = relay.transform.position;
+            return true;
+        }
+
+        public bool IsRelaySuppressed(int index)
+        {
+            return index >= 0 && index < MaxRelayNodes && _active && Time.time < _relaySuppressedUntil[index];
+        }
+
+        public bool SuppressRelay(int index, float seconds)
+        {
+            if (index < 0 || index >= MaxRelayNodes || !_active) return false;
+            GameObject relay = _relayObjects[index];
+            Health health = _relayHealth[index];
+            if (relay == null || health == null || health.IsDead) return false;
+            float until = Time.time + ClampSuppressionSeconds(seconds);
+            if (until <= _relaySuppressedUntil[index] + 0.01f) return false;
+            _relaySuppressedUntil[index] = until;
+            if (_relaySynced[index])
+            {
+                _relaySynced[index] = false;
+                _intelPackets = Mathf.Max(0, _intelPackets - 1);
+            }
+            _externalSuppressions++;
+            VisualFactory.RingPulse(relay.transform.position, new Color(1f, 0.45f, 0.08f), 0.85f);
+            ShowStatus("SCOUT RELAY " + (index + 1) + " SUPPRESSED // CLEAR RAID AND RE-SYNC", 2.8f);
+            return true;
+        }
+
+        public void ApplyCounterJamming(float seconds)
+        {
+            if (!_active) return;
+            _counterJamUntil = Mathf.Max(_counterJamUntil, Time.time + ClampCounterJamSeconds(seconds));
+            ShowStatus("COUNTER-JAM WINDOW ACTIVE // FULL RELAY SYNC RANGE", 2.8f);
+        }
+
+        public void ApplyMobileJammingPulse(float seconds)
+        {
+            if (!_active || CounterJammingActive) return;
+            _mobileJammingUntil = Mathf.Max(_mobileJammingUntil, Time.time + Mathf.Clamp(seconds, 0.25f, MobileJammingPulseMaxSeconds));
+        }
+
+        public bool ApplyRecoveredIntelPacket()
+        {
+            if (!_active || _intelPackets >= RequiredPacketsForVerified) return false;
+            _intelPackets++;
+            _recoveredPackets++;
+            RouteIntelState intel = IntelForPackets(_intelPackets, EffectiveJammerActive);
+            RaiseRouteIntel(intel);
+            ShowStatus("RECOVERED EW INTELLIGENCE // PACKETS " + _intelPackets + "/" + RequiredPacketsForVerified, 2.8f);
+            return true;
+        }
+
+        public static float ClampSuppressionSeconds(float seconds)
+        {
+            return Mathf.Clamp(seconds, ExternalSuppressionMinSeconds, ExternalSuppressionMaxSeconds);
+        }
+
+        public static float ClampCounterJamSeconds(float seconds)
+        {
+            return Mathf.Clamp(seconds, CounterJamMinSeconds, CounterJamMaxSeconds);
         }
 
         public static RouteIntelState IntelForPackets(int packets, bool jammerAlive)
@@ -461,6 +563,13 @@ namespace TankRevival
             return count;
         }
 
+        private int SuppressedRelayCount()
+        {
+            int count = 0;
+            for (int i = 0; i < MaxRelayNodes; i++) if (IsRelaySuppressed(i)) count++;
+            return count;
+        }
+
         private void CleanupOperation()
         {
             for (int i = 0; i < MaxRelayNodes; i++)
@@ -469,6 +578,7 @@ namespace TankRevival
                 _relayObjects[i] = null;
                 _relayHealth[i] = null;
                 _relaySynced[i] = false;
+                _relaySuppressedUntil[i] = 0f;
             }
             if (_jammerHealth != null)
             {
@@ -483,6 +593,8 @@ namespace TankRevival
             _jammerLane = -1;
             _intelPackets = 0;
             _guardCount = 0;
+            _counterJamUntil = 0f;
+            _mobileJammingUntil = 0f;
             _state = ReconEWState.Inactive;
             for (int i = 0; i < MaxGuardActors; i++) _guards[i] = null;
         }
@@ -495,6 +607,8 @@ namespace TankRevival
             _jammersDestroyed = 0;
             _intelForces = 0;
             _guardOrders = 0;
+            _externalSuppressions = 0;
+            _recoveredPackets = 0;
             _status = string.Empty;
         }
 
@@ -516,7 +630,7 @@ namespace TankRevival
             if (_game == null || !_game.IsPlaying) return;
             if (!OperationActive && Time.unscaledTime >= _statusUntil) return;
             EnsureStyles();
-            float width = 550f;
+            float width = 570f;
             float x = Screen.width * 0.5f - width * 0.5f;
             float y = 205f;
             GUI.color = new Color(0.02f, 0.04f, 0.055f, 0.90f);
@@ -526,10 +640,11 @@ namespace TankRevival
             GUI.Label(new Rect(x + 8f, y + 3f, width - 16f, 20f), title, _header);
             if (OperationActive)
             {
-                string jammer = JammerActive ? "JAMMER LIVE" : "JAMMER DOWN";
+                string jammer = EffectiveJammerActive ? "JAMMER EFFECTIVE" : (JammerActive ? "JAMMER BYPASSED" : "JAMMER DOWN");
                 string spoof = SpoofRisk ? "SPOOF RISK" : "ROUTE CLEAN";
+                string counter = CounterJammingActive ? " // C-JAM " + CounterJamRemaining.ToString("0.0") + "s" : string.Empty;
                 GUI.Label(new Rect(x + 8f, y + 25f, width - 16f, 20f),
-                    "PACKETS " + _intelPackets + "/" + RequiredPacketsForVerified + " // SIGNAL " + Mathf.RoundToInt(SignalQuality * 100f) + "% // " + jammer + " // " + spoof + " // GUARD " + _guardCount,
+                    "PACKETS " + _intelPackets + "/" + RequiredPacketsForVerified + " // SIGNAL " + Mathf.RoundToInt(SignalQuality * 100f) + "% // " + jammer + " // " + spoof + " // SUPP " + SuppressedRelayCount() + " // GUARD " + _guardCount + counter,
                     _bodyStyle);
             }
         }
