@@ -1,0 +1,45 @@
+name: ROADMAP v11.4 Scope Registrar
+on:
+  push:
+    branches: [dev-v11-4]
+    paths: ['.v114-roadmap-scope-trigger']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v11-4
+      - name: Register v11.4 scope and verify SWIR v1 dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
+          marker='<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          if sum(1 for line in s.splitlines() if line.strip()==marker)!=1: raise SystemExit('SWIR marker invalid')
+          if '## v11.4 — Dynamic Fire Missions & Platoon Target Assignment' not in s:
+              anchor='\n## Development rules\n'
+              block='''\n## v11.4 — Dynamic Fire Missions & Platoon Target Assignment — IN DEVELOPMENT\n- [ ] Platoon target assignment coordinates Heavy/Sniper/Siege/Elite fire priorities through existing EnemyTank and v11.0 platoon authority without adding a second firing path.\n- [ ] Overkill control caps simultaneous precision commitments to one target and redistributes eligible gunners when another live strategic target exists.\n- [ ] Dynamic fire-mission doctrine links v9.5 Fire Mission Network intelligence, v11.3 counter-fire memory and High Command doctrine into bounded target scoring and reassignment.\n- [ ] Target reservations expire quickly, are actor-capped and boss-safe so late-round mass battles retain deterministic performance and existing projectile/reload authority.\n- [ ] Packaged Windows v11.4 gate validates assignment budgets, overkill redistribution, doctrine/fire-mission integration, runtime installation and exact EXE boot before qualification.\n'''
+              if anchor not in s: raise SystemExit('Development rules anchor missing')
+              s=s.replace(anchor, block+anchor, 1)
+          completed=len(re.findall(r'^- \[x\] ',s,re.M)); remaining=len(re.findall(r'^- \[ \] ',s,re.M)); total=completed+remaining
+          if (completed,remaining,total)!=(264,5,269): raise SystemExit(f'Unexpected checklist counts {completed}/{remaining}/{total}')
+          pct=round(completed*100/total,1); filled=round(pct/5); bar='█'*filled+'░'*(20-filled)
+          start=s.index('<!-- ROADMAP-PROGRESS:START -->'); end=s.index('<!-- ROADMAP-PROGRESS:END -->')+len('<!-- ROADMAP-PROGRESS:END -->')
+          dashboard=f'''<!-- ROADMAP-PROGRESS:START -->\n<p align="center">\n  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-4"></a>\n  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-{pct:.1f}%25-d29922?style=for-the-badge">\n  <img alt="Completed" src="https://img.shields.io/badge/DONE-{completed}%2F{total}-1f6feb?style=for-the-badge">\n  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.4%20IN%20DEVELOPMENT-d29922?style=for-the-badge">\n</p>\n\n## 📊 Overall progress\n\n```text\n{bar} {pct:.1f}%\n```\n\n| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |\n|---:|---:|---:|---:|\n| **{completed}** | **{remaining}** | **{total}** | **{pct:.1f}%** |\n\n> **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.\n<!-- ROADMAP-PROGRESS:END -->'''
+          s=s[:start]+dashboard+s[end:]
+          p.write_text(s,encoding='utf-8')
+          reread=p.read_text(encoding='utf-8')
+          assert 'DONE-264%2F269' in reread and 'STATUS-V11.4%20IN%20DEVELOPMENT' in reread and f'{bar} {pct:.1f}%' in reread
+      - name: Commit registered scope
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ROADMAP.md
+          git diff --cached --quiet && exit 0
+          git commit -m "docs(v11.4): register dynamic fire mission scope"
+          git push origin HEAD:dev-v11-4

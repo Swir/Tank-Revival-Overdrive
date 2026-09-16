@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-3"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-2ea043?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-264%2F264-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.3%20QUALIFIED-2ea043?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-4"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-269%2F269-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.4%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **264** | **0** | **264** | **100.0%** |
+| **269** | **0** | **269** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -422,6 +422,13 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Counter-fire retaliation and doctrine-aware precision volleys materially alter target selection, aim quality and cadence while preserving reload/projectile authority.
 - [x] v11.3 runtime smoke validates doctrine selection, incoming-fire memory expiry, class eligibility and all safety caps in the packaged Windows EXE.
 - [x] Windows x64 qualification gate passes exact-candidate build, package and fresh-runner EXE smoke before v11.3 is marked complete.
+
+## v11.4 — Dynamic Fire Missions & Platoon Target Assignment — QUALIFIED
+- [x] Platoon target assignment coordinates Heavy/Sniper/Siege/Elite fire priorities through existing EnemyTank and v11.0 platoon authority without adding a second firing path.
+- [x] Overkill control caps simultaneous precision commitments to one target and redistributes eligible gunners when another live strategic target exists.
+- [x] Dynamic fire-mission doctrine links v9.5 Fire Mission Network intelligence, v11.3 counter-fire memory and High Command doctrine into bounded target scoring and reassignment.
+- [x] Target reservations expire quickly, are actor-capped and boss-safe so late-round mass battles retain deterministic performance and existing projectile/reload authority.
+- [x] Packaged Windows v11.4 gate validates assignment budgets, overkill redistribution, doctrine/fire-mission integration, runtime installation and exact EXE boot before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.

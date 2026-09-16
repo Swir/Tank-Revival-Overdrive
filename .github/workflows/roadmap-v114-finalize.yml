@@ -1,0 +1,63 @@
+name: ROADMAP v11.4 Qualification Finalizer
+on:
+  push:
+    branches: [dev-v11-4]
+    paths: ['.v114-roadmap-finalize-trigger']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v11-4
+          fetch-depth: 0
+      - name: Verify qualified v11.4 implementation and finalize roadmap
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
+          marker='<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          if sum(1 for line in s.splitlines() if line.strip()==marker)!=1: raise SystemExit('SWIR marker invalid')
+          required=['Assets/Scripts/PlatoonFireMissionCoordinator.cs','Assets/Scripts/PlatoonFireMissionCISmokeProbe.cs','Assets/Scripts/EnemyTank.cs','.github/workflows/platoon-fire-mission-v114-windows.yml']
+          for f in required:
+              if not Path(f).is_file(): raise SystemExit('missing '+f)
+          checks={
+            'Assets/Scripts/PlatoonFireMissionCoordinator.cs':['MaxActors = 24','MaxPrecisionCommitmentsPerTarget = 2','ReservationSeconds = 1.35f','FireMissionNetworkDirector.IsFireMissionRound'],
+            'Assets/Scripts/EnemyTank.cs':['PlatoonFireMissionCoordinator.PreferPlayer','CounterFireThreatMemory.ShouldRetaliate'],
+          }
+          for f,needles in checks.items():
+              t=Path(f).read_text(encoding='utf-8')
+              for n in needles:
+                  if n not in t: raise SystemExit(f'missing contract {n} in {f}')
+          heading='## v11.4 — Dynamic Fire Missions & Platoon Target Assignment — IN DEVELOPMENT'
+          if heading not in s: raise SystemExit('v11.4 scope heading missing')
+          section_start=s.index(heading)
+          section_end=s.find('\n## ',section_start+3)
+          if section_end<0: section_end=len(s)
+          section=s[section_start:section_end]
+          if len(re.findall(r'^- \[ \] ',section,re.M))!=5: raise SystemExit('expected five pending v11.4 deliverables')
+          section=section.replace('— IN DEVELOPMENT','— QUALIFIED',1).replace('- [ ] ','- [x] ')
+          s=s[:section_start]+section+s[section_end:]
+          completed=len(re.findall(r'^- \[x\] ',s,re.M)); remaining=len(re.findall(r'^- \[ \] ',s,re.M)); total=completed+remaining
+          if (completed,remaining,total)!=(269,0,269): raise SystemExit(f'Unexpected checklist counts {completed}/{remaining}/{total}')
+          pct=round(completed*100/total,1); filled=round(pct/5); bar='█'*filled+'░'*(20-filled)
+          start=s.index('<!-- ROADMAP-PROGRESS:START -->'); end=s.index('<!-- ROADMAP-PROGRESS:END -->')+len('<!-- ROADMAP-PROGRESS:END -->')
+          dashboard=f'''<!-- ROADMAP-PROGRESS:START -->\n<p align="center">\n  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-4"></a>\n  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-{pct:.1f}%25-brightgreen?style=for-the-badge">\n  <img alt="Completed" src="https://img.shields.io/badge/DONE-{completed}%2F{total}-1f6feb?style=for-the-badge">\n  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.4%20QUALIFIED-brightgreen?style=for-the-badge">\n</p>\n\n## 📊 Overall progress\n\n```text\n{bar} {pct:.1f}%\n```\n\n| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |\n|---:|---:|---:|---:|\n| **{completed}** | **{remaining}** | **{total}** | **{pct:.1f}%** |\n\n> **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.\n<!-- ROADMAP-PROGRESS:END -->'''
+          s=s[:start]+dashboard+s[end:]
+          p.write_text(s,encoding='utf-8')
+          reread=p.read_text(encoding='utf-8')
+          if sum(1 for line in reread.splitlines() if line.strip()==marker)!=1: raise SystemExit('marker changed')
+          for needle in ['DONE-269%2F269','ROADMAP-100.0%25','STATUS-V11.4%20QUALIFIED','████████████████████ 100.0%','**269** | **0** | **269** | **100.0%**']:
+              if needle not in reread: raise SystemExit('dashboard mismatch '+needle)
+      - name: Commit qualification
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ROADMAP.md
+          git diff --cached --quiet && exit 0
+          git commit -m "docs(v11.4): qualify platoon fire mission milestone"
+          git push origin HEAD:dev-v11-4
