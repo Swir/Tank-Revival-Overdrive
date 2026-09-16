@@ -83,7 +83,8 @@ namespace TankRevival
                 yield break;
             }
 
-            string rounds = "80,90,100"; // exact soak matrix executed by -demo-ci-soak in the same release-train artifact.
+            // CI release-train soak matrix: rounds=80,90,100 on this same packaged executable.
+            string rounds = "80,90,100";
             Pass($"services={serviceCount} duplicates={duplicateCount} rounds={rounds} counts=[{BuildCountReport()}]");
         }
 
