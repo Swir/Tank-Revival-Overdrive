@@ -2,7 +2,8 @@ name: ROADMAP v12.5 Scope Registrar
 
 on:
   push:
-    branches: [dev-v12-5]
+    branches:
+      - dev-v12-5
   workflow_dispatch:
 
 permissions:
@@ -16,8 +17,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: Register honest v12.5 scope and validate SWIR Roadmap v1
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
           import re
 
@@ -55,12 +57,11 @@ jobs:
 
           completed = len(re.findall(r'^- \[x\] ', text, flags=re.M))
           remaining = len(re.findall(r'^- \[ \] ', text, flags=re.M))
-          assert completed == 343, f'expected 343 completed, got {completed}'
-          assert remaining == 8, f'expected 8 remaining, got {remaining}'
-          assert completed + remaining == 351
+          assert (completed, remaining, completed + remaining) == (343, 8, 351), (completed, remaining, completed + remaining)
           assert '███████████████████░ 97.7%' in text
           assert 'DONE-343%2F351' in text and 'STATUS-V12.5%20IN%20DEVELOPMENT' in text
           p.write_text(text, encoding='utf-8')
+          PY
       - name: Commit roadmap scope when changed
         shell: bash
         run: |
