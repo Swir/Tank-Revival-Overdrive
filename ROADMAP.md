@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-7"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-8"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-287%2F287-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.7%20QUALIFIED-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-295%2F295-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.8%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **287** | **0** | **287** | **100.0%** |
+| **295** | **0** | **295** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -453,6 +453,16 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Runtime installation and smoke verification prove the presentation bridge remains additive and does not modify TankGame, Health, ArmorSystem, Projectile or EnemyTank movement authority.
 - [x] v11.7 source-contract qualification validates bounded cue counts, tactical-state mapping, existing BattlefieldPresentationOverdrive/CombatFX3D integration and SWIR roadmap invariants.
 - [x] Packaged Windows x64 v11.7 qualification gate builds and boots the exact candidate, executes the maneuver-presentation runtime probe and rejects blocking exception signatures before qualification.
+
+## v11.8 — Reactive Cover Breakthrough & Destructible Tactical Terrain — QUALIFIED
+- [x] Obstacle authority gains ammo-aware cover damage profiles so Brick and fortified Steel react differently to Basic/AP/HE/Plasma/EMP without introducing a second damage path.
+- [x] Fortified Steel can be breached by bounded heavy ordnance while ordinary fire produces readable dents/ricochets instead of silently deleting hard cover.
+- [x] Bounded recent-breach memory publishes opened lanes, attacker team and ordnance for tactical consumers without taking movement, projectile or round authority.
+- [x] Breacher/Commander maneuver intent can exploit a nearby valid breach toward Player/Orzełek while EnemyTank/Rigidbody2D remain the sole movement authority.
+- [x] Existing battlefield artillery can damage nearby cover through the same Obstacle authority, making telegraphed strikes reshape routes for both sides.
+- [x] Cover integrity, breakthrough and collapse presentation reuses existing Warzone/VisualFactory/DestructionReforge systems and obeys mass-battle FX budgets.
+- [x] v11.8 runtime/source-contract qualification verifies ammo response, bounded breach memory, AI authority boundaries and unchanged Health/Projectile ownership.
+- [x] Packaged Windows x64 v11.8 qualification builds and boots the exact candidate, executes reactive-cover smoke checks and rejects blocking exception signatures before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.

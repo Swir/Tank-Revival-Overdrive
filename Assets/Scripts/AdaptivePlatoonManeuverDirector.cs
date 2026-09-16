@@ -8,6 +8,7 @@ namespace TankRevival
     /// EnemyTank/Rigidbody2D remain the sole movement authority.
     /// v11.7 adds read-only presentation snapshots so HUD/VFX can describe this authority
     /// without gaining write access to movement, damage or projectile state.
+    /// v11.8 consumes bounded recent-breach snapshots to route assault roles through opened cover.
     /// </summary>
     public static class AdaptivePlatoonManeuverDirector
     {
@@ -37,13 +38,14 @@ namespace TankRevival
         public const float CounterFireDisplaceBand = 7.2f;
         public const float ReorgSeconds = 3.5f;
         public const float EncirclementPhaseSeconds = 6.0f;
+        public const float BreachExploitArrivalRadius = 0.55f;
         public const int MaxTrackedActors = 24;
 
         private static int _lossEpoch;
         private static float _lastLossTime = -99f;
         private static readonly Dictionary<EnemyKind, int> Losses = new Dictionary<EnemyKind, int>();
 
-        public static bool ConfigurationValid => HunterFlankBand >= 3.5f && HunterFlankBand <= 6.5f && SiegeMinStandoff >= 4f && SiegeMaxStandoff > SiegeMinStandoff && SiegeMaxStandoff <= 10f && CounterFireDisplaceBand >= SiegeMinStandoff && MaxTrackedActors == PlatoonFireMissionCoordinator.MaxActors && ReorgSeconds > 0f && EncirclementPhaseSeconds >= ReorgSeconds;
+        public static bool ConfigurationValid => HunterFlankBand >= 3.5f && HunterFlankBand <= 6.5f && SiegeMinStandoff >= 4f && SiegeMaxStandoff > SiegeMinStandoff && SiegeMaxStandoff <= 10f && CounterFireDisplaceBand >= SiegeMinStandoff && MaxTrackedActors == PlatoonFireMissionCoordinator.MaxActors && ReorgSeconds > 0f && EncirclementPhaseSeconds >= ReorgSeconds && BreachExploitArrivalRadius >= .35f && BreachExploitArrivalRadius <= .8f;
         public static int LossEpoch => _lossEpoch;
         public static bool Reorganizing => Time.time - _lastLossTime < ReorgSeconds;
         public static int LossesOf(EnemyKind kind) => Losses.TryGetValue(kind, out int count) ? count : 0;
@@ -109,6 +111,22 @@ namespace TankRevival
             int phase = Mathf.FloorToInt(Time.time / EncirclementPhaseSeconds);
             int parity = (actor.GetInstanceID() ^ (_lossEpoch * 397) ^ round ^ phase) & 1;
             if (parity == 0) side = -side;
+
+            // v11.8: assault leaders consume only read-only, fixed-cap breach snapshots. They still
+            // return a direction to EnemyTank; no transform/Rigidbody writes happen here. A Breacher
+            // commits more strongly to the opened lane, while a Commander biases the formation toward
+            // it and continues to act as recovery pivot once the opening is reached.
+            if ((role == PlatoonFireMissionCoordinator.PlatoonRole.Breacher || role == PlatoonFireMissionCoordinator.PlatoonRole.Commander) &&
+                ReactiveCoverBreachDirector.TryFindBestBreach(actorPosition, target, Team.Enemy, out ReactiveCoverBreachDirector.BreachSnapshot breach))
+            {
+                Vector2 toBreach = breach.Position - actorPosition;
+                if (toBreach.sqrMagnitude > BreachExploitArrivalRadius * BreachExploitArrivalRadius)
+                {
+                    Vector2 breachDirection = toBreach.normalized;
+                    float commitment = role == PlatoonFireMissionCoordinator.PlatoonRole.Breacher ? 1.35f : .82f;
+                    return Cardinal(breachDirection * commitment + forward * .32f);
+                }
+            }
 
             int hunterLosses = LossesOf(EnemyKind.Sniper) + LossesOf(EnemyKind.Elite);
             int breachLosses = LossesOf(EnemyKind.Heavy);

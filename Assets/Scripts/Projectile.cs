@@ -160,7 +160,7 @@ namespace TankRevival
                 DamageResolved?.Invoke(this, health, resolvedDamage, killed);
                 ApplyStatus(health);
                 bool explosive = Ammo == AmmoType.Explosive;
-                if (explosive) Detonate(health);
+                if (explosive) Detonate(health, null);
                 else if (MassBattleFxBudget.TryConsumeMicroFx(killed || OwnerTeam == Team.Player)) VisualFactory.MicroBurst(transform.position, _color, Ammo == AmmoType.Plasma ? 0.72f : 0.46f);
                 Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, explosive, false);
                 if (CanPenetrate()) { _penetrations--; return; }
@@ -170,24 +170,34 @@ namespace TankRevival
 
             var obstacle = other.GetComponent<Obstacle>();
             if (obstacle == null || obstacle.Kind == ObstacleKind.Water) return;
+
             bool steel = obstacle.Kind == ObstacleKind.Steel;
-            obstacle.Hit(Damage, transform.position);
+            ObstacleImpactResult coverResult = obstacle.ResolveProjectileImpact(Damage, transform.position, Ammo, OwnerTeam, false);
+            bool deflected = coverResult == ObstacleImpactResult.Deflected;
+            bool breached = coverResult == ObstacleImpactResult.Breached;
+
             if (Ammo == AmmoType.Explosive)
             {
-                Detonate(null);
+                // The direct obstacle already consumed the center hit. The splash pass deliberately
+                // skips it so HE/artillery never double-damages one cover cell in the same explosion.
+                Detonate(null, obstacle);
                 Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, true, false);
                 Recycle();
                 return;
             }
-            if (CanPenetrate())
+
+            // AP/Plasma can continue through Brick or a newly opened Steel lane. Intact fortified
+            // Steel absorbs the penetrator after taking its structural damage.
+            if (CanPenetrate() && (!steel || breached))
             {
                 _penetrations--;
                 if (MassBattleFxBudget.TryConsumeMicroFx(false)) VisualFactory.MicroBurst(transform.position, _color, 0.36f);
                 Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, false, false);
                 return;
             }
-            if (steel) BattleAudio.PlayGlobal(SoundCue.Ricochet, 0.42f, 0.08f);
-            Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, false, steel);
+
+            if (deflected && steel) BattleAudio.PlayGlobal(SoundCue.Ricochet, 0.42f, 0.08f);
+            Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, false, deflected && steel);
             Recycle();
         }
 
@@ -210,7 +220,7 @@ namespace TankRevival
             else status.ApplyBurn(OwnerTeam, 3.2f, 1, 0.78f);
         }
 
-        private void Detonate(Health primary)
+        private void Detonate(Health primary, Obstacle directObstacle)
         {
             const float radius = 1.05f;
             VisualFactory.Explosion(transform.position, _color, 0.95f);
@@ -226,8 +236,15 @@ namespace TankRevival
                     int splash = Mathf.Max(1, Damage - 1);
                     if (health.Damage(splash, OwnerTeam)) DamageResolved?.Invoke(this, health, splash, health.IsDead);
                 }
+
                 var obstacle = hit.GetComponent<Obstacle>();
-                if (obstacle != null && obstacle.Kind == ObstacleKind.Brick) obstacle.Hit(Mathf.Max(1, Damage), transform.position);
+                if (obstacle != null && obstacle != directObstacle && obstacle.Kind != ObstacleKind.Water)
+                {
+                    // SiegeLineWarfareDirector and friendly counter-battery both fire AmmoType.Explosive
+                    // through this Projectile path, so battlefield artillery now reshapes cover using the
+                    // exact same Obstacle authority as direct player/enemy ordnance.
+                    obstacle.ResolveProjectileImpact(Mathf.Max(1, Damage - 1), transform.position, AmmoType.Explosive, OwnerTeam, true);
+                }
                 SplashBuffer[i] = null;
             }
         }
