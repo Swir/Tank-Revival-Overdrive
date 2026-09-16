@@ -1,0 +1,178 @@
+name: Combined Arms Mobile Front v12.0 Windows Gate
+
+on:
+  push:
+    branches: ['dev-v12-0']
+    paths:
+      - 'Assets/Scripts/CombinedArmsMobileFrontDirector.cs'
+      - 'Assets/Scripts/CombinedArmsMobileFrontCISmokeProbe.cs'
+      - '.github/workflows/combined-arms-mobile-front-v120-windows.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contracts:
+    name: Verify v12.0 mobile-front and authority contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify implementation contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          test -f Assets/Scripts/CombinedArmsMobileFrontCISmokeProbe.cs
+          test -f Assets/Scripts/ReactiveCoverBreachDirector.cs
+          test -f Assets/Scripts/DynamicFrontlineTerritoryDirector.cs
+          test -f Assets/Scripts/Health.cs
+          grep -q 'MaxRetaskedSpecialists = 8' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'IsCandidateRound(int round)' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'MajorOperationBusy' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'TryFindBestBreach' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'ReactiveCoverBreachDirector.IsBreachActive' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'AddComponent<Health>' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'RigidbodyType2D.Kinematic' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'TacticalNavigationAgent' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'SetRole(SquadTacticalRole.Breaker)' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'WarEconomyDirector.AwardMissionBonds' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'V12_0_MOBILE_FRONT_SMOKE_OK.txt' Assets/Scripts/CombinedArmsMobileFrontCISmokeProbe.cs
+          if grep -Eq 'SpawnProjectile\(|AddComponent<Projectile>|\.Damage\(' Assets/Scripts/CombinedArmsMobileFrontDirector.cs; then
+            echo 'Mobile-front director contains forbidden projectile/direct-damage authority.' >&2
+            exit 1
+          fi
+      - name: Verify ROADMAP scope and SWIR v1 dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s=Path('ROADMAP.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',s,re.M))==1
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
+          assert (done,open_,total)==(303,8,311),(done,open_,total)
+          assert 'ROADMAP-97.4%25-brightgreen' in s
+          assert 'DONE-303%2F311' in s
+          assert 'STATUS-V12.0%20IN%20DEVELOPMENT-yellow' in s
+          assert '███████████████████░ 97.4%' in s
+          assert '| **303** | **8** | **311** | **97.4%** |' in s
+          start=s.index('## v12.0 — Combined Arms Operations & Mobile Front Objectives — IN DEVELOPMENT')
+          end=s.index('\n## Development rules',start)
+          section=s[start:end]
+          assert section.count('- [ ]')==8 and section.count('- [x]')==0
+
+  build-candidate:
+    name: Build exact v12.0 Windows x64 candidate
+    needs: source-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: V120MobileFront-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            V120MobileFront-Library-${{ runner.os }}-6000.3.17f1-
+            V119CombatEngineering-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+      - name: Build development player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Verify executable and pack exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f build/StandaloneWindows64/TankRevivalOverdrive.exe
+          test -d build/StandaloneWindows64/TankRevivalOverdrive_Data
+          cd build/StandaloneWindows64
+          zip -r ../../TankRevivalOverdrive-v12.0-mobile-front-Windows-x64.zip .
+          cd ../..
+          test -s TankRevivalOverdrive-v12.0-mobile-front-Windows-x64.zip
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v12.0-mobile-front-Windows-x64
+          path: TankRevivalOverdrive-v12.0-mobile-front-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  packaged-exe-smoke:
+    name: Boot exact EXE and verify v12.0 mobile front
+    needs: build-candidate
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - name: Download exact candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v12.0-mobile-front-Windows-x64
+          path: candidate
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevivalOverdrive-v12.0-mobile-front-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data directory missing after extraction' }
+      - name: Run v12.0 runtime smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item V12_0_MOBILE_FRONT_SMOKE_OK.txt, V12_0_MOBILE_FRONT_SMOKE_FAIL.txt, V120MobileFrontPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-tr-v120-smoke','-logFile','V120MobileFrontPlayer.log' -PassThru
+          if (!$p.WaitForExit(70000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'v12.0 mobile-front smoke timed out after 70 seconds'
+          }
+          if (Test-Path 'V12_0_MOBILE_FRONT_SMOKE_FAIL.txt') {
+            Get-Content V12_0_MOBILE_FRONT_SMOKE_FAIL.txt
+            if (Test-Path V120MobileFrontPlayer.log) { Get-Content V120MobileFrontPlayer.log -Tail 260 }
+            throw 'v12.0 runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'V12_0_MOBILE_FRONT_SMOKE_OK.txt')) {
+            if (Test-Path V120MobileFrontPlayer.log) { Get-Content V120MobileFrontPlayer.log -Tail 260 }
+            throw "Runtime exited without v12.0 PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content V12_0_MOBILE_FRONT_SMOKE_OK.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Test-Path V120MobileFrontPlayer.log) {
+            if (Select-String -Path V120MobileFrontPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|UnityException|TargetInvocationException' -Quiet) {
+              Get-Content V120MobileFrontPlayer.log -Tail 300
+              throw 'Blocking exception signature found during v12.0 runtime smoke'
+            }
+          }
+          Write-Host 'v12.0 combined-arms mobile-front runtime smoke passed.'
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v12.0-mobile-front-diagnostics
+          path: |
+            candidate/runtime/V12_0_MOBILE_FRONT_SMOKE_OK.txt
+            candidate/runtime/V12_0_MOBILE_FRONT_SMOKE_FAIL.txt
+            candidate/runtime/V120MobileFrontPlayer.log
+          if-no-files-found: ignore
+          retention-days: 14
