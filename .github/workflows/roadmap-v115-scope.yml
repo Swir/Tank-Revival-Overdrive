@@ -1,0 +1,47 @@
+name: ROADMAP v11.5 Scope Registrar
+on:
+  push:
+    branches: [dev-v11-5]
+    paths: ['.v115-roadmap-scope-trigger']
+permissions:
+  contents: write
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v11-5
+      - name: Register v11.5 scope and verify SWIR v1 dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
+          marker='<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          if sum(1 for line in s.splitlines() if line.strip()==marker)!=1: raise SystemExit('SWIR marker invalid')
+          heading='## v11.5 — Platoon Roles, Target Handoffs & Coordinated Assaults — IN DEVELOPMENT'
+          if heading not in s:
+              anchor='\n## Development rules\n'
+              block='''\n## v11.5 — Platoon Roles, Target Handoffs & Coordinated Assaults — IN DEVELOPMENT\n- [ ] Dynamic platoon roles assign Commander, Hunter, FireSupport and Breacher duties to Heavy/Sniper/Siege/Elite without replacing EnemyTank firing authority.\n- [ ] Target handoff releases stale reservations immediately on actor disable, target loss or strategic priority change so surviving units can reassign without waiting for reservation expiry.\n- [ ] Coordinated assault phases combine Heavy breach pressure, Sniper/Elite hunter screening and Siege fire support using existing High Command, Counter-Fire and Fire Mission Network intelligence.\n- [ ] Assault coordination remains bounded, boss-safe and deterministic under late-round mass battles, with capped platoon state and no additional projectile/damage path.\n- [ ] Packaged Windows v11.5 gate validates role assignment, target handoff, coordinated assault integration and exact EXE boot before qualification.\n'''
+              if anchor not in s: raise SystemExit('Development rules anchor missing')
+              s=s.replace(anchor,block+anchor,1)
+          completed=len(re.findall(r'^- \[x\] ',s,re.M)); remaining=len(re.findall(r'^- \[ \] ',s,re.M)); total=completed+remaining
+          if (completed,remaining,total)!=(269,5,274): raise SystemExit(f'Unexpected checklist counts {completed}/{remaining}/{total}')
+          pct=round(completed*100/total,1); filled=round(pct/5); bar='█'*filled+'░'*(20-filled)
+          start=s.index('<!-- ROADMAP-PROGRESS:START -->'); end=s.index('<!-- ROADMAP-PROGRESS:END -->')+len('<!-- ROADMAP-PROGRESS:END -->')
+          dashboard=f'''<!-- ROADMAP-PROGRESS:START -->\n<p align="center">\n  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-5"></a>\n  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-{pct:.1f}%25-brightgreen?style=for-the-badge">\n  <img alt="Completed" src="https://img.shields.io/badge/DONE-{completed}%2F{total}-1f6feb?style=for-the-badge">\n  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.5%20IN%20DEVELOPMENT-yellow?style=for-the-badge">\n</p>\n\n## 📊 Overall progress\n\n```text\n{bar} {pct:.1f}%\n```\n\n| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |\n|---:|---:|---:|---:|\n| **{completed}** | **{remaining}** | **{total}** | **{pct:.1f}%** |\n\n> **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.\n<!-- ROADMAP-PROGRESS:END -->'''
+          s=s[:start]+dashboard+s[end:]
+          p.write_text(s,encoding='utf-8')
+          reread=p.read_text(encoding='utf-8')
+          for needle in ['DONE-269%2F274','ROADMAP-98.2%25','STATUS-V11.5%20IN%20DEVELOPMENT','████████████████████ 98.2%','**269** | **5** | **274** | **98.2%**']:
+              if needle not in reread: raise SystemExit('dashboard mismatch '+needle)
+          if sum(1 for line in reread.splitlines() if line.strip()==marker)!=1: raise SystemExit('marker changed')
+      - name: Commit scope
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ROADMAP.md
+          git diff --cached --quiet && exit 0
+          git commit -m "docs(v11.5): register platoon assault milestone scope"
+          git push origin HEAD:dev-v11-5
