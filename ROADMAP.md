@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-5"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-274%2F274-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.5%20QUALIFIED-brightgreen?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-6"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.2%25-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-274%2F279-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.6%20IN%20DEVELOPMENT-yellow?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+████████████████████ 98.2%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **274** | **0** | **274** | **100.0%** |
+| **274** | **5** | **279** | **98.2%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -436,6 +436,13 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Coordinated assault phases combine Heavy breach pressure, Sniper/Elite hunter screening and Siege fire support using existing High Command, Counter-Fire and Fire Mission Network intelligence.
 - [x] Assault coordination remains bounded, boss-safe and deterministic under late-round mass battles, with capped platoon state and no additional projectile/damage path.
 - [x] Packaged Windows v11.5 gate validates role assignment, target handoff, coordinated assault integration and exact EXE boot before qualification.
+
+## v11.6 — Adaptive Platoon Maneuver & Battlefield Encirclement — IN DEVELOPMENT
+- [ ] Role-aware maneuver orders turn Commander/Hunter/FireSupport/Breacher assignments into bounded movement intent without replacing EnemyTank Rigidbody2D authority.
+- [ ] Hunter/Elite flank lanes and crossfire spacing react to player position while Heavy/Breacher units maintain frontal pressure and avoid deterministic stacking.
+- [ ] Siege FireSupport maintains bounded standoff bands and repositions when threatened by real Counter-Fire instead of camping indefinitely.
+- [ ] Commander casualty adaptation reorganizes surviving specialist roles and maneuver pressure after actor loss with capped deterministic platoon state.
+- [ ] Packaged Windows v11.6 gate validates maneuver bounds, encirclement integration, late-round safety and exact EXE boot before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
