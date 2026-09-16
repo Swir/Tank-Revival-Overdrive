@@ -1,10 +1,11 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace TankRevival
 {
     /// <summary>
-    /// v11.6 movement-intent layer. Returns bounded cardinal steering suggestions only;
-    /// EnemyTank Rigidbody2D remains the sole movement authority.
+    /// v11.6 bounded maneuver-intent layer. It coordinates specialist movement only;
+    /// EnemyTank/Rigidbody2D remain the sole movement authority.
     /// </summary>
     public static class AdaptivePlatoonManeuverDirector
     {
@@ -13,27 +14,29 @@ namespace TankRevival
         public const float SiegeMaxStandoff = 8.6f;
         public const float CounterFireDisplaceBand = 7.2f;
         public const float ReorgSeconds = 3.5f;
+        public const float EncirclementPhaseSeconds = 6.0f;
         public const int MaxTrackedActors = 24;
 
         private static int _lossEpoch;
         private static float _lastLossTime = -99f;
+        private static readonly Dictionary<EnemyKind, int> Losses = new Dictionary<EnemyKind, int>();
 
-        public static bool ConfigurationValid => HunterFlankBand >= 3.5f && HunterFlankBand <= 6.5f && SiegeMinStandoff >= 4f && SiegeMaxStandoff > SiegeMinStandoff && SiegeMaxStandoff <= 10f && CounterFireDisplaceBand >= SiegeMinStandoff && MaxTrackedActors == PlatoonFireMissionCoordinator.MaxActors;
+        public static bool ConfigurationValid => HunterFlankBand >= 3.5f && HunterFlankBand <= 6.5f && SiegeMinStandoff >= 4f && SiegeMaxStandoff > SiegeMinStandoff && SiegeMaxStandoff <= 10f && CounterFireDisplaceBand >= SiegeMinStandoff && MaxTrackedActors == PlatoonFireMissionCoordinator.MaxActors && ReorgSeconds > 0f && EncirclementPhaseSeconds >= ReorgSeconds;
         public static int LossEpoch => _lossEpoch;
         public static bool Reorganizing => Time.time - _lastLossTime < ReorgSeconds;
+        public static int LossesOf(EnemyKind kind) => Losses.TryGetValue(kind, out int count) ? count : 0;
 
         public static void NotifyLoss(EnemyKind kind)
         {
-            if (kind == EnemyKind.Heavy || kind == EnemyKind.Sniper || kind == EnemyKind.Siege || kind == EnemyKind.Elite)
-            {
-                _lossEpoch++;
-                _lastLossTime = Time.time;
-            }
+            if (!IsSpecialist(kind)) return;
+            _lossEpoch++;
+            _lastLossTime = Time.time;
+            Losses[kind] = LossesOf(kind) + 1;
         }
 
         public static Vector2 DesiredDirection(EnemyTank actor, EnemyKind kind, Vector2 actorPosition, Vector2 playerPosition, Vector2 eaglePosition, bool targetPlayer, bool counterFire, int round)
         {
-            if (actor == null || kind == EnemyKind.Boss || kind == EnemyKind.Supply || kind == EnemyKind.Basic || kind == EnemyKind.Fast)
+            if (actor == null || !IsSpecialist(kind))
                 return Cardinal((targetPlayer ? playerPosition : eaglePosition) - actorPosition);
 
             PlatoonFireMissionCoordinator.PlatoonRole role = PlatoonFireMissionCoordinator.RoleFor(actor, kind);
@@ -42,24 +45,37 @@ namespace TankRevival
             float distance = toTarget.magnitude;
             Vector2 forward = distance > .01f ? toTarget / distance : Vector2.down;
             Vector2 side = new Vector2(-forward.y, forward.x);
-            int parity = (actor.GetInstanceID() ^ (_lossEpoch * 397) ^ round) & 1;
+
+            // A six-second encirclement clock gives the platoon a shared maneuver rhythm.
+            // Casualties flip the parity so survivors do not keep marching into a collapsed lane.
+            int phase = Mathf.FloorToInt(Time.time / EncirclementPhaseSeconds);
+            int parity = (actor.GetInstanceID() ^ (_lossEpoch * 397) ^ round ^ phase) & 1;
             if (parity == 0) side = -side;
+
+            int hunterLosses = LossesOf(EnemyKind.Sniper) + LossesOf(EnemyKind.Elite);
+            int breachLosses = LossesOf(EnemyKind.Heavy);
+            int supportLosses = LossesOf(EnemyKind.Siege);
+            float casualtyPressure = Mathf.Clamp01((hunterLosses + breachLosses + supportLosses) / 8f);
 
             if (role == PlatoonFireMissionCoordinator.PlatoonRole.Hunter)
             {
-                // Hunters/Elites build opposing flank lanes around the player and periodically cross the axis.
-                float phase = Mathf.Sin((Time.time + (actor.GetInstanceID() & 7)) * .55f);
-                Vector2 flankPoint = playerPosition + side * HunterFlankBand + forward * phase * 1.4f;
+                // Hunters form alternating left/right hooks. After hunter losses, surviving flankers
+                // widen and rotate their lane instead of repeatedly entering the broken flank.
+                float recoveryWidth = Mathf.Min(1.8f, hunterLosses * .35f);
+                float sweep = Mathf.Sin((Time.time + (actor.GetInstanceID() & 7)) * .55f) * 1.4f;
+                Vector2 flankPoint = playerPosition + side * (HunterFlankBand + recoveryWidth) + forward * sweep;
+                if (Reorganizing) flankPoint += side * (1.0f + casualtyPressure);
                 return Cardinal(flankPoint - actorPosition);
             }
 
             if (role == PlatoonFireMissionCoordinator.PlatoonRole.FireSupport)
             {
-                // Siege never camps indefinitely: close units withdraw, distant units close the gap,
-                // and real Counter-Fire forces a lateral displacement inside a bounded band.
-                if (counterFire)
+                // Counter-fire always wins over normal standoff behavior. Reorganization also moves
+                // surviving support laterally so artillery does not remain in the lane where a unit died.
+                if (counterFire || (Reorganizing && supportLosses > 0))
                 {
-                    Vector2 displacePoint = target + side * CounterFireDisplaceBand - forward * 1.2f;
+                    float displacement = CounterFireDisplaceBand + Mathf.Min(1.2f, supportLosses * .3f);
+                    Vector2 displacePoint = target + side * displacement - forward * (1.2f + casualtyPressure);
                     return Cardinal(displacePoint - actorPosition);
                 }
                 if (distance < SiegeMinStandoff) return Cardinal(-forward + side * .25f);
@@ -69,13 +85,25 @@ namespace TankRevival
 
             if (role == PlatoonFireMissionCoordinator.PlatoonRole.Breacher)
             {
-                // Breachers preserve frontal pressure with a small deterministic lane split.
-                return Cardinal(forward + side * .22f);
+                // Heavy losses make remaining breachers spread rather than stack on the same frontal lane.
+                float lane = .22f + Mathf.Min(.38f, breachLosses * .08f);
+                if (Reorganizing) lane += .20f;
+                return Cardinal(forward + side * lane);
             }
 
-            // Commanders flex during casualty reorganization instead of stacking behind Breachers.
-            if (Reorganizing) return Cardinal(side + forward * .35f);
+            // Commander is the formation recovery pivot. During casualty recovery it shifts across the
+            // line while retaining forward pressure, then resumes the normal command lane.
+            if (Reorganizing)
+            {
+                float lateral = .85f + casualtyPressure * .55f;
+                return Cardinal(side * lateral + forward * .35f);
+            }
             return Cardinal(forward + side * .12f);
+        }
+
+        private static bool IsSpecialist(EnemyKind kind)
+        {
+            return kind == EnemyKind.Heavy || kind == EnemyKind.Sniper || kind == EnemyKind.Siege || kind == EnemyKind.Elite;
         }
 
         private static Vector2 Cardinal(Vector2 v)
