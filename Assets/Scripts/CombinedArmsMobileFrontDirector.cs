@@ -12,7 +12,8 @@ namespace TankRevival
     /// <summary>
     /// v12.0 late-campaign combined-arms operation layer. It owns only the mobile objective and
     /// temporary navigation orders. TankGame remains round/spawn/projectile authority, Health is
-    /// the only objective-damage authority, and EnemyTank/Rigidbody2D remain movement authority.
+    /// the only objective-damage authority, and the existing TacticalNavigationAgent/Rigidbody2D
+    /// stack remains enemy movement authority.
     /// </summary>
     [DefaultExecutionOrder(610)]
     public sealed class CombinedArmsMobileFrontDirector : MonoBehaviour
@@ -26,7 +27,9 @@ namespace TankRevival
         public const float PresenceRadius = 3.10f;
         public const float AdvanceSpeed = 0.94f;
         public const float FallbackSpeed = 0.42f;
-        public const float RetaskCadence = 1.35f;
+        // TacticalNavigationDirector refreshes its baseline at 0.30s. v12 orders deliberately
+        // reassert slightly faster and execute later (order 610 vs 420), without adding movement authority.
+        public const float RetaskCadence = 0.22f;
         public const float RouteRefreshCadence = 0.70f;
         public const float GoalThreshold = 0.96f;
         public const float MinimumTimeoutProgress = 0.56f;
@@ -85,7 +88,7 @@ namespace TankRevival
             PresenceRadius >= 2.4f && PresenceRadius <= 3.6f &&
             AdvanceSpeed >= 0.70f && AdvanceSpeed <= 1.20f &&
             FallbackSpeed >= 0.25f && FallbackSpeed < AdvanceSpeed &&
-            RetaskCadence >= 1.0f && RetaskCadence <= 2.0f &&
+            RetaskCadence >= 0.15f && RetaskCadence < TacticalNavigationDirector.DecisionCadence &&
             RouteRefreshCadence >= 0.45f && RouteRefreshCadence <= 1.25f &&
             GoalThreshold >= 0.90f && GoalThreshold <= 0.99f &&
             MinimumTimeoutProgress >= 0.50f && MinimumTimeoutProgress <= 0.70f &&
@@ -183,15 +186,32 @@ namespace TankRevival
         public static bool IsSpecialist(EnemyKind kind) =>
             kind == EnemyKind.Heavy || kind == EnemyKind.Sniper || kind == EnemyKind.Siege || kind == EnemyKind.Elite;
 
-        public static int NodeHitPointsForRound(int round)
+        public static SquadTacticalRole RoleForSpecialist(EnemyKind kind, bool enemyOperation)
         {
-            return Mathf.Clamp(NodeHealthMin + Mathf.Max(0, round - EarliestRound) / 12, NodeHealthMin, NodeHealthMax);
+            switch (kind)
+            {
+                case EnemyKind.Heavy: return enemyOperation ? SquadTacticalRole.Escort : SquadTacticalRole.Breaker;
+                case EnemyKind.Sniper: return SquadTacticalRole.Suppressor;
+                case EnemyKind.Siege: return SquadTacticalRole.Breaker;
+                case EnemyKind.Elite: return enemyOperation ? SquadTacticalRole.Escort : SquadTacticalRole.Flanker;
+                default: return SquadTacticalRole.Breaker;
+            }
         }
 
-        public static int RewardForRound(int round)
+        public static float StandoffForSpecialist(EnemyKind kind, bool enemyOperation)
         {
-            return Mathf.Clamp(RewardMin + Mathf.Max(0, round - EarliestRound) / 8, RewardMin, RewardMax);
+            switch (kind)
+            {
+                case EnemyKind.Sniper: return 5.2f;
+                case EnemyKind.Siege: return 2.45f;
+                case EnemyKind.Heavy: return enemyOperation ? 1.55f : 1.05f;
+                case EnemyKind.Elite: return enemyOperation ? 1.45f : 1.20f;
+                default: return 1.15f;
+            }
         }
+
+        public static int NodeHitPointsForRound(int round) => Mathf.Clamp(NodeHealthMin + Mathf.Max(0, round - EarliestRound) / 12, NodeHealthMin, NodeHealthMax);
+        public static int RewardForRound(int round) => Mathf.Clamp(RewardMin + Mathf.Max(0, round - EarliestRound) / 8, RewardMin, RewardMax);
 
         public static int ComputePresenceDelta(bool enemyOperation, int support, int opposition)
         {
@@ -206,14 +226,10 @@ namespace TankRevival
         {
             Vector2 axis = goal - start;
             float denom = axis.sqrMagnitude;
-            if (denom <= 0.001f) return 0f;
-            return Mathf.Clamp01(Vector2.Dot(current - start, axis) / denom);
+            return denom <= 0.001f ? 0f : Mathf.Clamp01(Vector2.Dot(current - start, axis) / denom);
         }
 
-        public static Vector2 ClampRoutePoint(Vector2 point)
-        {
-            return new Vector2(Mathf.Clamp(point.x, -ArenaXLimit, ArenaXLimit), Mathf.Clamp(point.y, -ArenaYLimit, ArenaYLimit));
-        }
+        public static Vector2 ClampRoutePoint(Vector2 point) => new Vector2(Mathf.Clamp(point.x, -ArenaXLimit, ArenaXLimit), Mathf.Clamp(point.y, -ArenaYLimit, ArenaYLimit));
 
         private static bool MajorOperationBusy(int round)
         {
@@ -235,7 +251,7 @@ namespace TankRevival
             _resolved = false;
             _operationEndsAt = Time.time + OperationDuration;
             _nextRouteRefresh = Time.time;
-            _nextRetask = Time.time + 0.25f;
+            _nextRetask = Time.time + 0.15f;
             _retaskedThisBeat = 0;
             _hasBreachRoute = false;
             _breachSequence = 0;
@@ -284,7 +300,6 @@ namespace TankRevival
             if (_nodeBody == null) return;
             Team team = _kind == MobileFrontOperationKind.EnemyBreakthrough ? Team.Enemy : Team.Player;
             if (_hasBreachRoute && ReactiveCoverBreachDirector.IsBreachActive(_breachSequence) && Vector2.Distance(_nodeBody.position, _routePoint) > 0.85f) return;
-
             _hasBreachRoute = false;
             _breachSequence = 0;
             if (!ReactiveCoverBreachDirector.TryFindBestBreach(_nodeBody.position, _goal, team, out ReactiveCoverBreachDirector.BreachSnapshot breach)) return;
@@ -295,8 +310,7 @@ namespace TankRevival
 
         private Vector2 CurrentRouteDestination()
         {
-            if (_hasBreachRoute && ReactiveCoverBreachDirector.IsBreachActive(_breachSequence) && Vector2.Distance(_nodeBody.position, _routePoint) > 0.75f)
-                return _routePoint;
+            if (_hasBreachRoute && ReactiveCoverBreachDirector.IsBreachActive(_breachSequence) && Vector2.Distance(_nodeBody.position, _routePoint) > 0.75f) return _routePoint;
             _hasBreachRoute = false;
             _breachSequence = 0;
             return _goal;
@@ -309,6 +323,7 @@ namespace TankRevival
             int ordered = 0;
             bool enemyOperation = _kind == MobileFrontOperationKind.EnemyBreakthrough;
             Vector2 anchor = _nodeBody != null ? _nodeBody.position : _start;
+            float forward = enemyOperation ? -1f : 1f;
 
             for (int i = 0; i < enemies.Length && ordered < MaxRetaskedSpecialists; i++)
             {
@@ -319,13 +334,11 @@ namespace TankRevival
 
                 int slot = ordered;
                 float side = (slot & 1) == 0 ? -1f : 1f;
-                float rank = 0.72f + (slot / 2) * 0.38f;
-                Vector2 offset = enemyOperation
-                    ? new Vector2(side * rank, 0.58f + (slot % 3) * 0.22f)
-                    : new Vector2(side * rank, 1.25f + (slot % 3) * 0.35f);
-                Vector2 target = ClampRoutePoint(anchor + (_kind == MobileFrontOperationKind.EnemyBreakthrough ? offset : new Vector2(offset.x, offset.y)));
-                navigation.SetRole(SquadTacticalRole.Breaker);
-                navigation.SetOrder(target, 0.86f, 1.12f, enemies);
+                float lateral = 0.72f + (slot / 2) * 0.38f;
+                float depth = enemyOperation ? 0.72f + (slot % 3) * 0.25f : 1.10f + (slot % 3) * 0.30f;
+                Vector2 target = ClampRoutePoint(anchor + new Vector2(side * lateral, forward * depth));
+                navigation.SetRole(RoleForSpecialist(enemy.Kind, enemyOperation));
+                navigation.SetOrder(target, StandoffForSpecialist(enemy.Kind, enemyOperation), enemy.Kind == EnemyKind.Sniper ? 0.84f : enemy.Kind == EnemyKind.Heavy ? 0.92f : 1.08f, enemies);
                 ordered++;
             }
 
@@ -358,6 +371,7 @@ namespace TankRevival
         {
             if (_resolved) return;
             _resolved = true;
+            Vector2 effectPosition = _nodeBody != null ? _nodeBody.position : _goal;
             if (playerSuccess)
             {
                 _operationsWon++;
@@ -370,26 +384,32 @@ namespace TankRevival
                     player.AddAmmo(AmmoType.ArmorPiercing, 1);
                     player.AddAmmo(AmmoType.Explosive, 1);
                 }
-                VisualFactory.RingPulse(_nodeBody != null ? _nodeBody.position : _goal, new Color(0.14f, 1f, 0.55f), 2.8f);
+                VisualFactory.RingPulse(effectPosition, new Color(0.14f, 1f, 0.55f), 2.8f);
                 BattleAudio.PlayGlobal(SoundCue.RoundClear, 0.48f, 0.02f);
             }
             else
             {
                 _operationsLost++;
-                VisualFactory.RingPulse(_nodeBody != null ? _nodeBody.position : _goal, new Color(1f, 0.18f, 0.08f), 2.8f);
+                VisualFactory.RingPulse(effectPosition, new Color(1f, 0.18f, 0.08f), 2.8f);
                 BattleAudio.PlayGlobal(SoundCue.EagleAlarm, 0.42f, 0.00f);
             }
             _status = reason;
             _statusUntil = Time.unscaledTime + 4.0f;
+            RemoveCommandPost();
         }
 
-        private void ClearOperation()
+        private void RemoveCommandPost()
         {
             if (_nodeHealth != null) _nodeHealth.Died -= OnCommandPostDestroyed;
             if (_node != null) Destroy(_node);
             _node = null;
             _nodeBody = null;
             _nodeHealth = null;
+        }
+
+        private void ClearOperation()
+        {
+            RemoveCommandPost();
             _kind = MobileFrontOperationKind.None;
             _resolved = false;
             _hasBreachRoute = false;
