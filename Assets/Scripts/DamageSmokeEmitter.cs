@@ -24,11 +24,11 @@ namespace TankRevival
             if (_health == null || _health.IsDead || _health.Maximum <= 1) return;
             float ratio = Mathf.Clamp01(_health.Current / (float)_health.Maximum);
             DamageVisualState state = CinematicCombatFeedbackDirector.ResolveDamageState(ratio);
-            if (state == DamageVisualState.Healthy) return;
-            if (Time.unscaledTime < _nextPulse) return;
+            if (state == DamageVisualState.Healthy || Time.unscaledTime < _nextPulse) return;
 
-            TankGame game = TankGame.I;
-            float pressure = game != null ? Mathf.Clamp01(game.LateBattleDensity01) : 0f;
+            float pressure = WarfarePerformanceGovernor.Tier == WarfarePerformanceGovernor.BudgetTier.Survival
+                ? 1f
+                : WarfarePerformanceGovernor.Tier == WarfarePerformanceGovernor.BudgetTier.Balanced ? 0.55f : 0f;
             float cadence = CinematicCombatFeedbackDirector.DamagePulseCadence(ratio, pressure);
             float jitter = Mathf.Lerp(0.92f, 1.10f, Mathf.PingPong(Time.unscaledTime * 0.37f + _phase, 1f));
             _nextPulse = Time.unscaledTime + cadence * jitter;
