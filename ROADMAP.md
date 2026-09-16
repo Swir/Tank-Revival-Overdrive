@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-3"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.6%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-327%2F335-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.3%20IN%20DEVELOPMENT-yellow?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-335%2F335-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.3%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-███████████████████░ 97.6%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **327** | **8** | **335** | **97.6%** |
+| **335** | **0** | **335** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -504,15 +504,15 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] v12.2 runtime telemetry/smoke verifies route catalog, reroute caps, decoy/recon transitions, ambush caps, cleanup and unchanged Health/Projectile/TankGame authority.
 - [x] Packaged Windows x64 v12.2 qualification builds and boots the exact candidate, executes route-intelligence smoke checks and rejects blocking exception signatures before qualification.
 
-## v12.3 — Reconnaissance Network & Electronic Counter-Logistics — IN DEVELOPMENT
-- [ ] Bounded physical scout-relay network and enemy jammer infrastructure use canonical Health/collision authority and stay subordinate to the active v12.1/v12.2 logistics operation.
-- [ ] Player relay-sync gameplay progressively converts enemy logistics from unknown contact to verified route intelligence without granting permanent omniscience.
-- [ ] Enemy electronic jamming creates a bounded interference/spoof state; destroying the jammer restores confidence and grants only existing War Bond rewards.
-- [ ] Existing Fast/Elite/Sniper combatants form bounded EW guard and counter-recon screens through TacticalNavigationAgent without replacing EnemyTank/Rigidbody2D authority.
-- [ ] Signal-quality telemetry and a compact HUD expose relay sync, intelligence packets, jammer status, spoof risk and verified-route state during live logistics operations.
-- [ ] Relay, jammer, guard-order and intelligence state cleanly reset on route resolution/round change with strict asset and actor caps for late-campaign performance.
-- [ ] v12.3 runtime smoke verifies relay/jammer bounds, deterministic lane placement, intelligence thresholds, EW guard roles, cleanup contracts and unchanged Health/Projectile/TankGame authority.
-- [ ] Packaged Windows x64 v12.3 qualification builds and boots the exact candidate, executes recon/EW smoke checks and rejects blocking exception signatures before qualification.
+## v12.3 — Reconnaissance Network & Electronic Counter-Logistics — QUALIFIED
+- [x] Bounded physical scout-relay network and enemy jammer infrastructure use canonical Health/collision authority and stay subordinate to the active v12.1/v12.2 logistics operation.
+- [x] Player relay-sync gameplay progressively converts enemy logistics from unknown contact to verified route intelligence without granting permanent omniscience.
+- [x] Enemy electronic jamming creates a bounded interference/spoof state; destroying the jammer restores confidence and grants only existing War Bond rewards.
+- [x] Existing Fast/Elite/Sniper combatants form bounded EW guard and counter-recon screens through TacticalNavigationAgent without replacing EnemyTank/Rigidbody2D authority.
+- [x] Signal-quality telemetry and a compact HUD expose relay sync, intelligence packets, jammer status, spoof risk and verified-route state during live logistics operations.
+- [x] Relay, jammer, guard-order and intelligence state cleanly reset on route resolution/round change with strict asset and actor caps for late-campaign performance.
+- [x] v12.3 runtime smoke verifies relay/jammer bounds, deterministic lane placement, intelligence thresholds, EW guard roles, cleanup contracts and unchanged Health/Projectile/TankGame authority.
+- [x] Packaged Windows x64 v12.3 qualification builds and boots the exact candidate, executes recon/EW smoke checks and rejects blocking exception signatures before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
