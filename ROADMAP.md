@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-2"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.6%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-319%2F327-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.2%20IN%20DEVELOPMENT-yellow?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-327%2F327-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.2%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-███████████████████░ 97.6%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **319** | **8** | **327** | **97.6%** |
+| **327** | **0** | **327** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -494,15 +494,15 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] v12.1 runtime telemetry/smoke verifies convoy/escort caps, finite manifest exhaustion, delivery/interception transitions, mobile-front routing, cleanup and authority/performance contracts.
 - [x] Packaged Windows x64 v12.1 qualification builds and boots the exact candidate, executes operational-sustainment smoke checks and rejects blocking exception signatures before qualification.
 
-## v12.2 — Route Intelligence, Ambush & Decoy Warfare — IN DEVELOPMENT
-- [ ] A bounded route-intelligence director links v12.1 operational columns with existing mobile-front, terrain, breach and counter-breach state without creating a parallel movement or economy authority.
-- [ ] Operational columns gain three deterministic route plans with bounded waypoint/reroute logic so blocked or tactically exposed corridors can be avoided while OperationalSustainmentDirector/Rigidbody2D remain movement authority.
-- [ ] Enemy sustainment can deploy at most one physical decoy logistics contact using canonical Health/collision but zero manifest/support authority, creating real target-identification pressure without fake damage or rewards.
-- [ ] Proximity/recon intelligence progressively reveals route confidence and distinguishes the real sustainment column from a decoy through readable battlefield/HUD feedback rather than hidden omniscience.
-- [ ] Existing Fast/Elite/Sniper combatants can form bounded route screens and ambush cells through TacticalNavigationAgent, with fixed actor/order caps and no replacement of EnemyTank AI authority.
-- [ ] Route threat scoring reacts to player pressure plus fresh breach/counter-breach state, permits at most two tactical reroutes per operation and cleans all route/decoy state when the column resolves.
-- [ ] v12.2 runtime telemetry/smoke verifies route catalog, reroute caps, decoy/recon transitions, ambush caps, cleanup and unchanged Health/Projectile/TankGame authority.
-- [ ] Packaged Windows x64 v12.2 qualification builds and boots the exact candidate, executes route-intelligence smoke checks and rejects blocking exception signatures before qualification.
+## v12.2 — Route Intelligence, Ambush & Decoy Warfare — QUALIFIED
+- [x] A bounded route-intelligence director links v12.1 operational columns with existing mobile-front, terrain, breach and counter-breach state without creating a parallel movement or economy authority.
+- [x] Operational columns gain three deterministic route plans with bounded waypoint/reroute logic so blocked or tactically exposed corridors can be avoided while OperationalSustainmentDirector/Rigidbody2D remain movement authority.
+- [x] Enemy sustainment can deploy at most one physical decoy logistics contact using canonical Health/collision but zero manifest/support authority, creating real target-identification pressure without fake damage or rewards.
+- [x] Proximity/recon intelligence progressively reveals route confidence and distinguishes the real sustainment column from a decoy through readable battlefield/HUD feedback rather than hidden omniscience.
+- [x] Existing Fast/Elite/Sniper combatants can form bounded route screens and ambush cells through TacticalNavigationAgent, with fixed actor/order caps and no replacement of EnemyTank AI authority.
+- [x] Route threat scoring reacts to player pressure plus fresh breach/counter-breach state, permits at most two tactical reroutes per operation and cleans all route/decoy state when the column resolves.
+- [x] v12.2 runtime telemetry/smoke verifies route catalog, reroute caps, decoy/recon transitions, ambush caps, cleanup and unchanged Health/Projectile/TankGame authority.
+- [x] Packaged Windows x64 v12.2 qualification builds and boots the exact candidate, executes route-intelligence smoke checks and rejects blocking exception signatures before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
