@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-5"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-351%2F351-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.5%20QUALIFIED-brightgreen?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-6"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.8%25-yellow?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-351%2F359-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.6%20IN%20DEVELOPMENT-yellow?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+███████████████████░ 97.8%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **351** | **0** | **351** | **100.0%** |
+| **351** | **8** | **359** | **97.8%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -545,4 +545,15 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Deception Guard & Counter-SIGINT AI** — reuse eligible Fast/Elite/Sniper units through `TacticalNavigationAgent` for bounded emitter screens and anti-designation pressure.
 - [x] **Readable & Bounded Signal Runtime** — expose triangulation, emitter identity, deception risk and fire-support readiness in HUD while enforcing fixed asset/actor/state limits and round cleanup.
 - [x] **v12.5 Windows x64 qualification** — source/authority contracts, Unity `6000.3.17f1` StandaloneWindows64 build and exact packaged-EXE runtime smoke are green before qualification.
+
+
+## v12.6 — Battlefield Presentation Overdrive & Unified Tactical HUD — IN DEVELOPMENT
+- [ ] Unified tactical command HUD consolidates Mobile Front, Sustainment, Route Intelligence, Recon/EW, Mobile Signal Warfare and SIGINT/fire-support states without creating a second gameplay authority.
+- [ ] Context-priority presentation model promotes only the highest-value active alerts/objectives and collapses stale panels to reduce late-wave HUD clutter.
+- [ ] Bounded world-space telegraph layer visualizes operational objectives, signal emitters, breach/counter-breach opportunities and fire-support danger/solution windows with deterministic hard caps.
+- [ ] 2.5D objective presentation adds layered rings, route vectors, pulses and state-aware emphasis while preserving existing physics, Health, Projectile and navigation authority.
+- [ ] Adaptive presentation budget scales HUD refresh cadence, telegraph count and pulse density against battle pressure/late rounds without unbounded per-frame allocations or scene scans.
+- [ ] v12.0–v12.5 directors expose bounded read-only presentation snapshots/events needed by the unified HUD instead of duplicating gameplay state.
+- [ ] Presentation runtime smoke validates priority ordering, budget monotonicity, caps, snapshot freshness and canonical authority boundaries across representative late-game rounds.
+- [ ] Dedicated Windows x64 v12.6 gate builds the exact candidate, runs packaged-EXE presentation smoke on a fresh Windows runner and records a passing runtime marker before qualification.
 
