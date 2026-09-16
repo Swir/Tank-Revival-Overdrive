@@ -28,16 +28,26 @@ jobs:
           test -f Assets/Scripts/DynamicFrontlineTerritoryDirector.cs
           test -f Assets/Scripts/Health.cs
           grep -q 'MaxRetaskedSpecialists = 8' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'MinPlayableOperations = 4' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
           grep -q 'IsCandidateRound(int round)' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'EligibleOperationCount' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
           grep -q 'MajorOperationBusy' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
           grep -q 'TryFindBestBreach' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
           grep -q 'ReactiveCoverBreachDirector.IsBreachActive' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'IsForwardRoutePoint' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
           grep -q 'AddComponent<Health>' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
           grep -q 'RigidbodyType2D.Kinematic' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
           grep -q 'TacticalNavigationAgent' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
-          grep -q 'SetRole(SquadTacticalRole.Breaker)' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'SetRole(RoleForSpecialist' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'SelectNearestSpecialists' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'SpecialistOffset' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'SelectOperationLane' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'ApplyFrontlinePressure' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'ProjectedLaneScore' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
           grep -q 'WarEconomyDirector.AwardMissionBonds' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
           grep -q 'V12_0_MOBILE_FRONT_SMOKE_OK.txt' Assets/Scripts/CombinedArmsMobileFrontCISmokeProbe.cs
+          grep -q 'eligibleOperations=' Assets/Scripts/CombinedArmsMobileFrontCISmokeProbe.cs
+          grep -q 'Frontline authority did not receive mobile-front outcome' Assets/Scripts/CombinedArmsMobileFrontCISmokeProbe.cs
           if grep -Eq 'SpawnProjectile\(|AddComponent<Projectile>|\.Damage\(' Assets/Scripts/CombinedArmsMobileFrontDirector.cs; then
             echo 'Mobile-front director contains forbidden projectile/direct-damage authority.' >&2
             exit 1

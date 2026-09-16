@@ -1,3 +1,4 @@
+using System.Reflection;
 using UnityEngine;
 
 namespace TankRevival
@@ -14,6 +15,10 @@ namespace TankRevival
     /// temporary navigation orders. TankGame remains round/spawn/projectile authority, Health is
     /// the only objective-damage authority, and the existing TacticalNavigationAgent/Rigidbody2D
     /// stack remains enemy movement authority.
+    ///
+    /// The director deliberately reads/writes the existing DynamicFrontline lane arrays through a
+    /// cached reflection bridge because v9.0 did not expose per-lane scores. No parallel territory
+    /// model is created: operation outcomes are folded back into the original frontline authority.
     /// </summary>
     [DefaultExecutionOrder(610)]
     public sealed class CombinedArmsMobileFrontDirector : MonoBehaviour
@@ -23,27 +28,38 @@ namespace TankRevival
         public const int FirstCandidateRound = 63;
         public const int CandidateInterval = 5;
         public const int MaxRetaskedSpecialists = 8;
+        public const int MinPlayableOperations = 4;
         public const float OperationDuration = 46f;
         public const float PresenceRadius = 3.10f;
         public const float AdvanceSpeed = 0.94f;
         public const float FallbackSpeed = 0.42f;
+        public const float RetaskRadius = 9.50f;
         // TacticalNavigationDirector refreshes its baseline at 0.30s. v12 orders deliberately
         // reassert slightly faster and execute later (order 610 vs 420), without adding movement authority.
         public const float RetaskCadence = 0.22f;
         public const float RouteRefreshCadence = 0.70f;
         public const float GoalThreshold = 0.96f;
         public const float MinimumTimeoutProgress = 0.56f;
+        public const float BreachRouteMinProgressGain = 0.04f;
         public const float ArenaXLimit = 6.0f;
         public const float ArenaYLimit = 4.65f;
+        public const float FrontlineOutcomePressure = 8.0f;
+        public const float FrontlinePressureMaxPerOperation = 10.0f;
         public const int NodeHealthMin = 8;
         public const int NodeHealthMax = 14;
         public const int RewardMin = 16;
         public const int RewardMax = 24;
 
+        private const BindingFlags PrivateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
+        private static readonly FieldInfo FrontlineControlField = typeof(DynamicFrontlineTerritoryDirector).GetField("_control", PrivateInstance);
+        private static readonly FieldInfo FrontlineStatesField = typeof(DynamicFrontlineTerritoryDirector).GetField("_states", PrivateInstance);
         private static CombinedArmsMobileFrontDirector _instance;
 
+        private readonly EnemyTank[] _retaskActors = new EnemyTank[MaxRetaskedSpecialists];
+        private readonly float[] _retaskDistances = new float[MaxRetaskedSpecialists];
         private TankGame _game;
         private int _round = -1;
+        private int _operationLane = -1;
         private MobileFrontOperationKind _kind;
         private bool _resolved;
         private float _operationEndsAt;
@@ -62,6 +78,8 @@ namespace TankRevival
         private int _operationsWon;
         private int _operationsLost;
         private int _totalRetasks;
+        private int _breachRoutesAccepted;
+        private float _lastOutcomePressure;
         private string _status = string.Empty;
         private float _statusUntil;
         private GUIStyle _header;
@@ -70,6 +88,7 @@ namespace TankRevival
         public static CombinedArmsMobileFrontDirector Instance => _instance;
         public bool IsOperationActive => _kind != MobileFrontOperationKind.None && !_resolved && _nodeHealth != null && !_nodeHealth.IsDead;
         public MobileFrontOperationKind CurrentKind => _kind;
+        public int CurrentLane => _operationLane;
         public float CurrentProgress => ComputeProgress(_start, _goal, _nodeBody != null ? _nodeBody.position : _start);
         public int CurrentNodeHealth => _nodeHealth != null ? _nodeHealth.Current : 0;
         public int CurrentNodeMaxHealth => _nodeHealth != null ? _nodeHealth.Maximum : 0;
@@ -79,22 +98,29 @@ namespace TankRevival
         public int OperationsWon => _operationsWon;
         public int OperationsLost => _operationsLost;
         public int TotalRetasks => _totalRetasks;
+        public int BreachRoutesAccepted => _breachRoutesAccepted;
+        public float LastOutcomePressure => _lastOutcomePressure;
 
         public static bool ConfigurationValid =>
             EarliestRound >= 55 && EarliestRound <= 70 && LatestRound == 99 &&
             FirstCandidateRound >= EarliestRound && CandidateInterval >= 4 && CandidateInterval <= 7 &&
+            EligibleOperationCount() >= MinPlayableOperations &&
             MaxRetaskedSpecialists >= 4 && MaxRetaskedSpecialists <= 8 &&
             OperationDuration >= 38f && OperationDuration <= 55f &&
             PresenceRadius >= 2.4f && PresenceRadius <= 3.6f &&
             AdvanceSpeed >= 0.70f && AdvanceSpeed <= 1.20f &&
             FallbackSpeed >= 0.25f && FallbackSpeed < AdvanceSpeed &&
+            RetaskRadius >= 7f && RetaskRadius <= 12f &&
             RetaskCadence >= 0.15f && RetaskCadence < TacticalNavigationDirector.DecisionCadence &&
             RouteRefreshCadence >= 0.45f && RouteRefreshCadence <= 1.25f &&
             GoalThreshold >= 0.90f && GoalThreshold <= 0.99f &&
             MinimumTimeoutProgress >= 0.50f && MinimumTimeoutProgress <= 0.70f &&
+            BreachRouteMinProgressGain >= 0.02f && BreachRouteMinProgressGain <= 0.10f &&
+            FrontlineOutcomePressure >= 5f && FrontlineOutcomePressure <= FrontlinePressureMaxPerOperation &&
             NodeHealthMin >= 6 && NodeHealthMax <= 16 && NodeHealthMin < NodeHealthMax &&
             RewardMin >= 12 && RewardMax <= 28 && RewardMin < RewardMax &&
-            ReactiveCoverBreachDirector.MaxRecentBreaches <= 24;
+            ReactiveCoverBreachDirector.MaxRecentBreaches <= 24 &&
+            FrontlineControlField != null && FrontlineStatesField != null;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -183,6 +209,13 @@ namespace TankRevival
             return true;
         }
 
+        public static int EligibleOperationCount()
+        {
+            int count = 0;
+            for (int round = 1; round <= 100; round++) if (IsCandidateRound(round)) count++;
+            return count;
+        }
+
         public static bool IsSpecialist(EnemyKind kind) =>
             kind == EnemyKind.Heavy || kind == EnemyKind.Sniper || kind == EnemyKind.Siege || kind == EnemyKind.Elite;
 
@@ -210,6 +243,38 @@ namespace TankRevival
             }
         }
 
+        public static Vector2 SpecialistOffset(EnemyKind kind, bool enemyOperation, int slot)
+        {
+            float side = (slot & 1) == 0 ? -1f : 1f;
+            float lateral;
+            float depth;
+            switch (kind)
+            {
+                case EnemyKind.Heavy:
+                    lateral = 0.64f + (slot / 2) * 0.22f;
+                    depth = enemyOperation ? 0.92f : 1.02f;
+                    break;
+                case EnemyKind.Sniper:
+                    lateral = 1.35f + (slot / 2) * 0.28f;
+                    depth = enemyOperation ? -1.35f : 0.55f;
+                    break;
+                case EnemyKind.Siege:
+                    lateral = 1.05f + (slot / 2) * 0.24f;
+                    depth = enemyOperation ? -0.82f : 0.42f;
+                    break;
+                case EnemyKind.Elite:
+                    lateral = 0.92f + (slot / 2) * 0.31f;
+                    depth = enemyOperation ? 0.72f : 1.18f;
+                    break;
+                default:
+                    lateral = 0.80f;
+                    depth = 0.80f;
+                    break;
+            }
+            float forward = enemyOperation ? -1f : 1f;
+            return new Vector2(side * lateral, forward * depth);
+        }
+
         public static int NodeHitPointsForRound(int round) => Mathf.Clamp(NodeHealthMin + Mathf.Max(0, round - EarliestRound) / 12, NodeHealthMin, NodeHealthMax);
         public static int RewardForRound(int round) => Mathf.Clamp(RewardMin + Mathf.Max(0, round - EarliestRound) / 8, RewardMin, RewardMax);
 
@@ -229,7 +294,63 @@ namespace TankRevival
             return denom <= 0.001f ? 0f : Mathf.Clamp01(Vector2.Dot(current - start, axis) / denom);
         }
 
+        public static bool IsForwardRoutePoint(Vector2 start, Vector2 goal, Vector2 current, Vector2 candidate)
+        {
+            float currentProgress = ComputeProgress(start, goal, current);
+            float candidateProgress = ComputeProgress(start, goal, candidate);
+            return candidateProgress >= currentProgress + BreachRouteMinProgressGain && candidateProgress < GoalThreshold;
+        }
+
         public static Vector2 ClampRoutePoint(Vector2 point) => new Vector2(Mathf.Clamp(point.x, -ArenaXLimit, ArenaXLimit), Mathf.Clamp(point.y, -ArenaYLimit, ArenaYLimit));
+
+        public static float ProjectedLaneScore(float current, Team pressureSide, float amount)
+        {
+            float bounded = Mathf.Clamp(amount, 0f, FrontlinePressureMaxPerOperation);
+            if (pressureSide == Team.Player) return Mathf.Clamp(current + bounded, 0f, 100f);
+            if (pressureSide == Team.Enemy) return Mathf.Clamp(current - bounded, 0f, 100f);
+            return Mathf.Clamp(current, 0f, 100f);
+        }
+
+        public static float FrontlineScoreForLane(int lane)
+        {
+            lane = Mathf.Clamp(lane, 0, DynamicFrontlineTerritoryDirector.LaneCount - 1);
+            DynamicFrontlineTerritoryDirector frontline = DynamicFrontlineTerritoryDirector.Instance;
+            if (frontline == null || FrontlineControlField == null) return 50f;
+            float[] scores = FrontlineControlField.GetValue(frontline) as float[];
+            return scores != null && lane < scores.Length ? scores[lane] : 50f;
+        }
+
+        public static int SelectOperationLane(int round, bool enemyOperation)
+        {
+            int lanes = DynamicFrontlineTerritoryDirector.LaneCount;
+            int start = Mathf.Abs(round / Mathf.Max(1, CandidateInterval)) % lanes;
+            int best = start;
+            float bestScore = FrontlineScoreForLane(best);
+            for (int step = 1; step < lanes; step++)
+            {
+                int lane = (start + step) % lanes;
+                float score = FrontlineScoreForLane(lane);
+                bool better = enemyOperation ? score > bestScore + 0.01f : score < bestScore - 0.01f;
+                if (!better) continue;
+                best = lane;
+                bestScore = score;
+            }
+            return best;
+        }
+
+        public static bool ApplyFrontlinePressure(int lane, Team pressureSide, float amount)
+        {
+            if (pressureSide == Team.Neutral) return false;
+            DynamicFrontlineTerritoryDirector frontline = DynamicFrontlineTerritoryDirector.Instance;
+            if (frontline == null || FrontlineControlField == null || FrontlineStatesField == null) return false;
+            float[] scores = FrontlineControlField.GetValue(frontline) as float[];
+            FrontlineControlState[] states = FrontlineStatesField.GetValue(frontline) as FrontlineControlState[];
+            if (scores == null || states == null || scores.Length < DynamicFrontlineTerritoryDirector.LaneCount || states.Length < DynamicFrontlineTerritoryDirector.LaneCount) return false;
+            lane = Mathf.Clamp(lane, 0, DynamicFrontlineTerritoryDirector.LaneCount - 1);
+            scores[lane] = ProjectedLaneScore(scores[lane], pressureSide, amount);
+            states[lane] = DynamicFrontlineTerritoryDirector.StateForScore(scores[lane]);
+            return true;
+        }
 
         private static bool MajorOperationBusy(int round)
         {
@@ -255,9 +376,11 @@ namespace TankRevival
             _retaskedThisBeat = 0;
             _hasBreachRoute = false;
             _breachSequence = 0;
+            _lastOutcomePressure = 0f;
             _operationsStarted++;
 
-            float laneX = ((round / CandidateInterval) % 3 - 1) * 3.6f;
+            _operationLane = SelectOperationLane(round, enemyOperation);
+            float laneX = DynamicFrontlineTerritoryDirector.LanePosition(_operationLane).x;
             _start = new Vector2(laneX, enemyOperation ? ArenaYLimit : -ArenaYLimit);
             _goal = new Vector2(laneX, enemyOperation ? -ArenaYLimit : ArenaYLimit);
             CreateCommandPost(enemyOperation ? Team.Enemy : Team.Player, NodeHitPointsForRound(round));
@@ -283,6 +406,7 @@ namespace TankRevival
             _nodeBody.gravityScale = 0f;
             _nodeBody.freezeRotation = true;
             _nodeBody.interpolation = RigidbodyInterpolation2D.Interpolate;
+            _nodeBody.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             _nodeHealth = _node.AddComponent<Health>();
             _nodeHealth.Initialize(team, hp);
             _nodeHealth.Died += OnCommandPostDestroyed;
@@ -303,9 +427,12 @@ namespace TankRevival
             _hasBreachRoute = false;
             _breachSequence = 0;
             if (!ReactiveCoverBreachDirector.TryFindBestBreach(_nodeBody.position, _goal, team, out ReactiveCoverBreachDirector.BreachSnapshot breach)) return;
-            _routePoint = ClampRoutePoint(breach.Position);
+            Vector2 candidate = ClampRoutePoint(breach.Position);
+            if (!IsForwardRoutePoint(_start, _goal, _nodeBody.position, candidate)) return;
+            _routePoint = candidate;
             _breachSequence = breach.Sequence;
             _hasBreachRoute = ReactiveCoverBreachDirector.IsBreachActive(_breachSequence);
+            if (_hasBreachRoute) _breachRoutesAccepted++;
         }
 
         private Vector2 CurrentRouteDestination()
@@ -320,23 +447,19 @@ namespace TankRevival
         {
             EnemyTank[] enemies = RuntimeBattleRegistry.EnemySnapshot;
             if (enemies == null || enemies.Length == 0) { _retaskedThisBeat = 0; return; }
-            int ordered = 0;
             bool enemyOperation = _kind == MobileFrontOperationKind.EnemyBreakthrough;
             Vector2 anchor = _nodeBody != null ? _nodeBody.position : _start;
-            float forward = enemyOperation ? -1f : 1f;
+            int selected = SelectNearestSpecialists(enemies, anchor);
+            int ordered = 0;
 
-            for (int i = 0; i < enemies.Length && ordered < MaxRetaskedSpecialists; i++)
+            for (int i = 0; i < selected; i++)
             {
-                EnemyTank enemy = enemies[i];
-                if (enemy == null || enemy.Health == null || enemy.Health.IsDead || !IsSpecialist(enemy.Kind)) continue;
+                EnemyTank enemy = _retaskActors[i];
+                if (enemy == null || enemy.Health == null || enemy.Health.IsDead) continue;
                 TacticalNavigationAgent navigation = enemy.GetComponent<TacticalNavigationAgent>();
                 if (navigation == null) continue;
-
-                int slot = ordered;
-                float side = (slot & 1) == 0 ? -1f : 1f;
-                float lateral = 0.72f + (slot / 2) * 0.38f;
-                float depth = enemyOperation ? 0.72f + (slot % 3) * 0.25f : 1.10f + (slot % 3) * 0.30f;
-                Vector2 target = ClampRoutePoint(anchor + new Vector2(side * lateral, forward * depth));
+                Vector2 offset = SpecialistOffset(enemy.Kind, enemyOperation, ordered);
+                Vector2 target = ClampRoutePoint(anchor + offset);
                 navigation.SetRole(RoleForSpecialist(enemy.Kind, enemyOperation));
                 navigation.SetOrder(target, StandoffForSpecialist(enemy.Kind, enemyOperation), enemy.Kind == EnemyKind.Sniper ? 0.84f : enemy.Kind == EnemyKind.Heavy ? 0.92f : 1.08f, enemies);
                 ordered++;
@@ -344,6 +467,51 @@ namespace TankRevival
 
             _retaskedThisBeat = ordered;
             _totalRetasks += ordered;
+        }
+
+        private int SelectNearestSpecialists(EnemyTank[] enemies, Vector2 anchor)
+        {
+            for (int i = 0; i < MaxRetaskedSpecialists; i++)
+            {
+                _retaskActors[i] = null;
+                _retaskDistances[i] = float.MaxValue;
+            }
+
+            int count = 0;
+            float maxDistanceSq = RetaskRadius * RetaskRadius;
+            for (int i = 0; i < enemies.Length; i++)
+            {
+                EnemyTank enemy = enemies[i];
+                if (enemy == null || enemy.Health == null || enemy.Health.IsDead || !IsSpecialist(enemy.Kind)) continue;
+                if (enemy.GetComponent<TacticalNavigationAgent>() == null) continue;
+                float distanceSq = ((Vector2)enemy.transform.position - anchor).sqrMagnitude;
+                if (distanceSq > maxDistanceSq) continue;
+
+                int insert;
+                if (count < MaxRetaskedSpecialists)
+                {
+                    insert = count;
+                    count++;
+                }
+                else
+                {
+                    if (distanceSq >= _retaskDistances[MaxRetaskedSpecialists - 1]) continue;
+                    insert = MaxRetaskedSpecialists - 1;
+                }
+
+                while (insert > 0 && distanceSq < _retaskDistances[insert - 1])
+                {
+                    if (insert < MaxRetaskedSpecialists)
+                    {
+                        _retaskDistances[insert] = _retaskDistances[insert - 1];
+                        _retaskActors[insert] = _retaskActors[insert - 1];
+                    }
+                    insert--;
+                }
+                _retaskDistances[insert] = distanceSq;
+                _retaskActors[insert] = enemy;
+            }
+            return count;
         }
 
         private static int CountLivingEnemiesNear(Vector2 position, float radius, EnemyTank[] enemies)
@@ -372,6 +540,10 @@ namespace TankRevival
             if (_resolved) return;
             _resolved = true;
             Vector2 effectPosition = _nodeBody != null ? _nodeBody.position : _goal;
+            Team pressureSide = playerSuccess ? Team.Player : Team.Enemy;
+            if (_operationLane >= 0 && ApplyFrontlinePressure(_operationLane, pressureSide, FrontlineOutcomePressure))
+                _lastOutcomePressure = pressureSide == Team.Player ? FrontlineOutcomePressure : -FrontlineOutcomePressure;
+
             if (playerSuccess)
             {
                 _operationsWon++;
@@ -393,7 +565,7 @@ namespace TankRevival
                 VisualFactory.RingPulse(effectPosition, new Color(1f, 0.18f, 0.08f), 2.8f);
                 BattleAudio.PlayGlobal(SoundCue.EagleAlarm, 0.42f, 0.00f);
             }
-            _status = reason;
+            _status = reason + (_lastOutcomePressure == 0f ? string.Empty : " // FRONTLINE SHIFT " + (_lastOutcomePressure > 0f ? "+" : string.Empty) + _lastOutcomePressure.ToString("0"));
             _statusUntil = Time.unscaledTime + 4.0f;
             RemoveCommandPost();
         }
@@ -415,6 +587,7 @@ namespace TankRevival
             _hasBreachRoute = false;
             _breachSequence = 0;
             _retaskedThisBeat = 0;
+            _operationLane = -1;
         }
 
         private void ResetRun()
@@ -435,7 +608,7 @@ namespace TankRevival
             if (_game == null || !_game.IsPlaying) return;
             if (!IsOperationActive && Time.unscaledTime >= _statusUntil) return;
             EnsureStyles();
-            float width = 520f;
+            float width = 560f;
             float x = Screen.width * 0.5f - width * 0.5f;
             GUI.color = new Color(0.018f, 0.035f, 0.050f, 0.88f);
             GUI.Box(new Rect(x, 18f, width, IsOperationActive ? 58f : 34f), string.Empty);
@@ -444,8 +617,8 @@ namespace TankRevival
             GUI.Label(new Rect(x + 10f, 22f, width - 20f, 20f), title, _header);
             if (IsOperationActive)
             {
-                string route = _hasBreachRoute ? " // BREACH ROUTE " + _breachSequence : string.Empty;
-                GUI.Label(new Rect(x + 10f, 43f, width - 20f, 20f), "ADVANCE " + Mathf.RoundToInt(CurrentProgress * 100f) + "% // CP " + CurrentNodeHealth + "/" + CurrentNodeMaxHealth + " // ESCORT " + _retaskedThisBeat + route, _body);
+                string route = _hasBreachRoute ? " // BREACH " + _breachSequence : string.Empty;
+                GUI.Label(new Rect(x + 10f, 43f, width - 20f, 20f), "LANE " + (_operationLane + 1) + " // ADVANCE " + Mathf.RoundToInt(CurrentProgress * 100f) + "% // CP " + CurrentNodeHealth + "/" + CurrentNodeMaxHealth + " // ESCORT " + _retaskedThisBeat + route, _body);
             }
         }
     }
