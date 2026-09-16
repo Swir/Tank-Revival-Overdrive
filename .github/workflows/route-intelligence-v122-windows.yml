@@ -28,6 +28,7 @@ jobs:
           test -f Assets/Scripts/OperationalSustainmentDirector.cs
           test -f Assets/Scripts/CombinedArmsMobileFrontDirector.cs
           test -f Assets/Scripts/ReactiveCoverBreachDirector.cs
+          test -f Assets/Scripts/TerrainIntelligenceDirector.cs
           test -f Assets/Scripts/TacticalNavigationDirector.cs
           grep -q 'RouteCount = 3' Assets/Scripts/LogisticsRouteIntelligenceDirector.cs
           grep -q 'MaxReroutes = 2' Assets/Scripts/LogisticsRouteIntelligenceDirector.cs
@@ -42,7 +43,9 @@ jobs:
           grep -q 'UpdateIntel' Assets/Scripts/LogisticsRouteIntelligenceDirector.cs
           grep -q 'AssignRouteCell' Assets/Scripts/LogisticsRouteIntelligenceDirector.cs
           grep -q 'V12_2_ROUTE_INTEL_SMOKE_OK.txt' Assets/Scripts/LogisticsRouteIntelligenceCISmokeProbe.cs
-          grep -q 'decoyEligible=' Assets/Scripts/LogisticsRouteIntelligenceCISmokeProbe.cs
+          grep -q 'TerrainIntelligenceDirector.ConfigurationValid' Assets/Scripts/LogisticsRouteIntelligenceCISmokeProbe.cs
+          grep -q 'routeCases=' Assets/Scripts/LogisticsRouteIntelligenceCISmokeProbe.cs
+          grep -q 'decoyCases=' Assets/Scripts/LogisticsRouteIntelligenceCISmokeProbe.cs
           if grep -Eq 'SpawnProjectile\(|AddComponent<Projectile>|\.Damage\(' Assets/Scripts/LogisticsRouteIntelligenceDirector.cs; then
             echo 'Route intelligence contains forbidden projectile/direct-damage authority.' >&2
             exit 1
