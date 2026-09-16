@@ -1,0 +1,200 @@
+name: Cinematic Combat Feedback v12.7 Windows Gate
+
+on:
+  push:
+    branches: ['dev-v12-7']
+    paths:
+      - 'Assets/Scripts/CinematicCombatFeedbackDirector.cs'
+      - 'Assets/Scripts/CinematicCombatFeedbackCISmokeProbe.cs'
+      - 'Assets/Scripts/CinematicCombatFeedbackDirector.cs.meta'
+      - 'Assets/Scripts/CinematicCombatFeedbackCISmokeProbe.cs.meta'
+      - 'Assets/Scripts/Projectile.cs'
+      - 'Assets/Scripts/DamageSmokeEmitter.cs'
+      - 'Assets/Scripts/BattleAudio.cs'
+      - 'Packages/manifest.json'
+      - 'CHANGELOG_v12.7.md'
+      - 'VERSION'
+      - '.github/workflows/cinematic-combat-v127-windows.yml'
+      - '.v127-qualification-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contracts:
+    name: Verify v12.7 feedback and authority contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify implementation contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Assets/Scripts/CinematicCombatFeedbackDirector.cs
+          test -f Assets/Scripts/CinematicCombatFeedbackCISmokeProbe.cs
+          test -f Assets/Scripts/Projectile.cs
+          test -f Assets/Scripts/DamageSmokeEmitter.cs
+          test -f Assets/Scripts/BattleAudio.cs
+          test -f CHANGELOG_v12.7.md
+          test "$(cat VERSION)" = 'v12.7.0-dev'
+          grep -q '"com.unity.modules.particlesystem": "1.0.0"' Packages/manifest.json
+          grep -q 'PoolCapacity = 16' Assets/Scripts/CinematicCombatFeedbackDirector.cs
+          grep -q 'MaxParticlesPerCue = 20' Assets/Scripts/CinematicCombatFeedbackDirector.cs
+          grep -q 'ResolveImpactStyle' Assets/Scripts/CinematicCombatFeedbackDirector.cs
+          grep -q 'ResolveDamageState' Assets/Scripts/CinematicCombatFeedbackDirector.cs
+          grep -q 'ComputeBudget' Assets/Scripts/CinematicCombatFeedbackDirector.cs
+          grep -q 'Projectile.ImpactMaterial3D += OnImpact' Assets/Scripts/CinematicCombatFeedbackDirector.cs
+          grep -q 'Projectile.ShotSpawned3D += OnShotSpawned' Assets/Scripts/CinematicCombatFeedbackDirector.cs
+          grep -q 'ImpactMaterial3D' Assets/Scripts/Projectile.cs
+          grep -q 'ImpactMaterialKind.Steel' Assets/Scripts/Projectile.cs
+          grep -q 'ImpactMaterialKind.Brick' Assets/Scripts/Projectile.cs
+          grep -q 'ImpactMaterialKind.Organic' Assets/Scripts/Projectile.cs
+          grep -q 'CinematicCombatFeedbackDirector.RequestDamagePulse' Assets/Scripts/DamageSmokeEmitter.cs
+          grep -q 'SoundCue.ImpactSoft' Assets/Scripts/BattleAudio.cs
+          grep -q 'SoundCue.ImpactHard' Assets/Scripts/BattleAudio.cs
+          grep -q 'V12_7_CINEMATIC_COMBAT_SMOKE_OK.txt' Assets/Scripts/CinematicCombatFeedbackCISmokeProbe.cs
+          grep -q 'styleCases=' Assets/Scripts/CinematicCombatFeedbackCISmokeProbe.cs
+          if grep -Eq 'SpawnProjectile|\.Damage\(|AddComponent<Health>|AddComponent<Projectile>|\.MovePosition\(|TacticalNavigationAgent|System\.Reflection|BindingFlags|GetField\(|Physics2D\.' Assets/Scripts/CinematicCombatFeedbackDirector.cs; then
+            echo 'Cinematic feedback director contains forbidden gameplay/damage/movement/reflection/physics authority.' >&2
+            exit 1
+          fi
+          if grep -Eq 'new GameObject|AddComponent<SmokePuffFx>|Destroy\(gameObject\)' Assets/Scripts/DamageSmokeEmitter.cs; then
+            echo 'Damage language regressed to per-puff GameObject churn.' >&2
+            exit 1
+          fi
+      - name: Verify ROADMAP scope and SWIR v1 dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s=Path('ROADMAP.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',s,re.M))==1
+          assert '<!-- ROADMAP-PROGRESS:START -->' in s and '<!-- ROADMAP-PROGRESS:END -->' in s
+          assert '## 📊 Overall progress' in s
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
+          assert (done,open_,total)==(359,8,367),(done,open_,total)
+          assert 'ROADMAP-97.8%25-yellow' in s
+          assert 'DONE-359%2F367' in s
+          assert 'STATUS-V12.7%20IN%20DEVELOPMENT-yellow' in s
+          assert '███████████████████░ 97.8%' in s
+          assert '| **359** | **8** | **367** | **97.8%** |' in s
+          start=s.index('## v12.7 — Cinematic Combat Feedback & Damage Language — IN DEVELOPMENT')
+          section=s[start:]
+          assert section.count('- [ ]')==8 and section.count('- [x]')==0
+
+  build-candidate:
+    name: Build exact v12.7 Windows x64 candidate
+    needs: source-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: V127CombatFX-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            V127CombatFX-Library-${{ runner.os }}-6000.3.17f1-
+            V126Presentation-Library-${{ runner.os }}-6000.3.17f1-
+            Dev-Library-${{ runner.os }}-6000.3.17f1-
+      - name: Build development player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Verify executable and pack exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f build/StandaloneWindows64/TankRevivalOverdrive.exe
+          test -d build/StandaloneWindows64/TankRevivalOverdrive_Data
+          cd build/StandaloneWindows64
+          zip -r ../../TankRevivalOverdrive-v12.7-cinematic-combat-Windows-x64.zip .
+          cd ../..
+          test -s TankRevivalOverdrive-v12.7-cinematic-combat-Windows-x64.zip
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v12.7-cinematic-combat-Windows-x64
+          path: TankRevivalOverdrive-v12.7-cinematic-combat-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  packaged-exe-smoke:
+    name: Boot exact EXE and verify v12.7 cinematic combat feedback
+    needs: build-candidate
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - name: Download exact candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v12.7-cinematic-combat-Windows-x64
+          path: candidate
+      - name: Extract candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevivalOverdrive-v12.7-cinematic-combat-Windows-x64.zip' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data directory missing after extraction' }
+      - name: Run v12.7 runtime smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          Remove-Item V12_7_CINEMATIC_COMBAT_SMOKE_OK.txt, V12_7_CINEMATIC_COMBAT_SMOKE_FAIL.txt, V127CombatFXPlayer.log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-tr-v127-smoke','-logFile','V127CombatFXPlayer.log' -PassThru
+          if (!$p.WaitForExit(70000)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            throw 'v12.7 cinematic combat smoke timed out after 70 seconds'
+          }
+          if (Test-Path 'V12_7_CINEMATIC_COMBAT_SMOKE_FAIL.txt') {
+            Get-Content V12_7_CINEMATIC_COMBAT_SMOKE_FAIL.txt
+            if (Test-Path V127CombatFXPlayer.log) { Get-Content V127CombatFXPlayer.log -Tail 380 }
+            throw 'v12.7 runtime probe reported FAIL'
+          }
+          if (!(Test-Path 'V12_7_CINEMATIC_COMBAT_SMOKE_OK.txt')) {
+            if (Test-Path V127CombatFXPlayer.log) { Get-Content V127CombatFXPlayer.log -Tail 380 }
+            throw "Runtime exited without v12.7 PASS marker (exit=$($p.ExitCode))"
+          }
+          Get-Content V12_7_CINEMATIC_COMBAT_SMOKE_OK.txt
+          if ($p.ExitCode -ne 0) { throw "Runtime returned non-zero exit code $($p.ExitCode)" }
+          if (Test-Path V127CombatFXPlayer.log) {
+            if (Select-String -Path V127CombatFXPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|UnityException|TargetInvocationException' -Quiet) {
+              Get-Content V127CombatFXPlayer.log -Tail 400
+              throw 'Blocking exception signature found during v12.7 runtime smoke'
+            }
+          }
+          Write-Host 'v12.7 cinematic combat runtime smoke passed.'
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v12.7-cinematic-combat-diagnostics
+          path: |
+            candidate/runtime/V12_7_CINEMATIC_COMBAT_SMOKE_OK.txt
+            candidate/runtime/V12_7_CINEMATIC_COMBAT_SMOKE_FAIL.txt
+            candidate/runtime/V127CombatFXPlayer.log
+          if-no-files-found: ignore
+          retention-days: 14

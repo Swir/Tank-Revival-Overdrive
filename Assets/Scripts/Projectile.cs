@@ -12,6 +12,7 @@ namespace TankRevival
 
         public static event Action<Projectile, Vector3, Vector2, Team, AmmoType> ShotSpawned3D;
         public static event Action<Projectile, Vector3, Team, AmmoType, bool, bool> Impact3D;
+        public static event Action<Projectile, Vector3, Team, AmmoType, ImpactMaterialKind, bool, bool> ImpactMaterial3D;
         public static event Action<Projectile, Health, int, bool> DamageResolved;
 
         private static readonly Collider2D[] SplashBuffer = new Collider2D[64];
@@ -132,7 +133,7 @@ namespace TankRevival
                     Health target = weakPoint.TargetHealth;
                     if (target != null) DamageResolved?.Invoke(this, target, weakDamage, target.IsDead);
                     if (MassBattleFxBudget.TryConsumeMicroFx(true)) VisualFactory.MicroBurst(transform.position, Color.Lerp(_color, Color.white, 0.48f), 0.92f);
-                    Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, Ammo == AmmoType.Explosive, false);
+                    PublishImpact(ImpactMaterialKind.Organic, Ammo == AmmoType.Explosive, false);
                     Recycle();
                 }
                 return;
@@ -148,7 +149,7 @@ namespace TankRevival
                 {
                     Vector2 velocity = _body != null ? _body.linearVelocity : (Vector2)transform.up;
                     resolvedDamage = armor.ResolveIncoming(Damage, Ammo, velocity, transform.position, out bool ricochet, out bool critical);
-                    if (ricochet) { Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, false, true); Recycle(); return; }
+                    if (ricochet) { PublishImpact(ImpactMaterialKind.Steel, false, true); Recycle(); return; }
                     if (critical && MassBattleFxBudget.TryConsumeMicroFx(true))
                     {
                         VisualFactory.MicroBurst(transform.position, new Color(1f, 0.12f, 0.04f), 1.0f);
@@ -162,16 +163,24 @@ namespace TankRevival
                 bool explosive = Ammo == AmmoType.Explosive;
                 if (explosive) Detonate(health, null);
                 else if (MassBattleFxBudget.TryConsumeMicroFx(killed || OwnerTeam == Team.Player)) VisualFactory.MicroBurst(transform.position, _color, Ammo == AmmoType.Plasma ? 0.72f : 0.46f);
-                Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, explosive, false);
+                PublishImpact(armor != null ? ImpactMaterialKind.Steel : ImpactMaterialKind.Organic, explosive, false);
                 if (CanPenetrate()) { _penetrations--; return; }
                 Recycle();
                 return;
             }
 
             var obstacle = other.GetComponent<Obstacle>();
-            if (obstacle == null || obstacle.Kind == ObstacleKind.Water) return;
+            if (obstacle == null) return;
+            if (obstacle.Kind == ObstacleKind.Water)
+            {
+                // Water is traversable gameplay terrain. Publish a presentation-only terrain crossing
+                // without invoking the legacy impact contract or recycling the projectile.
+                ImpactMaterial3D?.Invoke(this, transform.position, OwnerTeam, Ammo, ImpactMaterialKind.Terrain, false, false);
+                return;
+            }
 
             bool steel = obstacle.Kind == ObstacleKind.Steel;
+            ImpactMaterialKind impactMaterial = steel ? ImpactMaterialKind.Steel : ImpactMaterialKind.Brick;
             ObstacleImpactResult coverResult = obstacle.ResolveProjectileImpact(Damage, transform.position, Ammo, OwnerTeam, false);
             bool deflected = coverResult == ObstacleImpactResult.Deflected;
             bool breached = coverResult == ObstacleImpactResult.Breached;
@@ -181,7 +190,7 @@ namespace TankRevival
                 // The direct obstacle already consumed the center hit. The splash pass deliberately
                 // skips it so HE/artillery never double-damages one cover cell in the same explosion.
                 Detonate(null, obstacle);
-                Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, true, false);
+                PublishImpact(impactMaterial, true, false);
                 Recycle();
                 return;
             }
@@ -192,13 +201,19 @@ namespace TankRevival
             {
                 _penetrations--;
                 if (MassBattleFxBudget.TryConsumeMicroFx(false)) VisualFactory.MicroBurst(transform.position, _color, 0.36f);
-                Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, false, false);
+                PublishImpact(impactMaterial, false, false);
                 return;
             }
 
             if (deflected && steel) BattleAudio.PlayGlobal(SoundCue.Ricochet, 0.42f, 0.08f);
-            Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, false, deflected && steel);
+            PublishImpact(impactMaterial, false, deflected && steel);
             Recycle();
+        }
+
+        private void PublishImpact(ImpactMaterialKind material, bool explosive, bool ricochet)
+        {
+            Impact3D?.Invoke(this, transform.position, OwnerTeam, Ammo, explosive, ricochet);
+            ImpactMaterial3D?.Invoke(this, transform.position, OwnerTeam, Ammo, material, explosive, ricochet);
         }
 
         private void Recycle()
