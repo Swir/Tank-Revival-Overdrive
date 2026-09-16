@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-5"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.2%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-269%2F274-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.5%20IN%20DEVELOPMENT-yellow?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-274%2F274-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.5%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 98.2%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **269** | **5** | **274** | **98.2%** |
+| **274** | **0** | **274** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -430,12 +430,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Target reservations expire quickly, are actor-capped and boss-safe so late-round mass battles retain deterministic performance and existing projectile/reload authority.
 - [x] Packaged Windows v11.4 gate validates assignment budgets, overkill redistribution, doctrine/fire-mission integration, runtime installation and exact EXE boot before qualification.
 
-## v11.5 — Platoon Roles, Target Handoffs & Coordinated Assaults — IN DEVELOPMENT
-- [ ] Dynamic platoon roles assign Commander, Hunter, FireSupport and Breacher duties to Heavy/Sniper/Siege/Elite without replacing EnemyTank firing authority.
-- [ ] Target handoff releases stale reservations immediately on actor disable, target loss or strategic priority change so surviving units can reassign without waiting for reservation expiry.
-- [ ] Coordinated assault phases combine Heavy breach pressure, Sniper/Elite hunter screening and Siege fire support using existing High Command, Counter-Fire and Fire Mission Network intelligence.
-- [ ] Assault coordination remains bounded, boss-safe and deterministic under late-round mass battles, with capped platoon state and no additional projectile/damage path.
-- [ ] Packaged Windows v11.5 gate validates role assignment, target handoff, coordinated assault integration and exact EXE boot before qualification.
+## v11.5 — Platoon Roles, Target Handoffs & Coordinated Assaults — QUALIFIED
+- [x] Dynamic platoon roles assign Commander, Hunter, FireSupport and Breacher duties to Heavy/Sniper/Siege/Elite without replacing EnemyTank firing authority.
+- [x] Target handoff releases stale reservations immediately on actor disable, target loss or strategic priority change so surviving units can reassign without waiting for reservation expiry.
+- [x] Coordinated assault phases combine Heavy breach pressure, Sniper/Elite hunter screening and Siege fire support using existing High Command, Counter-Fire and Fire Mission Network intelligence.
+- [x] Assault coordination remains bounded, boss-safe and deterministic under late-round mass battles, with capped platoon state and no additional projectile/damage path.
+- [x] Packaged Windows v11.5 gate validates role assignment, target handoff, coordinated assault integration and exact EXE boot before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
