@@ -199,6 +199,7 @@ namespace TankRevival
             var root = new GameObject("PlatoonManeuverCue3D");
             root.transform.SetParent(transform, false);
             root.transform.localPosition = new Vector3(0f, 0f, 0.34f);
+            root.transform.localRotation = Quaternion.identity;
             _root = root.transform;
 
             PlatoonFireMissionCoordinator.PlatoonRole role = PlatoonFireMissionCoordinator.RoleFor(actor, actor.Kind);
@@ -264,7 +265,8 @@ namespace TankRevival
             if (_root.gameObject.activeSelf != visible) _root.gameObject.SetActive(visible);
             if (!visible) return;
 
-            _root.rotation = Quaternion.identity;
+            // Keep local identity so forward/flank/standoff glyphs inherit the actual tank facing.
+            // This is presentation-only; the parent EnemyTank remains the sole transform authority.
             _phase += Time.unscaledDeltaTime * (_state == AdaptivePlatoonManeuverDirector.ManeuverPresentationState.Reorganizing ? 6.4f : 3.4f);
             float amplitude = _role == PlatoonFireMissionCoordinator.PlatoonRole.Commander ? 0.085f : 0.055f;
             float pulse = 1f + Mathf.Sin(_phase) * amplitude;
