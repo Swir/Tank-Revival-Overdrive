@@ -1,0 +1,51 @@
+name: ROADMAP v11.9 Scope Registrar
+on:
+  push:
+    branches: [dev-v11-9]
+    paths: ['.v119-roadmap-scope-trigger']
+permissions:
+  contents: write
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v11-9
+      - name: Register v11.9 scope and verify SWIR v1 dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
+          marker='<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          assert sum(1 for line in s.splitlines() if line.strip()==marker)==1
+          heading='## v11.9 — Combat Engineering & Counter-Breach Warfare — IN DEVELOPMENT'
+          if heading not in s:
+              anchor='\n## Development rules\n'
+              block='''\n## v11.9 — Combat Engineering & Counter-Breach Warfare — IN DEVELOPMENT\n- [ ] A bounded counter-breach coordinator consumes fresh v11.8 breach intelligence with per-side budgets, sector cooldowns and no new movement/projectile authority.\n- [ ] Orzełek emergency engineers can automatically contest hostile-created openings near the core with finite temporary field barriers that use the existing Obstacle authority.\n- [ ] Enemy siege engineers can counter player-created breaches in later rounds with temporary barricades instead of treating every opened corridor as permanently safe.\n- [ ] Side-aware breach denial mines/controlled charges make recently opened corridors dangerous but telegraphed, bounded and destructible/expiring rather than permanent map spam.\n- [ ] Closing a breach suppresses that opening from tactical consumers; destroying the counter-breach asset naturally republishes a new opening through the existing Obstacle pipeline.\n- [ ] Adaptive platoon maneuver ignores resolved/closed gaps and can re-exploit a sector only after it is genuinely breached again, preserving EnemyTank/Rigidbody2D authority.\n- [ ] Counter-breach runtime telemetry and soak contracts verify bounded assets, bounded sector memory, cooldowns, cleanup and late-round performance-safe behavior.\n- [ ] Packaged Windows x64 v11.9 qualification builds and boots the exact candidate, executes combat-engineering smoke checks and rejects blocking exception signatures before qualification.\n'''
+              assert anchor in s
+              s=s.replace(anchor,block+anchor,1)
+          completed=len(re.findall(r'^- \[x\] ',s,re.M)); remaining=len(re.findall(r'^- \[ \] ',s,re.M)); total=completed+remaining
+          assert (completed,remaining,total)==(295,8,303),(completed,remaining,total)
+          pct=round(completed*100/total,1); filled=round(20*completed/total); bar='█'*filled+'░'*(20-filled)
+          start=s.index('<!-- ROADMAP-PROGRESS:START -->'); end=s.index('<!-- ROADMAP-PROGRESS:END -->')+len('<!-- ROADMAP-PROGRESS:END -->')
+          dashboard=f'''<!-- ROADMAP-PROGRESS:START -->\n<p align="center">\n  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-9"></a>\n  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-{pct:.1f}%25-brightgreen?style=for-the-badge">\n  <img alt="Completed" src="https://img.shields.io/badge/DONE-{completed}%2F{total}-1f6feb?style=for-the-badge">\n  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.9%20IN%20DEVELOPMENT-yellow?style=for-the-badge">\n</p>\n\n## 📊 Overall progress\n\n```text\n{bar} {pct:.1f}%\n```\n\n| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |\n|---:|---:|---:|---:|\n| **{completed}** | **{remaining}** | **{total}** | **{pct:.1f}%** |\n\n> **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.\n<!-- ROADMAP-PROGRESS:END -->'''
+          s=s[:start]+dashboard+s[end:]
+          p.write_text(s,encoding='utf-8')
+          r=p.read_text(encoding='utf-8')
+          assert heading in r
+          assert 'DONE-295%2F303' in r
+          assert 'STATUS-V11.9%20IN%20DEVELOPMENT-yellow' in r
+          assert '███████████████████░ 97.4%' in r
+          assert '| **295** | **8** | **303** | **97.4%** |' in r
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',r,re.M))==1
+      - name: Commit roadmap scope
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'docs(v11.9): register combat engineering milestone'
+          git push
