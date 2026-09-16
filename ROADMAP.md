@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-4"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-343%2F343-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.4%20QUALIFIED-brightgreen?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-5"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.7%25-7c3aed?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-343%2F351-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.5%20IN%20DEVELOPMENT-7c3aed?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+███████████████████░ 97.7%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **343** | **0** | **343** | **100.0%** |
+| **343** | **8** | **351** | **97.7%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -535,3 +535,14 @@ When this gate is fully reached, release reporting must explicitly state:
 8. A demo candidate is not release-ready until the packaged EXE itself boots on a fresh Windows runner.
 9. A public demo is not release-ready until that same packaged EXE also passes automated late-round 80/90/100 runtime qualification.
 10. `ROADMAP.md` must preserve `<!-- SWIR-ROADMAP-STANDARD:v1 -->` and the canonical dashboard structure.
+
+## v12.5 — Signals Intelligence Fire Support & Deception Raids — IN DEVELOPMENT
+- [ ] **Dual-Relay SIGINT Triangulation** — combine both physical scout relays into bounded geometric bearing confidence instead of granting perfect map knowledge.
+- [ ] **Physical True/Decoy Emitters** — deploy one real enemy fire-control emitter plus at most one deceptive transmitter using canonical `Health`, collision and kinematic `Rigidbody2D` authority.
+- [ ] **False-Target Verification Loop** — require proximity/relay evidence to distinguish a true emitter from a decoy before high-confidence support can be committed.
+- [ ] **Bounded SIGINT Fire-Support Window** — turn verified signal intelligence into short, finite player fire-support opportunities with telegraphing, cooldown and strict salvo caps.
+- [ ] **Canonical Projectile Fire Missions** — execute fire missions only through existing `TankGame.SpawnProjectile` / `Projectile` authority; no parallel direct-damage path.
+- [ ] **Deception Guard & Counter-SIGINT AI** — reuse eligible Fast/Elite/Sniper units through `TacticalNavigationAgent` for bounded emitter screens and anti-designation pressure.
+- [ ] **Readable & Bounded Signal Runtime** — expose triangulation, emitter identity, deception risk and fire-support readiness in HUD while enforcing fixed asset/actor/state limits and round cleanup.
+- [ ] **v12.5 Windows x64 qualification** — source/authority contracts, Unity `6000.3.17f1` StandaloneWindows64 build and exact packaged-EXE runtime smoke are green before qualification.
+
