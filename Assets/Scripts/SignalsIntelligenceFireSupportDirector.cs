@@ -34,7 +34,7 @@ namespace TankRevival
         public const float VerificationRadius = 1.80f;
         public const float VerificationHoldSeconds = 1.55f;
         public const float VerificationDecayPerSecond = 0.52f;
-        public const float MinTriangulationQuality = 0.55f;
+        public const float MinTriangulationQuality = 0.22f;
         public const float FireSupportWindowSeconds = 8.0f;
         public const float FireSupportCooldownSeconds = 12.0f;
         public const float ShellInterval = 0.24f;
@@ -114,7 +114,7 @@ namespace TankRevival
             VerificationRadius >= 1.4f && VerificationRadius <= 2.4f &&
             VerificationHoldSeconds >= 1.0f && VerificationHoldSeconds <= 2.5f &&
             VerificationDecayPerSecond >= 0.25f && VerificationDecayPerSecond <= 0.8f &&
-            MinTriangulationQuality >= 0.45f && MinTriangulationQuality <= 0.70f &&
+            MinTriangulationQuality >= 0.18f && MinTriangulationQuality <= 0.35f &&
             FireSupportWindowSeconds >= 5f && FireSupportWindowSeconds <= 10f &&
             FireSupportCooldownSeconds >= FireSupportWindowSeconds && FireSupportCooldownSeconds <= 16f &&
             MaxFireMissionsPerOperation >= 1 && MaxFireMissionsPerOperation <= 2 &&
@@ -531,7 +531,7 @@ namespace TankRevival
             Vector2 an = a / da;
             Vector2 bn = b / db;
             float crossing = Mathf.Abs(an.x * bn.y - an.y * bn.x);
-            float baselineScore = Mathf.Clamp01((baseline - 1.0f) / 5.0f);
+            float baselineScore = Mathf.Clamp01(baseline / 3.0f);
             float distanceScore = Mathf.Clamp01(1f - Mathf.Max(da, db) / 18f);
             return Mathf.Clamp01(crossing * 0.58f + baselineScore * 0.27f + distanceScore * 0.15f);
         }

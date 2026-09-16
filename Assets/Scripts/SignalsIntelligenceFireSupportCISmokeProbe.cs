@@ -44,8 +44,12 @@ namespace TankRevival
                 float coincident = SignalsIntelligenceFireSupportDirector.TriangulationQualityForGeometry(new Vector2(-2f, -2f), new Vector2(-2f, -2f), new Vector2(0f, 2f));
                 float narrow = SignalsIntelligenceFireSupportDirector.TriangulationQualityForGeometry(new Vector2(-0.65f, -3f), new Vector2(0.65f, -3f), new Vector2(0f, 2f));
                 float strong = SignalsIntelligenceFireSupportDirector.TriangulationQualityForGeometry(new Vector2(-4.5f, -2.6f), new Vector2(4.5f, -2.6f), new Vector2(0f, 2f));
+                float edgeLeft = SignalsIntelligenceFireSupportDirector.TriangulationQualityForGeometry(new Vector2(-0.42f, ReconElectronicWarfareDirector.RelayY), new Vector2(0.42f, ReconElectronicWarfareDirector.RelayY + 0.55f), new Vector2(-5.82f, 4.15f));
+                float edgeRight = SignalsIntelligenceFireSupportDirector.TriangulationQualityForGeometry(new Vector2(-0.42f, ReconElectronicWarfareDirector.RelayY), new Vector2(0.42f, ReconElectronicWarfareDirector.RelayY + 0.55f), new Vector2(5.82f, 4.15f));
                 if (coincident > 0.001f || narrow < 0f || strong > 1.001f || strong <= narrow || strong < SignalsIntelligenceFireSupportDirector.MinTriangulationQuality)
                 { Fail("Triangulation geometry is not bounded/discriminating"); return; }
+                if (edgeLeft < SignalsIntelligenceFireSupportDirector.MinTriangulationQuality || edgeRight < SignalsIntelligenceFireSupportDirector.MinTriangulationQuality)
+                { Fail("Edge-route relay geometry cannot achieve a playable firing solution"); return; }
 
                 float qNear = SignalsIntelligenceFireSupportDirector.VerificationQualityForDistance(0f);
                 float qMid = SignalsIntelligenceFireSupportDirector.VerificationQualityForDistance(SignalsIntelligenceFireSupportDirector.VerificationRadius * 0.5f);
@@ -118,7 +122,7 @@ namespace TankRevival
                     "v12.5 SIGINT fire-support smoke: PASS\n" +
                     "Version: " + Application.version + "\n" +
                     "emitters=" + SignalsIntelligenceFireSupportDirector.MaxEmitters + " guards=" + SignalsIntelligenceFireSupportDirector.MaxGuardActors + " maxSupportShells=" + (SignalsIntelligenceFireSupportDirector.MaxFireMissionsPerOperation * SignalsIntelligenceFireSupportDirector.ShellsPerMission) + "\n" +
-                    "triCoincident=" + coincident.ToString("0.00") + " triNarrow=" + narrow.ToString("0.00") + " triStrong=" + strong.ToString("0.00") + " anchorCases=" + anchorCases + "\n" +
+                    "triCoincident=" + coincident.ToString("0.00") + " triNarrow=" + narrow.ToString("0.00") + " triStrong=" + strong.ToString("0.00") + " edgeLeft=" + edgeLeft.ToString("0.00") + " edgeRight=" + edgeRight.ToString("0.00") + " anchorCases=" + anchorCases + "\n" +
                     "hp72=" + hp72 + " hp99=" + hp99 + " scatterCases=" + scatterCases + " maxScatter=" + maxScatter.ToString("0.00") + "\n";
                 File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), PassMarker), report);
                 Debug.Log("[TankRevival] " + report.Replace("\n", " | "));
