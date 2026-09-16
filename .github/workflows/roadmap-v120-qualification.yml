@@ -1,0 +1,94 @@
+name: ROADMAP v12.0 Qualification Lock
+
+on:
+  push:
+    branches: ['dev-v12-0']
+    paths: ['.v120-qualification-trigger']
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v12-0
+          fetch-depth: 0
+      - name: Verify exact qualified Windows candidate
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          from pathlib import Path
+          import json, os, subprocess, urllib.request
+          sha=Path('.v120-qualification-trigger').read_text(encoding='utf-8').strip()
+          assert len(sha)==40 and all(c in '0123456789abcdef' for c in sha.lower()), sha
+          subprocess.run(['git','merge-base','--is-ancestor',sha,'HEAD'],check=True)
+          changed=subprocess.check_output(['git','diff','--name-only',sha+'..HEAD'],text=True).splitlines()
+          allowed={'.github/workflows/roadmap-v120-qualification.yml','.v120-qualification-trigger'}
+          assert set(changed).issubset(allowed), 'Unqualified changes after candidate: '+repr(changed)
+          req=urllib.request.Request(f'https://api.github.com/repos/{os.environ["REPOSITORY"]}/actions/runs?head_sha={sha}&per_page=100',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
+          with urllib.request.urlopen(req) as r: data=json.load(r)
+          matches=[x for x in data.get('workflow_runs',[]) if x.get('name')=='Combined Arms Mobile Front v12.0 Windows Gate' and x.get('head_sha')==sha and x.get('conclusion')=='success']
+          assert matches, 'No successful exact v12.0 Windows gate for '+sha
+          print('Qualified SHA:',sha,'run:',matches[0]['html_url'])
+      - name: Lock verified roadmap deliverables
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
+          marker='<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          assert len(re.findall(r'^'+re.escape(marker)+r'$',s,re.M))==1
+          start=s.index('## v12.0 — Combined Arms Operations & Mobile Front Objectives — IN DEVELOPMENT')
+          end=s.index('\n## Development rules',start)
+          section=s[start:end]
+          assert section.count('- [ ]')==8 and section.count('- [x]')==0
+          section=section.replace('## v12.0 — Combined Arms Operations & Mobile Front Objectives — IN DEVELOPMENT','## v12.0 — Combined Arms Operations & Mobile Front Objectives — QUALIFIED',1).replace('- [ ]','- [x]')
+          s=s[:start]+section+s[end:]
+          completed=len(re.findall(r'^- \[x\] ',s,re.M)); remaining=len(re.findall(r'^- \[ \] ',s,re.M)); total=completed+remaining
+          assert (completed,remaining,total)==(311,0,311),(completed,remaining,total)
+          ds=s.index('<!-- ROADMAP-PROGRESS:START -->'); de=s.index('<!-- ROADMAP-PROGRESS:END -->')+len('<!-- ROADMAP-PROGRESS:END -->')
+          dashboard='''<!-- ROADMAP-PROGRESS:START -->
+<p align="center">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-0"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-311%2F311-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.0%20QUALIFIED-brightgreen?style=for-the-badge">
+</p>
+
+## 📊 Overall progress
+
+```text
+████████████████████ 100.0%
+```
+
+| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
+|---:|---:|---:|---:|
+| **311** | **0** | **311** | **100.0%** |
+
+> **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
+<!-- ROADMAP-PROGRESS:END -->'''
+          s=s[:ds]+dashboard+s[de:]
+          p.write_text(s,encoding='utf-8')
+          r=p.read_text(encoding='utf-8')
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',r,re.M))==1
+          assert 'DONE-311%2F311' in r and 'ROADMAP-100.0%25' in r and 'STATUS-V12.0%20QUALIFIED-brightgreen' in r
+          assert '████████████████████ 100.0%' in r and '| **311** | **0** | **311** | **100.0%** |' in r
+          qstart=r.index('## v12.0 — Combined Arms Operations & Mobile Front Objectives — QUALIFIED'); qend=r.index('\n## Development rules',qstart)
+          q=r[qstart:qend]
+          assert q.count('- [x]')==8 and q.count('- [ ]')==0
+      - name: Commit qualification lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git commit -m 'docs(v12.0): qualify combined-arms mobile front milestone'
+          git push
