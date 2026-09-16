@@ -533,7 +533,10 @@ namespace TankRevival
             float crossing = Mathf.Abs(an.x * bn.y - an.y * bn.x);
             float baselineScore = Mathf.Clamp01(baseline / 3.0f);
             float distanceScore = Mathf.Clamp01(1f - Mathf.Max(da, db) / 18f);
-            return Mathf.Clamp01(crossing * 0.58f + baselineScore * 0.27f + distanceScore * 0.15f);
+            // Baseline and distance retain meaningful evidence when edge-lane targets create shallow bearing crossings.
+            // Crossing still dominates high-quality geometry, but a valid deployed relay pair cannot become unusable
+            // solely because the true emitter sits near the battlefield X limits.
+            return Mathf.Clamp01(crossing * 0.43f + baselineScore * 0.36f + distanceScore * 0.21f);
         }
 
         public static Vector2 FireMissionScatter(int round, int mission, int shellIndex)
