@@ -163,14 +163,21 @@ namespace TankRevival
                 bool explosive = Ammo == AmmoType.Explosive;
                 if (explosive) Detonate(health, null);
                 else if (MassBattleFxBudget.TryConsumeMicroFx(killed || OwnerTeam == Team.Player)) VisualFactory.MicroBurst(transform.position, _color, Ammo == AmmoType.Plasma ? 0.72f : 0.46f);
-                PublishImpact(ImpactMaterialKind.Organic, explosive, false);
+                PublishImpact(armor != null ? ImpactMaterialKind.Steel : ImpactMaterialKind.Organic, explosive, false);
                 if (CanPenetrate()) { _penetrations--; return; }
                 Recycle();
                 return;
             }
 
             var obstacle = other.GetComponent<Obstacle>();
-            if (obstacle == null || obstacle.Kind == ObstacleKind.Water) return;
+            if (obstacle == null) return;
+            if (obstacle.Kind == ObstacleKind.Water)
+            {
+                // Water is traversable gameplay terrain. Publish a presentation-only terrain crossing
+                // without invoking the legacy impact contract or recycling the projectile.
+                ImpactMaterial3D?.Invoke(this, transform.position, OwnerTeam, Ammo, ImpactMaterialKind.Terrain, false, false);
+                return;
+            }
 
             bool steel = obstacle.Kind == ObstacleKind.Steel;
             ImpactMaterialKind impactMaterial = steel ? ImpactMaterialKind.Steel : ImpactMaterialKind.Brick;
