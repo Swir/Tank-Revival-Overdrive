@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-9"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-0"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-303%2F303-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.9%20QUALIFIED-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-311%2F311-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.0%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **303** | **0** | **303** | **100.0%** |
+| **311** | **0** | **311** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -473,6 +473,16 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Adaptive platoon maneuver ignores resolved/closed gaps and can re-exploit a sector only after it is genuinely breached again, preserving EnemyTank/Rigidbody2D authority.
 - [x] Counter-breach runtime telemetry and soak contracts verify bounded assets, bounded sector memory, cooldowns, cleanup and late-round performance-safe behavior.
 - [x] Packaged Windows x64 v11.9 qualification builds and boots the exact candidate, executes combat-engineering smoke checks and rejects blocking exception signatures before qualification.
+
+## v12.0 — Combined Arms Operations & Mobile Front Objectives — QUALIFIED
+- [x] A bounded combined-arms operation director links late-campaign frontline state, command momentum, engineering/breach intelligence and specialist platoons without replacing TankGame round authority.
+- [x] Deterministic non-boss rounds 60–99 can launch mobile-front operations only when existing major operation schedulers are idle, preventing stacked objective overload.
+- [x] Physical mobile command posts use authoritative Health/collision and advance or fall back from real Player/enemy presence instead of scripted invulnerability.
+- [x] Existing enemy Heavy/Sniper/Siege/Elite actors are retasked as bounded escort/breaker groups through TacticalNavigationAgent while EnemyTank/Rigidbody2D remain movement authority.
+- [x] Fresh v11.8/v11.9 breach state can redirect the mobile objective through genuinely open sectors; resolved counter-breaches are ignored until re-opened.
+- [x] Successful operations create bounded real support/recovery and War Bond rewards, while failed enemy breakthroughs create readable frontline pressure without hidden damage or a parallel economy.
+- [x] v12.0 runtime telemetry/smoke verifies operation scheduling, mobile-node bounds, escort caps, breach routing, cleanup and late-round authority/performance contracts.
+- [x] Packaged Windows x64 v12.0 qualification builds and boots the exact candidate, executes combined-arms mobile-front smoke checks and rejects blocking exception signatures before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
