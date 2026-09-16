@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-7"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.8%25-yellow?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-359%2F367-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.7%20IN%20DEVELOPMENT-yellow?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-367%2F367-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.7%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-███████████████████░ 97.8%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **359** | **8** | **367** | **97.8%** |
+| **367** | **0** | **367** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -558,13 +558,13 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Dedicated Windows x64 v12.6 gate builds the exact candidate, runs packaged-EXE presentation smoke on a fresh Windows runner and records a passing runtime marker before qualification.
 
 
-## v12.7 — Cinematic Combat Feedback & Damage Language — IN DEVELOPMENT
-- [ ] Pooled material-and-ammunition impact language differentiates Organic, Brick, Steel and Terrain hits across Basic, AP, HE, Plasma and EMP while Projectile remains the sole collision/damage authority.
-- [ ] Layered combat cues add bounded shockwave rings, sparks, fragments and impact flashes whose scale and lifetime communicate ammunition weight without per-impact GameObject churn.
-- [ ] Persistent vehicle/base damage language exposes Healthy, Damaged, Critical and Burning visual states from read-only Health ratio using pooled smoke/spark/fire pulses without modifying survivability.
-- [ ] Adaptive combat-FX budget reduces active impact cues, particle density and refresh cadence under late-wave pressure while retaining minimum readability floors and fixed hard caps.
-- [ ] Combat audio hierarchy maps impact material/ammunition significance onto existing BattleAudio cues with cooldown/priority limits so dense firefights remain readable instead of becoming louder spam.
-- [ ] v12.7 integration consumes existing Projectile Fired/Impacted events plus Health state only; it does not spawn projectiles, call Damage, move gameplay Rigidbody2D objects or replace AI/navigation authority.
-- [ ] Packaged runtime smoke validates the ammo/material style matrix, damage-state thresholds, budget monotonicity, pool caps, audio priority and authority boundaries across representative late-game pressure.
-- [ ] Dedicated Windows x64 v12.7 gate builds the exact candidate, runs packaged-EXE cinematic-combat smoke on a fresh Windows runner and records a passing runtime marker before qualification.
+## v12.7 — Cinematic Combat Feedback & Damage Language — QUALIFIED
+- [x] Pooled material-and-ammunition impact language differentiates Organic, Brick, Steel and Terrain hits across Basic, AP, HE, Plasma and EMP while Projectile remains the sole collision/damage authority.
+- [x] Layered combat cues add bounded shockwave rings, sparks, fragments and impact flashes whose scale and lifetime communicate ammunition weight without per-impact GameObject churn.
+- [x] Persistent vehicle/base damage language exposes Healthy, Damaged, Critical and Burning visual states from read-only Health ratio using pooled smoke/spark/fire pulses without modifying survivability.
+- [x] Adaptive combat-FX budget reduces active impact cues, particle density and refresh cadence under late-wave pressure while retaining minimum readability floors and fixed hard caps.
+- [x] Combat audio hierarchy maps impact material/ammunition significance onto existing BattleAudio cues with cooldown/priority limits so dense firefights remain readable instead of becoming louder spam.
+- [x] v12.7 integration consumes existing Projectile Fired/Impacted events plus Health state only; it does not spawn projectiles, call Damage, move gameplay Rigidbody2D objects or replace AI/navigation authority.
+- [x] Packaged runtime smoke validates the ammo/material style matrix, damage-state thresholds, budget monotonicity, pool caps, audio priority and authority boundaries across representative late-game pressure.
+- [x] Dedicated Windows x64 v12.7 gate builds the exact candidate, runs packaged-EXE cinematic-combat smoke on a fresh Windows runner and records a passing runtime marker before qualification.
 
