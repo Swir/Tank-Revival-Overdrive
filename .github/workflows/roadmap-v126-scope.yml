@@ -28,22 +28,17 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          import re
-
           text = Path("ROADMAP.md").read_text(encoding="utf-8")
           marker = "<!-- SWIR-ROADMAP-STANDARD:v1 -->"
           assert text.count(marker) == 1
           assert "## 📊 Overall progress" in text
-          assert "ROADMAP-97.8%25-yellow" in text
-          assert "DONE-351%2F359-yellow" in text
-          assert "STATUS-V12.6%20IN%20DEVELOPMENT-yellow" in text
-          assert "`███████████████████░` **97.8%**" in text
-          assert "| Completed | 351 |" in text
-          assert "| Remaining | 8 |" in text
-          assert "| Total | 359 |" in text
-          assert "| Progress | 97.8% |" in text
+          assert "badge.svg?branch=dev-v12-6" in text
+          assert "ROADMAP-97.8%25-yellow?style=for-the-badge" in text
+          assert "DONE-351%2F359-1f6feb?style=for-the-badge" in text
+          assert "STATUS-V12.6%20IN%20DEVELOPMENT-yellow?style=for-the-badge" in text
+          assert "███████████████████░ 97.8%" in text
+          assert "| **351** | **8** | **359** | **97.8%** |" in text
           section = text.split("## v12.6 — Battlefield Presentation Overdrive & Unified Tactical HUD", 1)[1]
-          section = section.split("## Development rules", 1)[0]
           assert section.count("- [ ]") == 8
           assert section.count("- [x]") == 0
           print("ROADMAP v12.6 scope invariants: PASS")
