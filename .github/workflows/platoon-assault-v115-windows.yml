@@ -1,0 +1,83 @@
+name: Platoon Assault v11.5 Windows Gate
+on:
+  push:
+    branches: ['dev-v11-5']
+    paths: ['.platoon-assault-v115-trigger']
+  workflow_dispatch:
+jobs:
+  build-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify v11.5 source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Assets/Scripts/PlatoonFireMissionCoordinator.cs
+          test -f Assets/Scripts/PlatoonAssaultCISmokeProbe.cs
+          grep -q 'enum PlatoonRole' Assets/Scripts/PlatoonFireMissionCoordinator.cs
+          grep -q 'PrioritySignature' Assets/Scripts/PlatoonFireMissionCoordinator.cs
+          grep -q 'AssaultPhaseSeconds = 8f' Assets/Scripts/PlatoonFireMissionCoordinator.cs
+          grep -q 'FireMissionNetworkDirector.IsFireMissionRound' Assets/Scripts/PlatoonFireMissionCoordinator.cs
+          grep -q 'AdvancedGunneryDoctrineDirector.PreferPlayer' Assets/Scripts/PlatoonFireMissionCoordinator.cs
+          grep -q 'DONE-269%2F274' ROADMAP.md
+          grep -q 'SWIR-ROADMAP-STANDARD:v1' ROADMAP.md
+          git diff --check
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"; test -n "$UNITY_EMAIL"; test -n "$UNITY_PASSWORD"
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: v115-Library-${{ runner.os }}-6000.3.17f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            v115-Library-${{ runner.os }}-6000.3.17f1-
+            v114-Library-${{ runner.os }}-6000.3.17f1-
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Package exact candidate
+        shell: bash
+        run: |
+          test -f build/StandaloneWindows64/TankRevivalOverdrive.exe
+          cd build/StandaloneWindows64
+          zip -r ../../TankRevivalOverdrive-v11.5-candidate-Windows-x64.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v11.5-candidate-Windows-x64
+          path: TankRevivalOverdrive-v11.5-candidate-Windows-x64.zip
+  packaged-exe-smoke:
+    needs: build-candidate
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v11.5-candidate-Windows-x64
+          path: candidate
+      - shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          Set-Location candidate
+          Expand-Archive 'TankRevivalOverdrive-v11.5-candidate-Windows-x64.zip' -DestinationPath runtime -Force
+          Set-Location runtime
+          $p=Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics','-platoon-assault-v115-smoke','-logFile','PlatoonAssaultPlayer.log' -PassThru
+          if(!$p.WaitForExit(60000)){Stop-Process -Id $p.Id -Force; throw 'smoke timeout'}
+          if(Test-Path 'PLATOON_ASSAULT_V115_FAIL.txt'){Get-Content PLATOON_ASSAULT_V115_FAIL.txt; throw 'runtime probe failed'}
+          if(!(Test-Path 'PLATOON_ASSAULT_V115_PASS.txt')){throw 'PASS marker missing'}
+          if($p.ExitCode -ne 0){throw "runtime exit $($p.ExitCode)"}
+          if(Select-String -Path PlatoonAssaultPlayer.log -Pattern 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|Compilation failed' -Quiet){throw 'blocking exception signature'}
