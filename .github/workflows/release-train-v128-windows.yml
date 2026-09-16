@@ -1,0 +1,277 @@
+name: Full-Stack Release Train v12.8 Windows Gate
+
+on:
+  push:
+    branches: ['dev-v12-8']
+    paths:
+      - '.v128-release-train-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UNITY_VERSION: 6000.3.17f1
+  CANDIDATE_ZIP: TankRevivalOverdrive-v12.8-release-train-Windows-x64.zip
+
+jobs:
+  source-contracts:
+    name: Verify v12.8 integration, authority and roadmap contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify release-train implementation and authority boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          test -f Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs.meta
+          test -f Assets/Scripts/DemoCISoakProbe.cs
+          test -f CHANGELOG_v12.8.md
+          test "$(cat VERSION)" = 'v12.8.0-dev'
+
+          for f in \
+            Assets/Scripts/CombinedArmsMobileFrontCISmokeProbe.cs \
+            Assets/Scripts/OperationalSustainmentCISmokeProbe.cs \
+            Assets/Scripts/LogisticsRouteIntelligenceCISmokeProbe.cs \
+            Assets/Scripts/ReconElectronicWarfareCISmokeProbe.cs \
+            Assets/Scripts/MobileSignalWarfareCISmokeProbe.cs \
+            Assets/Scripts/SignalsIntelligenceFireSupportCISmokeProbe.cs \
+            Assets/Scripts/BattlefieldPresentationOverdriveCISmokeProbe.cs \
+            Assets/Scripts/CinematicCombatFeedbackCISmokeProbe.cs; do
+            test -f "$f"
+          done
+
+          grep -q -- '-tr-v128-smoke' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'V12_8_RELEASE_TRAIN_INTEGRATION_OK.txt' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'V12_8_RELEASE_TRAIN_INTEGRATION_FAIL.txt' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'typeof(CombinedArmsMobileFrontDirector)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'typeof(OperationalSustainmentDirector)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'typeof(LogisticsRouteIntelligenceDirector)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'typeof(ReconElectronicWarfareDirector)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'typeof(MobileSignalWarfareDirector)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'typeof(SignalsIntelligenceFireSupportDirector)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'typeof(BattlefieldPresentationOverdriveDirector)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'typeof(CinematicCombatFeedbackDirector)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'CountDuplicateServices' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'rounds=80,90,100' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+
+          if grep -Eq 'SpawnProjectile|\.Damage\(|AddComponent<Health>|AddComponent<Projectile>|\.MovePosition\(|TacticalNavigationAgent|AwardMissionBonds|AddWarBonds|BindingFlags\.NonPublic|GetField\(' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs; then
+            echo 'v12.8 integration sentinel contains forbidden gameplay/damage/movement/economy/private-reflection authority.' >&2
+            exit 1
+          fi
+
+          # Preserve key hard caps from the integrated stack.
+          grep -q 'MaxRetaskedSpecialists = 8' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
+          grep -q 'MaxColumns = 1' Assets/Scripts/OperationalSustainmentDirector.cs
+          grep -q 'MaxEscorts = 4' Assets/Scripts/OperationalSustainmentDirector.cs
+          grep -q 'MaxReroutes = 2' Assets/Scripts/LogisticsRouteIntelligenceDirector.cs
+          grep -q 'MaxDecoys = 1' Assets/Scripts/LogisticsRouteIntelligenceDirector.cs
+          grep -q 'MaxRelayNodes = 2' Assets/Scripts/ReconElectronicWarfareDirector.cs
+          grep -q 'MaxJammers = 1' Assets/Scripts/ReconElectronicWarfareDirector.cs
+          grep -q 'MaxMobileJammers = 1' Assets/Scripts/MobileSignalWarfareDirector.cs
+          grep -q 'MaxRaidActors = 3' Assets/Scripts/MobileSignalWarfareDirector.cs
+          grep -q 'MaxFireMissionsPerOperation = 2' Assets/Scripts/SignalsIntelligenceFireSupportDirector.cs
+          grep -q 'MaxTelegraphs = 12' Assets/Scripts/BattlefieldPresentationOverdriveDirector.cs
+          grep -q 'PoolCapacity = 16' Assets/Scripts/CinematicCombatFeedbackDirector.cs
+          grep -q 'PressureUnitsPerStage = 16' Assets/Scripts/DemoCISoakProbe.cs
+
+      - name: Verify exact v12.8 ROADMAP scope and SWIR v1 dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s = Path('ROADMAP.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$', s, re.M)) == 1
+          assert '<!-- ROADMAP-PROGRESS:START -->' in s and '<!-- ROADMAP-PROGRESS:END -->' in s
+          assert '## 📊 Overall progress' in s
+          done = len(re.findall(r'^- \[x\] ', s, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', s, re.M))
+          total = done + open_
+          assert (done, open_, total) == (367, 8, 375), (done, open_, total)
+          assert 'badge.svg?branch=dev-v12-8' in s
+          assert 'ROADMAP-97.9%25-yellow' in s
+          assert 'DONE-367%2F375' in s
+          assert 'STATUS-V12.8%20IN%20DEVELOPMENT-yellow' in s
+          assert '███████████████████░ 97.9%' in s
+          assert '| **367** | **8** | **375** | **97.9%** |' in s
+          start = s.index('## v12.8 — Full-Stack Integration & Release Train Hardening — IN DEVELOPMENT')
+          section = s[start:]
+          assert section.count('- [ ]') == 8 and section.count('- [x]') == 0
+          print('v12.8 scope/dashboard: PASS')
+
+  build-candidate:
+    name: Build one exact v12.8 Windows x64 release-train candidate
+    needs: source-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE"
+          test -n "$UNITY_EMAIL"
+          test -n "$UNITY_PASSWORD"
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: V128ReleaseTrain-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            V128ReleaseTrain-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-
+            V127CombatFX-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-
+            Dev-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-
+
+      - name: Build development player once
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+
+      - name: Verify executable, write attribution and package exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f build/StandaloneWindows64/TankRevivalOverdrive.exe
+          test -d build/StandaloneWindows64/TankRevivalOverdrive_Data
+          printf 'version=%s\ncommit=%s\nunity=%s\n' "$(cat VERSION)" "$GITHUB_SHA" "$UNITY_VERSION" > build/StandaloneWindows64/V128_RELEASE_TRAIN_BUILD.txt
+          cd build/StandaloneWindows64
+          zip -r ../../"$CANDIDATE_ZIP" .
+          cd ../..
+          test -s "$CANDIDATE_ZIP"
+          sha256sum "$CANDIDATE_ZIP" | tee V128_RELEASE_TRAIN_SHA256.txt
+
+      - name: Upload one exact release-train candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v12.8-release-train-Windows-x64
+          path: |
+            ${{ env.CANDIDATE_ZIP }}
+            V128_RELEASE_TRAIN_SHA256.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  packaged-exe-matrix:
+    name: Run v12.0-v12.8 plus 80/90/100 soak on the same EXE
+    needs: build-candidate
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download exact candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v12.8-release-train-Windows-x64
+          path: candidate
+
+      - name: Extract and verify candidate attribution
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate
+          Expand-Archive '${{ env.CANDIDATE_ZIP }}' -DestinationPath runtime -Force
+          if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
+          if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data directory missing after extraction' }
+          if (!(Test-Path 'runtime/V128_RELEASE_TRAIN_BUILD.txt')) { throw 'release-train attribution file missing' }
+          $info = Get-Content 'runtime/V128_RELEASE_TRAIN_BUILD.txt' -Raw
+          if ($info -notmatch '${{ github.sha }}') { throw 'packaged build commit does not match workflow candidate SHA' }
+          Get-Content 'runtime/V128_RELEASE_TRAIN_BUILD.txt'
+
+      - name: Run complete single-binary smoke matrix
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location candidate/runtime
+          $blocking = 'Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|UnityException|TargetInvocationException'
+          $report = [System.Collections.Generic.List[string]]::new()
+
+          function Invoke-TankSmoke {
+            param(
+              [string]$Name,
+              [string]$Flag,
+              [string]$PassMarker,
+              [string]$FailMarker,
+              [string]$LogFile,
+              [int]$TimeoutMs = 80000
+            )
+            Remove-Item $PassMarker, $FailMarker, $LogFile -ErrorAction SilentlyContinue
+            $sw = [System.Diagnostics.Stopwatch]::StartNew()
+            $p = Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics',$Flag,'-logFile',$LogFile -PassThru
+            if (!$p.WaitForExit($TimeoutMs)) {
+              Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+              throw "$Name timed out after $([math]::Round($TimeoutMs/1000)) seconds"
+            }
+            $sw.Stop()
+            if (Test-Path $FailMarker) {
+              Get-Content $FailMarker
+              if (Test-Path $LogFile) { Get-Content $LogFile -Tail 350 }
+              throw "$Name emitted FAIL marker"
+            }
+            if (!(Test-Path $PassMarker)) {
+              if (Test-Path $LogFile) { Get-Content $LogFile -Tail 350 }
+              throw "$Name exited without PASS marker (exit=$($p.ExitCode))"
+            }
+            if ($p.ExitCode -ne 0) { throw "$Name returned non-zero exit code $($p.ExitCode)" }
+            if (Test-Path $LogFile) {
+              if (Select-String -Path $LogFile -Pattern $blocking -Quiet) {
+                Get-Content $LogFile -Tail 420
+                throw "$Name log contains blocking exception signature"
+              }
+            }
+            $marker = (Get-Content $PassMarker -Raw).Trim()
+            Write-Host "===== $Name PASS ($($sw.Elapsed.TotalSeconds.ToString('0.0'))s) ====="
+            Write-Host $marker
+            $report.Add("PASS | $Name | flag=$Flag | seconds=$($sw.Elapsed.TotalSeconds.ToString('0.0')) | marker=$PassMarker")
+          }
+
+          Invoke-TankSmoke 'v12.0 Mobile Front' '-tr-v120-smoke' 'V12_0_MOBILE_FRONT_SMOKE_OK.txt' 'V12_0_MOBILE_FRONT_SMOKE_FAIL.txt' 'V120MobileFrontPlayer.log'
+          Invoke-TankSmoke 'v12.1 Operational Sustainment' '-tr-v121-smoke' 'V12_1_SUSTAINMENT_SMOKE_OK.txt' 'V12_1_SUSTAINMENT_SMOKE_FAIL.txt' 'V121SustainmentPlayer.log'
+          Invoke-TankSmoke 'v12.2 Route Intelligence' '-tr-v122-smoke' 'V12_2_ROUTE_INTEL_SMOKE_OK.txt' 'V12_2_ROUTE_INTEL_SMOKE_FAIL.txt' 'V122RouteIntelPlayer.log'
+          Invoke-TankSmoke 'v12.3 Recon/EW' '-tr-v123-smoke' 'V12_3_RECON_EW_SMOKE_OK.txt' 'V12_3_RECON_EW_SMOKE_FAIL.txt' 'V123ReconEWPlayer.log'
+          Invoke-TankSmoke 'v12.4 Mobile Signal' '-tr-v124-smoke' 'V12_4_MOBILE_SIGNAL_SMOKE_OK.txt' 'V12_4_MOBILE_SIGNAL_SMOKE_FAIL.txt' 'V124MobileSignalPlayer.log'
+          Invoke-TankSmoke 'v12.5 SIGINT Fire Support' '-tr-v125-smoke' 'V12_5_SIGINT_FIRE_SUPPORT_SMOKE_OK.txt' 'V12_5_SIGINT_FIRE_SUPPORT_SMOKE_FAIL.txt' 'V125SIGINTPlayer.log'
+          Invoke-TankSmoke 'v12.6 Battlefield Presentation' '-tr-v126-smoke' 'V12_6_BATTLEFIELD_PRESENTATION_SMOKE_OK.txt' 'V12_6_BATTLEFIELD_PRESENTATION_SMOKE_FAIL.txt' 'V126PresentationPlayer.log'
+          Invoke-TankSmoke 'v12.7 Cinematic Combat' '-tr-v127-smoke' 'V12_7_CINEMATIC_COMBAT_SMOKE_OK.txt' 'V12_7_CINEMATIC_COMBAT_SMOKE_FAIL.txt' 'V127CombatFXPlayer.log'
+          Invoke-TankSmoke 'v12.8 Integration Topology' '-tr-v128-smoke' 'V12_8_RELEASE_TRAIN_INTEGRATION_OK.txt' 'V12_8_RELEASE_TRAIN_INTEGRATION_FAIL.txt' 'V128IntegrationPlayer.log'
+          Invoke-TankSmoke 'Round 80/90/100 Pressure Soak' '-demo-ci-soak' 'DEMO_SOAK_PASS.txt' 'DEMO_SOAK_FAIL.txt' 'V128LateRoundSoak.log' 95000
+
+          @(
+            'Tank Revival: Orzel Overdrive',
+            'v12.8 single-binary release-train matrix: PASS',
+            'candidate=${{ github.sha }}',
+            'unity=${{ env.UNITY_VERSION }}',
+            'smokes=10',
+            'lateRounds=80,90,100'
+          ) + $report | Set-Content 'V12_8_RELEASE_TRAIN_MATRIX_OK.txt'
+          Get-Content 'V12_8_RELEASE_TRAIN_MATRIX_OK.txt'
+
+      - name: Upload release-train diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v12.8-release-train-diagnostics
+          path: |
+            candidate/runtime/*SMOKE_OK.txt
+            candidate/runtime/*SMOKE_FAIL.txt
+            candidate/runtime/DEMO_SOAK_PASS.txt
+            candidate/runtime/DEMO_SOAK_FAIL.txt
+            candidate/runtime/V12_8_RELEASE_TRAIN_MATRIX_OK.txt
+            candidate/runtime/V128_RELEASE_TRAIN_BUILD.txt
+            candidate/runtime/V12*.log
+            candidate/runtime/V128*.log
+          if-no-files-found: ignore
+          retention-days: 14
