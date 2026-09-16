@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v11-9"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.4%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-295%2F303-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.9%20IN%20DEVELOPMENT-yellow?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-303%2F303-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V11.9%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-███████████████████░ 97.4%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **295** | **8** | **303** | **97.4%** |
+| **303** | **0** | **303** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -464,15 +464,15 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] v11.8 runtime/source-contract qualification verifies ammo response, bounded breach memory, AI authority boundaries and unchanged Health/Projectile ownership.
 - [x] Packaged Windows x64 v11.8 qualification builds and boots the exact candidate, executes reactive-cover smoke checks and rejects blocking exception signatures before qualification.
 
-## v11.9 — Combat Engineering & Counter-Breach Warfare — IN DEVELOPMENT
-- [ ] A bounded counter-breach coordinator consumes fresh v11.8 breach intelligence with per-side budgets, sector cooldowns and no new movement/projectile authority.
-- [ ] Orzełek emergency engineers can automatically contest hostile-created openings near the core with finite temporary field barriers that use the existing Obstacle authority.
-- [ ] Enemy siege engineers can counter player-created breaches in later rounds with temporary barricades instead of treating every opened corridor as permanently safe.
-- [ ] Side-aware breach denial mines/controlled charges make recently opened corridors dangerous but telegraphed, bounded and destructible/expiring rather than permanent map spam.
-- [ ] Closing a breach suppresses that opening from tactical consumers; destroying the counter-breach asset naturally republishes a new opening through the existing Obstacle pipeline.
-- [ ] Adaptive platoon maneuver ignores resolved/closed gaps and can re-exploit a sector only after it is genuinely breached again, preserving EnemyTank/Rigidbody2D authority.
-- [ ] Counter-breach runtime telemetry and soak contracts verify bounded assets, bounded sector memory, cooldowns, cleanup and late-round performance-safe behavior.
-- [ ] Packaged Windows x64 v11.9 qualification builds and boots the exact candidate, executes combat-engineering smoke checks and rejects blocking exception signatures before qualification.
+## v11.9 — Combat Engineering & Counter-Breach Warfare — QUALIFIED
+- [x] A bounded counter-breach coordinator consumes fresh v11.8 breach intelligence with per-side budgets, sector cooldowns and no new movement/projectile authority.
+- [x] Orzełek emergency engineers can automatically contest hostile-created openings near the core with finite temporary field barriers that use the existing Obstacle authority.
+- [x] Enemy siege engineers can counter player-created breaches in later rounds with temporary barricades instead of treating every opened corridor as permanently safe.
+- [x] Side-aware breach denial mines/controlled charges make recently opened corridors dangerous but telegraphed, bounded and destructible/expiring rather than permanent map spam.
+- [x] Closing a breach suppresses that opening from tactical consumers; destroying the counter-breach asset naturally republishes a new opening through the existing Obstacle pipeline.
+- [x] Adaptive platoon maneuver ignores resolved/closed gaps and can re-exploit a sector only after it is genuinely breached again, preserving EnemyTank/Rigidbody2D authority.
+- [x] Counter-breach runtime telemetry and soak contracts verify bounded assets, bounded sector memory, cooldowns, cleanup and late-round performance-safe behavior.
+- [x] Packaged Windows x64 v11.9 qualification builds and boots the exact candidate, executes combat-engineering smoke checks and rejects blocking exception signatures before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
