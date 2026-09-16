@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-0"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-311%2F311-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.0%20QUALIFIED-brightgreen?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-1"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.5%25-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-311%2F319-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.1%20IN%20DEVELOPMENT-yellow?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+███████████████████░ 97.5%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **311** | **0** | **311** | **100.0%** |
+| **311** | **8** | **319** | **97.5%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -483,6 +483,16 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] Successful operations create bounded real support/recovery and War Bond rewards, while failed enemy breakthroughs create readable frontline pressure without hidden damage or a parallel economy.
 - [x] v12.0 runtime telemetry/smoke verifies operation scheduling, mobile-node bounds, escort caps, breach routing, cleanup and late-round authority/performance contracts.
 - [x] Packaged Windows x64 v12.0 qualification builds and boots the exact candidate, executes combined-arms mobile-front smoke checks and rejects blocking exception signatures before qualification.
+
+## v12.1 — Mobile Logistics Columns & Operational Sustainment — IN DEVELOPMENT
+- [ ] A bounded operational-sustainment director links v12.0 mobile-front operations with the existing logistics, convoy, supply-route and strategic-reserve authorities instead of creating a parallel economy.
+- [ ] Physical friendly and enemy logistics columns use authoritative Health/collision plus finite fuel, ammunition and repair manifests while moving behind the active mobile front.
+- [ ] Existing Heavy/Elite/Fast specialists can escort operational columns through TacticalNavigationAgent with hard actor/order caps and no replacement of EnemyTank/Rigidbody2D movement authority.
+- [ ] Successful delivery restores bounded support, recovery or reserve readiness through existing systems; interception creates a temporary readable sustainment deficit rather than hidden direct damage.
+- [ ] Enemy sustainment deficits reduce Siege/engineering support cadence and replenishment capacity through bounded multipliers without bypassing Projectile, Health or existing fire-control authority.
+- [ ] Friendly sustainment reaching the Orzełek line grants finite repair/ammunition support, while lost friendly columns visibly reduce support availability without permanent campaign lockout.
+- [ ] v12.1 runtime telemetry/smoke verifies convoy/escort caps, finite manifest exhaustion, delivery/interception transitions, mobile-front routing, cleanup and authority/performance contracts.
+- [ ] Packaged Windows x64 v12.1 qualification builds and boots the exact candidate, executes operational-sustainment smoke checks and rejects blocking exception signatures before qualification.
 
 ## Development rules
 1. Each version must be a coherent milestone with a visible gameplay, production-quality or performance gain.
