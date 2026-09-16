@@ -2,39 +2,31 @@ name: ROADMAP v12.5 Scope Registrar
 
 on:
   push:
-    branches:
-      - dev-v12-5
-  workflow_dispatch:
+    branches: ['dev-v12-5']
+    paths: ['.v125-scope-trigger']
 
 permissions:
   contents: write
 
 jobs:
-  register-scope:
+  register:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Register honest v12.5 scope and validate SWIR Roadmap v1
-        shell: bash
+      - name: Register v12.5 roadmap scope
+        shell: python
         run: |
-          python - <<'PY'
           from pathlib import Path
           import re
-
-          p = Path('ROADMAP.md')
-          text = p.read_text(encoding='utf-8')
-          marker = '<!-- SWIR-ROADMAP-STANDARD:v1 -->'
-          required = ['<!-- ROADMAP-PROGRESS:START -->', '<!-- ROADMAP-PROGRESS:END -->', '## 📊 Overall progress', '| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |']
-          assert text.count(marker) == 1, 'SWIR roadmap marker count must be exactly one'
-          for token in required:
-              assert token in text, f'missing roadmap dashboard element: {token}'
-
-          section = '''
-
-## v12.5 — Signals Intelligence Fire Support & Deception Raids
-**Status:** IN DEVELOPMENT
+          p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',s,re.M))==1
+          assert '<!-- ROADMAP-PROGRESS:START -->' in s and '<!-- ROADMAP-PROGRESS:END -->' in s
+          assert '## 📊 Overall progress' in s
+          heading='## v12.5 — Signals Intelligence Fire Support & Deception Raids — IN DEVELOPMENT'
+          if heading not in s:
+              s=s.rstrip()+'''\n\n## v12.5 — Signals Intelligence Fire Support & Deception Raids — IN DEVELOPMENT
 - [ ] **Dual-Relay SIGINT Triangulation** — combine both physical scout relays into bounded geometric bearing confidence instead of granting perfect map knowledge.
 - [ ] **Physical True/Decoy Emitters** — deploy one real enemy fire-control emitter plus at most one deceptive transmitter using canonical `Health`, collision and kinematic `Rigidbody2D` authority.
 - [ ] **False-Target Verification Loop** — require proximity/relay evidence to distinguish a true emitter from a decoy before high-confidence support can be committed.
@@ -44,33 +36,26 @@ jobs:
 - [ ] **Readable & Bounded Signal Runtime** — expose triangulation, emitter identity, deception risk and fire-support readiness in HUD while enforcing fixed asset/actor/state limits and round cleanup.
 - [ ] **v12.5 Windows x64 qualification** — source/authority contracts, Unity `6000.3.17f1` StandaloneWindows64 build and exact packaged-EXE runtime smoke are green before qualification.
 '''
-
-          if '## v12.5 — Signals Intelligence Fire Support & Deception Raids' not in text:
-              text = text.rstrip() + section + '\n'
-
-          text = re.sub(r'badge\.svg\?branch=dev-v12-4', 'badge.svg?branch=dev-v12-5', text, count=1)
-          text = re.sub(r'ROADMAP-100\.0%25-brightgreen', 'ROADMAP-97.7%25-7c3aed', text, count=1)
-          text = re.sub(r'DONE-343%2F343-1f6feb', 'DONE-343%2F351-1f6feb', text, count=1)
-          text = re.sub(r'STATUS-V12\.4%20QUALIFIED-brightgreen', 'STATUS-V12.5%20IN%20DEVELOPMENT-7c3aed', text, count=1)
-          text = text.replace('████████████████████ 100.0%', '███████████████████░ 97.7%', 1)
-          text = text.replace('| **343** | **0** | **343** | **100.0%** |', '| **343** | **8** | **351** | **97.7%** |', 1)
-
-          completed = len(re.findall(r'^- \[x\] ', text, flags=re.M))
-          remaining = len(re.findall(r'^- \[ \] ', text, flags=re.M))
-          assert (completed, remaining, completed + remaining) == (343, 8, 351), (completed, remaining, completed + remaining)
-          assert '███████████████████░ 97.7%' in text
-          assert 'DONE-343%2F351' in text and 'STATUS-V12.5%20IN%20DEVELOPMENT' in text
-          p.write_text(text, encoding='utf-8')
-          PY
-      - name: Commit roadmap scope when changed
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
+          assert (done,open_,total)==(343,8,351),(done,open_,total)
+          s=re.sub(r'badge\.svg\?branch=dev-v12-4','badge.svg?branch=dev-v12-5',s,count=1)
+          s=re.sub(r'ROADMAP-100\.0%25-brightgreen','ROADMAP-97.7%25-7c3aed',s,count=1)
+          s=re.sub(r'DONE-343%2F343-1f6feb','DONE-343%2F351-1f6feb',s,count=1)
+          s=re.sub(r'STATUS-V12\.4%20QUALIFIED-brightgreen','STATUS-V12.5%20IN%20DEVELOPMENT-7c3aed',s,count=1)
+          s=re.sub(r'(?m)^[█░]{20} [0-9.]+%$','███████████████████░ 97.7%',s,count=1)
+          s=re.sub(r'\| \*\*343\*\* \| \*\*0\*\* \| \*\*343\*\* \| \*\*100\.0%\*\* \|','| **343** | **8** | **351** | **97.7%** |',s,count=1)
+          p.write_text(s,encoding='utf-8')
+      - name: Verify and commit
         shell: bash
         run: |
-          if git diff --quiet -- ROADMAP.md; then
-            echo "ROADMAP v12.5 scope already registered."
-            exit 0
-          fi
+          set -euo pipefail
+          test "$(grep -c '^<!-- SWIR-ROADMAP-STANDARD:v1 -->$' ROADMAP.md)" -eq 1
+          grep -q 'DONE-343%2F351' ROADMAP.md
+          grep -q 'STATUS-V12.5%20IN%20DEVELOPMENT-7c3aed' ROADMAP.md
+          grep -q '███████████████████░ 97.7%' ROADMAP.md
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add ROADMAP.md
+          if git diff --cached --quiet; then exit 0; fi
           git commit -m "docs(v12.5): register SIGINT fire-support scope"
           git push origin HEAD:dev-v12-5
