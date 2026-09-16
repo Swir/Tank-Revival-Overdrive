@@ -368,7 +368,7 @@ namespace TankRevival
                 }
                 else
                 {
-                    _supportWindowUntil = Time.time + FireSupportWindowSeconds;
+                    _supportWindowUntil = _supportCooldownUntil + FireSupportWindowSeconds;
                     ShowStatus("FIRE MISSION COMPLETE // REACQUIRE AFTER COOLDOWN", 2.6f);
                 }
             }
