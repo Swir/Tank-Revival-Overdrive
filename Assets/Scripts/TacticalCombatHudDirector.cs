@@ -3,11 +3,12 @@ using UnityEngine;
 namespace TankRevival
 {
     /// <summary>
-    /// v1.8 tactical combat HUD. Consolidates the most actionable information from
-    /// armor, factions, ammo and Eagle threat into one bottom-center command strip.
+    /// Tactical combat HUD. v11.7 extends the bottom command strip with live platoon maneuver
+    /// state from AdaptivePlatoonManeuverDirector without taking gameplay authority.
     /// </summary>
     public sealed class TacticalCombatHudDirector : MonoBehaviour
     {
+        public const float PanelHeight = 96f;
         private TankGame _game;
         private PlayerTank _player;
         private float _nextPlayerScan;
@@ -86,9 +87,9 @@ namespace TankRevival
             EnsureStyles();
 
             float width = Mathf.Min(690f, Screen.width - 36f);
-            float height = 74f;
+            float height = PanelHeight;
             float x = (Screen.width - width) * 0.5f;
-            float y = Screen.height - 132f;
+            float y = Screen.height - 154f;
 
             GUI.color = new Color(0.015f, 0.024f, 0.038f, 0.93f);
             GUI.Box(new Rect(x, y, width, height), string.Empty);
@@ -106,9 +107,11 @@ namespace TankRevival
                 $"TACTICAL LINK // R{_game.CurrentRound:000}  •  {factionName}  •  EAGLE THREAT {threatPercent}% {threatText}",
                 threatPercent >= 70 ? _critical : threatPercent >= 45 ? _warning : _title);
 
+            DrawAssaultOperationStrip(x, y, width);
+
             if (_player == null || _player.Health == null)
             {
-                GUI.Label(new Rect(x + 12f, y + 28f, width - 24f, 18f), "PLAYER VEHICLE OFFLINE // RESPAWN LINK ACTIVE", _critical);
+                GUI.Label(new Rect(x + 12f, y + 49f, width - 24f, 18f), "PLAYER VEHICLE OFFLINE // RESPAWN LINK ACTIVE", _critical);
                 return;
             }
 
@@ -116,7 +119,7 @@ namespace TankRevival
             if (armor != null)
             {
                 GUIStyle armorStyle = armor.AverageIntegrity <= 35 ? _critical : armor.AverageIntegrity <= 65 ? _warning : _good;
-                GUI.Label(new Rect(x + 12f, y + 27f, width * 0.62f, 18f),
+                GUI.Label(new Rect(x + 12f, y + 48f, width * 0.62f, 18f),
                     $"DAMAGE CONTROL  ENG {armor.EngineIntegrity}%   TRK {armor.TrackIntegrity}%   GUN {armor.GunIntegrity}%   AMMO {armor.AmmoRackIntegrity}%",
                     armorStyle);
 
@@ -124,7 +127,7 @@ namespace TankRevival
                                    armor.IsMobilityCritical ? "MOBILITY CRITICAL" :
                                    armor.IsWeaponCritical ? "WEAPON SYSTEM CRITICAL" :
                                    armor.AverageIntegrity < 75 ? "FIELD REPAIR ADVISED [K]" : "COMBAT READY";
-                GUI.Label(new Rect(x + 12f, y + 48f, width * 0.55f, 18f), readiness,
+                GUI.Label(new Rect(x + 12f, y + 69f, width * 0.55f, 18f), readiness,
                     armor.AverageIntegrity <= 35 ? _critical : armor.AverageIntegrity < 75 ? _warning : _good);
             }
 
@@ -135,11 +138,28 @@ namespace TankRevival
                 ? threat.PriorityTarget.Kind.ToString().ToUpperInvariant()
                 : "NONE";
 
-            GUI.Label(new Rect(x + width * 0.58f, y + 27f, width * 0.40f, 18f),
-                $"ACTIVE {AmmoDatabase.DisplayName(active)} [{ammo}]", _body);
             GUI.Label(new Rect(x + width * 0.58f, y + 48f, width * 0.40f, 18f),
+                $"ACTIVE {AmmoDatabase.DisplayName(active)} [{ammo}]", _body);
+            GUI.Label(new Rect(x + width * 0.58f, y + 69f, width * 0.40f, 18f),
                 "PRIORITY TARGET // " + priority,
                 priority == "NONE" ? _good : threatPercent >= 70 ? _critical : _warning);
+        }
+
+        private void DrawAssaultOperationStrip(float x, float y, float width)
+        {
+            AdaptivePlatoonManeuverDirector.ManeuverPresentationSnapshot snapshot =
+                AdaptivePlatoonManeuverDirector.ReadPresentationSnapshot(_game.CurrentRound);
+            AdaptiveAssaultPresentationDirector presentation = AdaptiveAssaultPresentationDirector.Instance;
+            string operation = AdaptiveAssaultPresentationDirector.OperationLabel(_game.CurrentRound);
+            int hunters = presentation != null ? presentation.ActiveHunters : 0;
+            int support = presentation != null ? presentation.ActiveSupport : 0;
+            int breachers = presentation != null ? presentation.ActiveBreacher : 0;
+            int counter = presentation != null ? presentation.CounterFireCues : 0;
+
+            GUIStyle style = snapshot.Reorganizing ? _warning : counter > 0 ? _critical : _body;
+            string doctrine = snapshot.Doctrine.ToString().ToUpperInvariant();
+            GUI.Label(new Rect(x + 12f, y + 26f, width - 24f, 18f),
+                $"ENEMY MANEUVER // {operation}  •  HUNTER {hunters}  BREACH {breachers}  SUPPORT {support}  •  {doctrine}", style);
         }
     }
 }

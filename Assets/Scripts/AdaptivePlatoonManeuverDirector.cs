@@ -6,9 +6,31 @@ namespace TankRevival
     /// <summary>
     /// v11.6 bounded maneuver-intent layer. It coordinates specialist movement only;
     /// EnemyTank/Rigidbody2D remain the sole movement authority.
+    /// v11.7 adds read-only presentation snapshots so HUD/VFX can describe this authority
+    /// without gaining write access to movement, damage or projectile state.
     /// </summary>
     public static class AdaptivePlatoonManeuverDirector
     {
+        public enum ManeuverPresentationState
+        {
+            Advance,
+            Envelopment,
+            Standoff,
+            CounterFireDisplacement,
+            Reorganizing
+        }
+
+        public struct ManeuverPresentationSnapshot
+        {
+            public int PhaseIndex;
+            public float Phase01;
+            public bool Reorganizing;
+            public float CasualtyPressure01;
+            public int LossEpoch;
+            public int SpecialistLosses;
+            public GunneryDoctrine Doctrine;
+        }
+
         public const float HunterFlankBand = 4.8f;
         public const float SiegeMinStandoff = 5.4f;
         public const float SiegeMaxStandoff = 8.6f;
@@ -25,6 +47,42 @@ namespace TankRevival
         public static int LossEpoch => _lossEpoch;
         public static bool Reorganizing => Time.time - _lastLossTime < ReorgSeconds;
         public static int LossesOf(EnemyKind kind) => Losses.TryGetValue(kind, out int count) ? count : 0;
+        public static int SpecialistLosses => LossesOf(EnemyKind.Heavy) + LossesOf(EnemyKind.Sniper) + LossesOf(EnemyKind.Siege) + LossesOf(EnemyKind.Elite);
+        public static float CasualtyPressure01 => Mathf.Clamp01(SpecialistLosses / 8f);
+
+        public static bool SupportsPresentation(EnemyKind kind)
+        {
+            return IsSpecialist(kind);
+        }
+
+        public static ManeuverPresentationSnapshot ReadPresentationSnapshot(int round)
+        {
+            int phase = Mathf.FloorToInt(Time.time / EncirclementPhaseSeconds);
+            GunneryDoctrine doctrine = AdvancedGunneryDoctrineDirector.Instance != null
+                ? AdvancedGunneryDoctrineDirector.Instance.ActiveDoctrine
+                : (round >= 70 ? GunneryDoctrine.CounterFire : round >= 35 ? GunneryDoctrine.HunterKiller : GunneryDoctrine.Standard);
+            return new ManeuverPresentationSnapshot
+            {
+                PhaseIndex = phase,
+                Phase01 = Mathf.Repeat(Time.time, EncirclementPhaseSeconds) / EncirclementPhaseSeconds,
+                Reorganizing = Reorganizing,
+                CasualtyPressure01 = CasualtyPressure01,
+                LossEpoch = _lossEpoch,
+                SpecialistLosses = SpecialistLosses,
+                Doctrine = doctrine
+            };
+        }
+
+        public static ManeuverPresentationState PresentationStateFor(EnemyTank actor, EnemyKind kind, bool counterFire)
+        {
+            if (Reorganizing) return ManeuverPresentationState.Reorganizing;
+            PlatoonFireMissionCoordinator.PlatoonRole role = PlatoonFireMissionCoordinator.RoleFor(actor, kind);
+            if (role == PlatoonFireMissionCoordinator.PlatoonRole.FireSupport)
+                return counterFire ? ManeuverPresentationState.CounterFireDisplacement : ManeuverPresentationState.Standoff;
+            if (role == PlatoonFireMissionCoordinator.PlatoonRole.Hunter)
+                return ManeuverPresentationState.Envelopment;
+            return ManeuverPresentationState.Advance;
+        }
 
         public static void NotifyLoss(EnemyKind kind)
         {

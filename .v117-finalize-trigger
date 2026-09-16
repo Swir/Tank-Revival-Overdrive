@@ -1,0 +1,7 @@
+v11.7 qualified candidate: 3ac6c2994406bd4f64ff2f046688dfa67212a0f3
+facing-aligned presentation implementation: 25bee8ba1c1d062c0393ccf4d5c8c02c11048a40
+dedicated gate run: 35093025327
+source-contracts: success
+windows-build: success
+packaged-exe-smoke: success
+standard dev windows run: 35093032538 success
