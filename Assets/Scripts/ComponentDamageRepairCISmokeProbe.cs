@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace TankRevival
 {
-    /// <summary>Packaged-EXE qualification for v12.9 component degradation and finite emergency repair warfare.</summary>
+    /// <summary>Packaged-EXE qualification for v12.9 component degradation, casualty tactics and finite emergency repair warfare.</summary>
     public sealed class ComponentDamageRepairCISmokeProbe : MonoBehaviour
     {
         public const string PassMarker = "V12_9_COMPONENT_DAMAGE_REPAIR_OK.txt";
@@ -33,6 +33,7 @@ namespace TankRevival
                 if (!ComponentDamageWarfare.ConfigurationValid()) { Fail("component damage profile configuration invalid"); return; }
                 if (!ArmorSystem.ConfigurationValid) { Fail("ArmorSystem v12.9 configuration invalid"); return; }
                 if (!EmergencyRepairSystem.ConfigurationValid) { Fail("emergency repair configuration invalid"); return; }
+                if (!ComponentCasualtyTactics.ConfigurationValid) { Fail("component casualty tactics configuration invalid"); return; }
                 if (!ComponentDamageRepairDirector.ConfigurationValid) { Fail("component repair director configuration invalid"); return; }
                 if (ComponentDamageRepairDirector.Instance == null) { Fail("component repair director was not installed at runtime"); return; }
 
@@ -73,6 +74,18 @@ namespace TankRevival
                     ComponentDamageWarfare.PreferredModule(AmmoType.Incendiary, ArmorZone.Rear) != TankModule.Engine)
                 { Fail("representative ammunition-to-subsystem hierarchy regressed"); return; }
 
+                int tacticCases = 0;
+                if (ComponentCasualtyTactics.Resolve(EnemyKind.Heavy, false, false, false, false, 8f, true) != ComponentCasualtyTactic.FightThrough) { Fail("healthy casualty tactic is not FightThrough"); return; } tacticCases++;
+                if (ComponentCasualtyTactics.Resolve(EnemyKind.Heavy, true, false, false, false, 4f, true) != ComponentCasualtyTactic.Screen) { Fail("heavy mobility casualty does not screen"); return; } tacticCases++;
+                if (ComponentCasualtyTactics.Resolve(EnemyKind.Fast, true, false, false, false, 4f, false) != ComponentCasualtyTactic.Disengage) { Fail("fast mobility casualty does not disengage"); return; } tacticCases++;
+                if (ComponentCasualtyTactics.Resolve(EnemyKind.Sniper, false, true, false, false, 4f, false) != ComponentCasualtyTactic.Hold) { Fail("weapon-critical sniper does not hold"); return; } tacticCases++;
+                if (ComponentCasualtyTactics.Resolve(EnemyKind.Basic, true, true, true, false, 8f, true) != ComponentCasualtyTactic.Recover) { Fail("safe mobility kill does not request recovery"); return; } tacticCases++;
+                if (ComponentCasualtyTactics.Resolve(EnemyKind.Basic, true, true, true, true, 2f, false) != ComponentCasualtyTactic.Hold) { Fail("combined disabled casualty near threat does not hold"); return; } tacticCases++;
+                Vector2 away = ComponentCasualtyTactics.AdjustDirection(ComponentCasualtyTactic.Disengage, Vector2.zero, Vector2.right * 3f, Vector2.up, 2);
+                if (Vector2.Dot(away, Vector2.right) >= -0.5f) { Fail("disengage vector is not away from player"); return; }
+                if (ComponentCasualtyTactics.SpeedScale(ComponentCasualtyTactic.Recover) != 0f || ComponentCasualtyTactics.SpeedScale(ComponentCasualtyTactic.Screen) >= 1f)
+                { Fail("casualty speed policy violates hold/screen bounds"); return; }
+
                 fixture = new GameObject("v12_9_component_repair_fixture");
                 Health health = fixture.AddComponent<Health>();
                 health.Initialize(Team.Player, 200, 173);
@@ -91,6 +104,7 @@ namespace TankRevival
                 if (!(armor.MobilityMultiplier < mobilityBefore && armor.ReloadMultiplier > reloadBefore && armor.WeaponFunctionMultiplier < weaponBefore))
                 { Fail("component degradation is not connected to handling/reload/fire-control multipliers"); return; }
                 if (health.Current != hpBefore) { Fail("module degradation modified Health"); return; }
+                if (!ComponentCasualtyTactics.CanFire(ComponentCasualtyTactic.FightThrough, armor)) { Fail("damaged-but-functional weapon was incorrectly fire-blocked"); return; }
 
                 int engineBeforeRepair = armor.EngineIntegrity;
                 if (!repair.CompleteImmediatelyForSmoke()) { Fail("first finite field repair failed"); return; }
@@ -111,10 +125,14 @@ namespace TankRevival
                 if (playerSpread <= 1.0f || enemySpread <= 1.45f)
                 { Fail("damaged gun state is not consumed by shared fire-control authority"); return; }
 
+                armor.ApplyModuleDamageDeterministic(TankModule.Gun, 62, Vector2.zero, false);
+                if (!armor.IsWeaponDisabled || ComponentCasualtyTactics.CanFire(ComponentCasualtyTactic.Hold, armor))
+                { Fail("disabled weapon did not suppress firing through casualty doctrine"); return; }
+
                 string report =
-                    "v12.9 component damage + emergency repair smoke: PASS\n" +
+                    "v12.9 component damage + emergency repair + casualty tactics smoke: PASS\n" +
                     "Version: " + Application.version + "\n" +
-                    "matrixCases=" + matrixCases + " severitySum=" + severitySum + "\n" +
+                    "matrixCases=" + matrixCases + " severitySum=" + severitySum + " tacticCases=" + tacticCases + "\n" +
                     "thresholds=70/35/12 charges=" + repair.CompletedRepairs + "/" + EmergencyRepairSystem.MaxCharges + " remaining=" + repair.ChargesRemaining + "\n" +
                     "moduleStatus=" + armor.CompactStatus() + "\n" +
                     "mobility=" + armor.MobilityMultiplier.ToString("0.000") + " reload=" + armor.ReloadMultiplier.ToString("0.000") +

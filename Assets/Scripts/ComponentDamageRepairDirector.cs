@@ -4,19 +4,21 @@ namespace TankRevival
 {
     /// <summary>
     /// v12.9 integration layer: attaches finite repair capability to canonical ArmorSystem actors,
-    /// exposes player repair on R, and lets badly damaged enemies stop and recover only when clear of the player.
+    /// exposes player repair on R, and lets component-casualty doctrine request bounded recovery.
     /// It never moves a Rigidbody2D and never modifies Health.
     /// </summary>
     public sealed class ComponentDamageRepairDirector : MonoBehaviour
     {
         public const float DiscoveryInterval = 1.25f;
-        public const float EnemyRepairSafeDistance = 5.5f;
+        public const float EnemyRepairSafeDistance = ComponentCasualtyTactics.MinRecoveryDistance;
         public const int MaxTrackedRepairSystems = 128;
 
         public static ComponentDamageRepairDirector Instance { get; private set; }
         public int TrackedSystems { get; private set; }
         public int EnemyRepairStarts { get; private set; }
         public int DiscoveryPasses { get; private set; }
+        public int TacticEvaluations { get; private set; }
+        public int RecoveryDecisions { get; private set; }
 
         private readonly EmergencyRepairSystem[] _systems = new EmergencyRepairSystem[MaxTrackedRepairSystems];
         private float _nextDiscovery;
@@ -60,8 +62,13 @@ namespace TankRevival
                 EnemyTank enemy = repair.GetComponent<EnemyTank>();
                 ArmorSystem armor = repair.GetComponent<ArmorSystem>();
                 if (enemy == null || armor == null || repair.IsRepairing || repair.ChargesRemaining <= 0) continue;
-                if (!armor.IsMobilityCritical && !armor.IsWeaponCritical) continue;
-                if (((Vector2)enemy.transform.position - playerPosition).sqrMagnitude < EnemyRepairSafeDistance * EnemyRepairSafeDistance) continue;
+
+                float distance = Vector2.Distance(enemy.transform.position, playerPosition);
+                TacticEvaluations++;
+                ComponentCasualtyTactic tactic = ComponentCasualtyTactics.Resolve(enemy.Kind, armor, distance, true);
+                if (tactic != ComponentCasualtyTactic.Recover) continue;
+                RecoveryDecisions++;
+
                 Rigidbody2D body = enemy.GetComponent<Rigidbody2D>();
                 if (body != null && body.linearVelocity.sqrMagnitude > EmergencyRepairSystem.MaxRepairSpeed * EmergencyRepairSystem.MaxRepairSpeed) continue;
                 if (repair.TryBeginRepair()) EnemyRepairStarts++;
@@ -92,6 +99,6 @@ namespace TankRevival
         public static bool ConfigurationValid =>
             DiscoveryInterval >= 0.75f && DiscoveryInterval <= 2f &&
             EnemyRepairSafeDistance >= 4f && MaxTrackedRepairSystems >= 64 &&
-            EmergencyRepairSystem.ConfigurationValid;
+            EmergencyRepairSystem.ConfigurationValid && ComponentCasualtyTactics.ConfigurationValid;
     }
 }
