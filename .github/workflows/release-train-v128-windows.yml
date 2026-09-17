@@ -5,6 +5,10 @@ on:
     branches: ['dev-v12-8']
     paths:
       - '.v128-release-train-trigger'
+      - '.github/workflows/release-train-v128-windows.yml'
+      - 'Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs'
+      - 'Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs.meta'
+      - 'Assets/Scripts/DemoCISoakProbe.cs'
   workflow_dispatch:
 
 permissions:
@@ -52,7 +56,9 @@ jobs:
           grep -q 'typeof(ReconElectronicWarfareDirector)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
           grep -q 'typeof(MobileSignalWarfareDirector)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
           grep -q 'typeof(SignalsIntelligenceFireSupportDirector)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
-          grep -q 'typeof(BattlefieldPresentationOverdriveDirector)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'PresentationDirectorTypeName = "TankRevival.BattlefieldPresentationOverdriveDirector"' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'ResolveDirectorType(PresentationDirectorTypeName)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
+          grep -q 'CountNamedService(PresentationDirectorTypeName)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
           grep -q 'typeof(CinematicCombatFeedbackDirector)' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
           grep -q 'CountDuplicateServices' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
           grep -q 'rounds=80,90,100' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
@@ -143,18 +149,62 @@ jobs:
           buildMethod: TankRevival.Editor.CIBuild.BuildWindows
           allowDirtyBuild: true
 
-      - name: Verify executable, write attribution and package exact candidate
+      - name: Discover, verify and package exact Windows x64 candidate
         shell: bash
         run: |
           set -euo pipefail
-          test -f build/StandaloneWindows64/TankRevivalOverdrive.exe
-          test -d build/StandaloneWindows64/TankRevivalOverdrive_Data
-          printf 'version=%s\ncommit=%s\nunity=%s\n' "$(cat VERSION)" "$GITHUB_SHA" "$UNITY_VERSION" > build/StandaloneWindows64/V128_RELEASE_TRAIN_BUILD.txt
-          cd build/StandaloneWindows64
-          zip -r ../../"$CANDIDATE_ZIP" .
-          cd ../..
-          test -s "$CANDIDATE_ZIP"
-          sha256sum "$CANDIDATE_ZIP" | tee V128_RELEASE_TRAIN_SHA256.txt
+          mkdir -p build
+
+          # Keep a deterministic discovery report even when the layout contract fails.
+          find build -maxdepth 6 -printf '%y %p\n' | sort | tee V128_RELEASE_TRAIN_BUILD_TREE.txt
+
+          mapfile -t exe_candidates < <(find build -type f -name 'TankRevivalOverdrive.exe' -print | sort)
+          if [[ ${#exe_candidates[@]} -ne 1 ]]; then
+            echo "Expected exactly one TankRevivalOverdrive.exe below build/, found ${#exe_candidates[@]}." >&2
+            printf 'candidate: %s\n' "${exe_candidates[@]:-<none>}" >&2
+            exit 1
+          fi
+
+          exe_path="${exe_candidates[0]}"
+          runtime_dir="$(dirname "$exe_path")"
+          data_dir="$runtime_dir/TankRevivalOverdrive_Data"
+          if [[ ! -d "$data_dir" ]]; then
+            echo "EXE discovered at $exe_path but paired data directory is missing: $data_dir" >&2
+            exit 1
+          fi
+
+          # Reject an ambiguous runtime layout instead of packaging the wrong build.
+          mapfile -t data_candidates < <(find build -type d -name 'TankRevivalOverdrive_Data' -print | sort)
+          if [[ ${#data_candidates[@]} -ne 1 || "${data_candidates[0]}" != "$data_dir" ]]; then
+            echo "Expected exactly one data directory paired with the EXE; found ${#data_candidates[@]}." >&2
+            printf 'data candidate: %s\n' "${data_candidates[@]:-<none>}" >&2
+            exit 1
+          fi
+
+          runtime_layout="$(realpath --relative-to=build "$runtime_dir")"
+          printf 'version=%s\ncommit=%s\nunity=%s\nruntime_layout=%s\nexe=TankRevivalOverdrive.exe\n' \
+            "$(cat VERSION)" "$GITHUB_SHA" "$UNITY_VERSION" "$runtime_layout" \
+            > "$runtime_dir/V128_RELEASE_TRAIN_BUILD.txt"
+
+          candidate_zip="$GITHUB_WORKSPACE/$CANDIDATE_ZIP"
+          rm -f "$candidate_zip"
+          (
+            cd "$runtime_dir"
+            zip -qr "$candidate_zip" .
+          )
+          test -s "$candidate_zip"
+          sha256sum "$candidate_zip" | tee V128_RELEASE_TRAIN_SHA256.txt
+          echo "Packaged runtime from: $runtime_dir"
+          cat "$runtime_dir/V128_RELEASE_TRAIN_BUILD.txt"
+
+      - name: Upload build-discovery diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v12.8-build-discovery
+          path: V128_RELEASE_TRAIN_BUILD_TREE.txt
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Upload one exact release-train candidate
         uses: actions/upload-artifact@v4
