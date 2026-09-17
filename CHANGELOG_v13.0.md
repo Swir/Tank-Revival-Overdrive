@@ -29,3 +29,6 @@
 ## Qualification status
 
 v13.0 remains **IN DEVELOPMENT**. The current implementation intentionally does not mark any v13.0 ROADMAP deliverable complete yet. Live `TankGame` spawn/round consumption, Orzeł defense escalation, cross-director doctrine adapters, HUD telemetry, the exact Windows single-binary gate and exact-SHA ROADMAP finalizer still require qualification before 391/391 can be claimed.
+
+## Live encounter consumption
+- `TankGame` consumes v13.0 plan budgets, deterministic doctrine composition and Orzelek pressure fortification; HUD exposes exact plan telemetry.

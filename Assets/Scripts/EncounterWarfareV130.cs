@@ -132,10 +132,68 @@ namespace TankRevival
             };
         }
 
+        /// <summary>
+        /// Deterministic support-wave composition consumed by TankGame. No Unity random state, allocations or authority writes.
+        /// Boss rounds keep the boss itself in TankGame's existing boss path while this helper produces its escort wave.
+        /// </summary>
+        public static EnemyKind EnemyForSpawn(EncounterPlan plan, int spawnOrdinal)
+        {
+            int ordinal = Mathf.Max(0, spawnOrdinal);
+            int roll = PositiveMod(unchecked(plan.Signature * 397 + ordinal * 101 + plan.Round * 53), 100);
+
+            if (plan.BossRound)
+            {
+                if (roll < 24) return plan.Round >= 60 ? EnemyKind.Elite : EnemyKind.Heavy;
+                if (roll < 44) return EnemyKind.Siege;
+                if (roll < 61) return EnemyKind.Sniper;
+                if (roll < 75) return EnemyKind.Fast;
+                if (roll < 84) return EnemyKind.Supply;
+                return plan.Round >= 40 ? EnemyKind.Heavy : EnemyKind.Basic;
+            }
+
+            if (roll < 52) return plan.PrimaryEnemy;
+            if (roll < 62 && plan.Round >= 3) return EnemyKind.Supply;
+
+            switch (plan.Doctrine)
+            {
+                case EncounterDoctrine.ArmoredAssault: return roll < 84 ? EnemyKind.Heavy : EnemyKind.Siege;
+                case EncounterDoctrine.HunterKiller: return roll < 82 ? EnemyKind.Fast : EnemyKind.Sniper;
+                case EncounterDoctrine.ArtillerySiege: return roll < 84 ? EnemyKind.Siege : EnemyKind.Heavy;
+                case EncounterDoctrine.LogisticsInterdiction: return roll < 82 ? EnemyKind.Fast : EnemyKind.Supply;
+                case EncounterDoctrine.ElectronicSuppression: return roll < 84 ? EnemyKind.Sniper : EnemyKind.Elite;
+                case EncounterDoctrine.RouteBreakthrough: return roll < 84 ? EnemyKind.Fast : EnemyKind.Heavy;
+                case EncounterDoctrine.CombinedArms:
+                    if (roll < 74) return EnemyKind.Heavy;
+                    if (roll < 88) return EnemyKind.Sniper;
+                    return plan.Round >= 60 ? EnemyKind.Elite : EnemyKind.Fast;
+                default: return EnemyKind.Basic;
+            }
+        }
+
+        public static EagleDefensePlanV130 EagleDefenseFor(EncounterPlan plan)
+        {
+            float pressure = Mathf.Clamp01(plan.EaglePressure);
+            int tier = pressure >= 0.78f ? 3 : pressure >= 0.52f ? 2 : 1;
+            int wallHp = tier == 3 ? 4 : tier == 2 ? 3 : 2;
+            return new EagleDefensePlanV130
+            {
+                Tier = tier,
+                WallHitPoints = wallHp,
+                SteelSides = tier >= 2,
+                SteelCrown = tier >= 3
+            };
+        }
+
         public static void BuildAll(EncounterPlan[] destination)
         {
             if (destination == null || destination.Length < PlannedRounds) return;
             for (int i = 0; i < PlannedRounds; i++) destination[i] = PlanForRound(i + 1);
+        }
+
+        private static int PositiveMod(int value, int divisor)
+        {
+            int result = value % divisor;
+            return result < 0 ? result + divisor : result;
         }
 
         private static float DoctrinePressure(EncounterDoctrine doctrine)
@@ -182,6 +240,14 @@ namespace TankRevival
                 default: return round >= 25 ? EnemyKind.Heavy : EnemyKind.Basic;
             }
         }
+    }
+
+    public struct EagleDefensePlanV130
+    {
+        public int Tier;
+        public int WallHitPoints;
+        public bool SteelSides;
+        public bool SteelCrown;
     }
 
     /// <summary>Pure phase policy used by the real boss weapon authority.</summary>

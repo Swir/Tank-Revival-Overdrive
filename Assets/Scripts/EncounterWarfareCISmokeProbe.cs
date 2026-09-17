@@ -85,6 +85,33 @@ namespace TankRevival
                     maxPressure = Mathf.Max(maxPressure, plan.EaglePressure);
                 }
 
+                // Live-consumption contracts: deterministic wave composition and monotonic Orzelek fortification.
+                int spawnFold = 23;
+                int supplySpawns = 0;
+                for (int r = 0; r < plans.Length; r++)
+                {
+                    EncounterPlan plan = plans[r];
+                    for (int ordinal = 0; ordinal < plan.EnemyCount; ordinal++)
+                    {
+                        EnemyKind a = EncounterPlannerV130.EnemyForSpawn(plan, ordinal);
+                        EnemyKind b = EncounterPlannerV130.EnemyForSpawn(plan, ordinal);
+                        if (a != b) { Fail("spawn composition is not deterministic at round " + plan.Round); return; }
+                        if (a == EnemyKind.Boss) { Fail("support wave leaked boss authority at round " + plan.Round); return; }
+                        if (a == EnemyKind.Supply) supplySpawns++;
+                        spawnFold = unchecked(spawnFold * 31 + (int)a);
+                    }
+                }
+                if (supplySpawns <= 0) { Fail("deterministic campaign composition contains no supply units"); return; }
+
+                EagleDefensePlanV130 earlyDefense = EncounterPlannerV130.EagleDefenseFor(plans[0]);
+                EagleDefensePlanV130 midDefense = EncounterPlannerV130.EagleDefenseFor(plans[49]);
+                EagleDefensePlanV130 lateDefense = EncounterPlannerV130.EagleDefenseFor(plans[99]);
+                if (earlyDefense.Tier < 1 || lateDefense.Tier > 3 ||
+                    earlyDefense.Tier > midDefense.Tier || midDefense.Tier > lateDefense.Tier ||
+                    earlyDefense.WallHitPoints > midDefense.WallHitPoints || midDefense.WallHitPoints > lateDefense.WallHitPoints ||
+                    !lateDefense.SteelSides || !lateDefense.SteelCrown)
+                { Fail("Orzelek fortification policy is not bounded/monotonic"); return; }
+
                 if (bossRounds != 10) { Fail("expected exactly ten boss rounds, got " + bossRounds); return; }
                 int doctrineCount = 0;
                 for (int i = 0; i < doctrines.Length; i++) if (doctrines[i]) doctrineCount++;
@@ -120,7 +147,8 @@ namespace TankRevival
                     "plans=" + plans.Length + " bossRounds=" + bossRounds + " doctrines=" + doctrineCount + " signatureFold=" + signatureFold + "\n" +
                     "enemyBudget=" + minEnemies + ".." + maxEnemies + " concurrent=" + minAlive + ".." + maxAlive +
                     " minSpawnInterval=" + minInterval.ToString("0.000") + " maxEaglePressure=" + maxPressure.ToString("0.000") + "\n" +
-                    "bossPhases=3..4 maxTrackedRounds=" + EncounterWarfareDirector.MaxTrackedRounds + " maxTrackedBosses=" + EncounterWarfareDirector.MaxTrackedBosses + "\n";
+                    "bossPhases=3..4 maxTrackedRounds=" + EncounterWarfareDirector.MaxTrackedRounds + " maxTrackedBosses=" + EncounterWarfareDirector.MaxTrackedBosses + "\n" +
+                    "spawnFold=" + spawnFold + " supplySpawns=" + supplySpawns + " fortificationTiers=" + earlyDefense.Tier + "/" + midDefense.Tier + "/" + lateDefense.Tier + "\n";
                 File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), PassMarker), report);
                 Debug.Log("[TankRevival] " + report.Replace("\n", " | "));
                 Application.Quit(0);
