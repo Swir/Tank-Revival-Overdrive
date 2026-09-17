@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+  <title id="title">Tank Revival: Orzeł Overdrive</title>
+  <desc id="desc">SWIR project hero for a 2.5D tank-defense action game on Windows, shown with an abstract armored vehicle and eagle-wing command mark.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#02050A"/>
+      <stop offset="1" stop-color="#07111C"/>
+    </linearGradient>
+    <linearGradient id="energy" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0088FF"/>
+      <stop offset="1" stop-color="#62E5FF"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#0B2637" stroke-width="1" opacity="0.5"/>
+    </pattern>
+  </defs>
+
+  <rect x="1" y="1" width="1198" height="318" rx="28" fill="url(#bg)" stroke="#16394C" stroke-width="2"/>
+  <rect x="20" y="20" width="1160" height="280" rx="22" fill="url(#grid)" opacity="0.65"/>
+  <path d="M42 256 C210 206 350 284 520 232 S875 186 1158 236" fill="none" stroke="#0088FF" stroke-width="2" opacity="0.28"/>
+  <path d="M42 270 C250 226 360 292 548 250 S908 214 1158 252" fill="none" stroke="#62E5FF" stroke-width="1" opacity="0.18"/>
+
+  <g transform="translate(92 74)" filter="url(#glow)">
+    <path d="M112 14 L78 46 L45 30 L66 66 L30 92 L76 86 L92 118 L112 90 L132 118 L148 86 L194 92 L158 66 L179 30 L146 46 Z" fill="none" stroke="#62E5FF" stroke-width="5" stroke-linejoin="round" opacity="0.88"/>
+    <rect x="54" y="116" width="116" height="54" rx="14" fill="#07111C" stroke="#0088FF" stroke-width="5"/>
+    <rect x="78" y="92" width="70" height="42" rx="12" fill="#02050A" stroke="#62E5FF" stroke-width="5"/>
+    <path d="M142 103 L214 75" fill="none" stroke="#62E5FF" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="113" cy="113" r="10" fill="#62E5FF"/>
+    <path d="M43 158 H181" stroke="#0088FF" stroke-width="12" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="70" cy="158" r="12" fill="#02050A" stroke="#62E5FF" stroke-width="4"/>
+    <circle cx="154" cy="158" r="12" fill="#02050A" stroke="#62E5FF" stroke-width="4"/>
+  </g>
+
+  <g font-family="Segoe UI, Inter, Arial, sans-serif">
+    <text x="350" y="76" fill="#62E5FF" font-size="15" font-weight="700" letter-spacing="4">SWIR PROJECT • ARMORED ACTION</text>
+    <text x="350" y="132" fill="#F4FAFF" font-size="45" font-weight="800" letter-spacing="1">TANK REVIVAL</text>
+    <text x="350" y="176" fill="url(#energy)" font-size="34" font-weight="800">ORZEŁ OVERDRIVE</text>
+    <text x="350" y="219" fill="#8DA8B8" font-size="18">Defend Orzełek through 100 rounds of adaptive armored warfare.</text>
+    <rect x="350" y="244" width="452" height="34" rx="17" fill="#02050A" stroke="#16394C"/>
+    <text x="372" y="267" fill="#D6EAF5" font-size="14" font-weight="600">WINDOWS 10 / 11 x64</text>
+    <circle cx="545" cy="261" r="3" fill="#62E5FF"/>
+    <text x="560" y="267" fill="#D6EAF5" font-size="14" font-weight="600">UNITY 6</text>
+    <circle cx="645" cy="261" r="3" fill="#62E5FF"/>
+    <text x="660" y="267" fill="#D6EAF5" font-size="14" font-weight="600">2.5D TANK DEFENSE</text>
+  </g>
+
+  <path d="M1080 48 h72 v6 h-72z M1118 48 v72 h6 V48z" fill="#62E5FF" opacity="0.65"/>
+  <circle cx="1121" cy="51" r="10" fill="none" stroke="#0088FF" stroke-width="2" opacity="0.75"/>
+</svg>
