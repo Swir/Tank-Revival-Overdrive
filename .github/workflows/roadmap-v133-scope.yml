@@ -1,0 +1,75 @@
+name: ROADMAP v13.3 Scope Registrar
+
+on:
+  push:
+    branches:
+      - dev-v13-3
+    paths:
+      - .v133-scope-trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          ref: dev-v13-3
+          fetch-depth: 0
+
+      - name: Register v13.3 milestone in canonical roadmap and README
+        run: python Tools/register_v133_scope.py
+
+      - name: Regenerate deterministic SWIR Progress SVG Pro assets
+        run: python Tools/generate_progress_svgs.py --write --embed --check
+
+      - name: Re-read and verify SWIR Roadmap/README/Progress contracts
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, xml.etree.ElementTree as ET
+          text = Path('ROADMAP.md').read_text(encoding='utf-8')
+          readme = Path('README.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$', text, re.M)) == 1
+          assert '<!-- SWIR-README-STANDARD:v2 -->' in readme
+          assert '## 🔎 Search Keywords' in readme
+          assert '<!-- SWIR-PROGRESS-SVG-PRO:v1 -->' in text and '<!-- SWIR-PROGRESS-SVG-PRO:v1 -->' in readme
+          for token in [
+              '## 📊 Overall progress', 'badge.svg?branch=dev-v13-3',
+              'ROADMAP-98.1%25-yellow?style=for-the-badge', 'DONE-407%2F415-1f6feb?style=for-the-badge',
+              'STATUS-V13.3%20IN%20DEVELOPMENT-yellow?style=for-the-badge',
+              '███████████████████░ 98.1%', '| **407** | **8** | **415** | **98.1%** |',
+              '407 / 415 completed (98.1%)', 'V13.3 IN DEVELOPMENT'
+          ]: assert token in text or token in readme, token
+          assert len(re.findall(r'^- \[x\] ', text, re.M)) == 407
+          assert len(re.findall(r'^- \[ \] ', text, re.M)) == 8
+          section = text.split('## v13.3 — Battlefield Cohesion & Squad Command Warfare', 1)[1]
+          assert section.count('- [ ]') == 8 and section.count('- [x]') == 0
+          for p in ['assets/readme/progress-card.svg','assets/readme/progress-mini.svg','assets/readme/progress-template.svg']:
+              ET.parse(p)
+          print('ROADMAP/README/Progress v13.3 scope invariants: PASS')
+
+      - name: Verify deterministic no-op regeneration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Tools/generate_progress_svgs.py --write --embed --check
+          git diff --check
+
+      - name: Commit roadmap scope and synchronized documentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- ROADMAP.md README.md assets/readme; then
+            echo 'v13.3 scope already registered and progress assets current; no commit needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
+          git commit -m 'docs(v13.3): register battlefield-cohesion milestone'
+          git push origin HEAD:dev-v13-3

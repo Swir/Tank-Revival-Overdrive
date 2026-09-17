@@ -2,7 +2,7 @@ name: SWIR Progress SVG Pro v1 Rollout
 
 on:
   push:
-    branches: ['dev-v13-2']
+    branches: ['dev-v13-3']
     paths:
       - 'ROADMAP.md'
       - 'README.md'
@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: dev-v13-2
+          ref: dev-v13-3
           fetch-depth: 0
       - name: Generate and embed SWIR Progress SVG Pro
         run: python Tools/generate_progress_svgs.py --write --embed --check
@@ -77,4 +77,4 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add README.md ROADMAP.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
           git commit -m 'docs(progress): roll out SWIR Progress SVG Pro v1'
-          git push origin HEAD:dev-v13-2
+          git push origin HEAD:dev-v13-3
