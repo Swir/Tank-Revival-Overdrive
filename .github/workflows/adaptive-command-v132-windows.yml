@@ -48,11 +48,13 @@ jobs:
           set -euo pipefail
           workflow='.github/workflows/adaptive-command-v132-windows.yml'
           grep -Fq 'Enforce clean Unity qualification state' "$workflow"
-          if grep -Fq 'uses: actions/cache@' "$workflow"; then
+          cache_action='actions/'"cache@"
+          if grep -Fq "uses: ${cache_action}" "$workflow"; then
             echo 'Exact-candidate qualification must not restore or save Unity Library caches.' >&2
             exit 1
           fi
-          if grep -Fq 'restore-keys:' "$workflow"; then
+          restore_key='restore'"-keys:"
+          if grep -Fq "$restore_key" "$workflow"; then
             echo 'Cross-candidate Unity Library restore keys are forbidden for qualification.' >&2
             exit 1
           fi
