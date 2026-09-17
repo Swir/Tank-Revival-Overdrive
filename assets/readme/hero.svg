@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+<title id="title">Tank Revival: Orzeł Overdrive</title><desc id="desc">SWIR project hero for an original top-down tank combat game</desc>
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#02050A"/><stop offset="1" stop-color="#07111C"/></linearGradient><linearGradient id="cyan" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#62E5FF"/><stop offset="1" stop-color="#0088FF"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<rect width="1200" height="320" rx="26" fill="url(#bg)"/><g opacity=".2" stroke="#62E5FF"><path d="M20 44h260M940 52h220M36 274h220M976 266h180"/></g>
+<g transform="translate(72 80)" filter="url(#glow)" stroke="#62E5FF" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="18" y="88" width="164" height="54" rx="20"/><circle cx="55" cy="142" r="22"/><circle cx="145" cy="142" r="22"/><rect x="65" y="55" width="76" height="44" rx="10"/><path d="M140 70h70M88 55l18-26h32l18 26"/></g>
+<text x="310" y="72" fill="#62E5FF" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="700" letter-spacing="5">SWIR PROJECT</text>
+<text x="310" y="132" fill="#F4FAFF" font-family="Segoe UI,Arial,sans-serif" font-size="45" font-weight="800">TANK REVIVAL</text>
+<text x="310" y="177" fill="#F4FAFF" font-family="Segoe UI,Arial,sans-serif" font-size="31" font-weight="700">ORZEŁ OVERDRIVE</text>
+<text x="312" y="213" fill="#8DA8B8" font-family="Segoe UI,Arial,sans-serif" font-size="21">100-round top-down tank combat campaign</text>
+<rect x="310" y="232" width="590" height="3" rx="2" fill="url(#cyan)"/>
+<text x="312" y="268" fill="#62E5FF" font-family="Consolas,monospace" font-size="16">ARMOR • BOSSES • FIELD COMMAND • OVERDRIVE</text>
+<text x="1080" y="288" fill="#31566A" font-family="Consolas,monospace" font-size="13">by SWIR</text>
+</svg>
