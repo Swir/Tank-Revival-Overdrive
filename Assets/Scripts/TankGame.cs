@@ -18,6 +18,13 @@ namespace TankRevival
         private const float ArenaHalfHeight = 7f;
         private const int FinalRound = 100;
         private const int EagleMaxHealth = 6;
+        private static readonly Vector2[] EnemySpawnPoints =
+        {
+            new Vector2(-9.5f, 5.65f),
+            new Vector2(-3.2f, 5.65f),
+            new Vector2(3.2f, 5.65f),
+            new Vector2(9.5f, 5.65f)
+        };
 
         private GameState _state = GameState.Menu;
         private Camera _camera;
@@ -36,6 +43,10 @@ namespace TankRevival
         private int _maxAlive;
         private bool _bossPending;
         private float _nextSpawn;
+        private int _spawnOrdinal;
+        private EncounterPlan _encounterPlan;
+        private EncounterRuntimeBudgetV130 _encounterRuntimeBudget;
+        private float _nextEncounterDoctrineRefresh;
         private float _roundClearAt = -1f;
         private float _nextEagleAlarm;
 
@@ -62,6 +73,8 @@ namespace TankRevival
         public Vector2 PlayerPosition => _player != null ? (Vector2)_player.transform.position : BasePosition;
         public Vector2 BasePosition => _baseObject != null ? (Vector2)_baseObject.transform.position : new Vector2(0f, -5.95f);
         public int CurrentRound => _round;
+        public EncounterPlan CurrentEncounterPlan => _encounterPlan;
+        public EncounterRuntimeBudgetV130 CurrentEncounterRuntimeBudget => _encounterRuntimeBudget;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureGameExists()
@@ -197,20 +210,24 @@ namespace TankRevival
         {
             _roundClearAt = -1f;
             _aliveEnemies = 0;
-            _enemiesToSpawn = Mathf.Min(62, 6 + Mathf.CeilToInt(round * 0.50f));
-            _maxAlive = Mathf.Min(14, 4 + round / 10);
-            _bossPending = round % 10 == 0;
-            _nextSpawn = Time.time + 0.70f;
+            _encounterPlan = EncounterPlannerV130.PlanForRound(round);
+            _enemiesToSpawn = _encounterPlan.EnemyCount;
+            _encounterRuntimeBudget = EncounterCrossSystemDoctrineV130.Resolve(_encounterPlan, EncounterCrossSystemDoctrineV130.CaptureReadOnly());
+            _maxAlive = _encounterRuntimeBudget.MaxAlive;
+            _bossPending = _encounterPlan.BossRound;
+            _spawnOrdinal = 0;
+            _nextEncounterDoctrineRefresh = Time.time + EncounterCrossSystemDoctrineV130.RefreshSeconds;
+            _nextSpawn = Time.time + _encounterRuntimeBudget.SpawnInterval;
             BuildArena(round);
 
             if (_bossPending)
             {
-                ShowToast($"ROUND {round:000} // BOSS ASSAULT", 2.0f);
+                ShowToast($"ROUND {round:000} // {_encounterPlan.Doctrine} // BOSS ASSAULT", 2.0f);
                 BattleAudio.PlayGlobal(SoundCue.BossAlarm, 0.72f, 0f);
             }
             else
             {
-                ShowToast($"ROUND {round:000} // DEFEND THE EAGLE", 1.45f);
+                ShowToast($"ROUND {round:000} // {_encounterPlan.Doctrine} // DEFEND THE EAGLE", 1.55f);
             }
         }
 
@@ -325,12 +342,14 @@ namespace TankRevival
             _baseHealth.Damaged += OnEagleDamaged;
             _baseHealth.Died += _ => OnBaseDestroyed(go.transform.position);
 
-            ObstacleKind sideKind = round >= 70 ? ObstacleKind.Steel : ObstacleKind.Brick;
-            int wallHp = round >= 45 ? 3 : 2;
+            EagleDefensePlanV130 defense = EncounterPlannerV130.EagleDefenseFor(_encounterPlan);
+            ObstacleKind sideKind = defense.SteelSides ? ObstacleKind.Steel : ObstacleKind.Brick;
+            ObstacleKind crownKind = ObstacleKind.Brick; // permanent universal-ammo breach lane
+            int wallHp = defense.WallHitPoints;
             CreateObstacle(new Vector2(-1.15f, -5.85f), sideKind, new Vector2(0.75f, 0.75f), wallHp);
             CreateObstacle(new Vector2(1.15f, -5.85f), sideKind, new Vector2(0.75f, 0.75f), wallHp);
-            CreateObstacle(new Vector2(-0.75f, -5.05f), ObstacleKind.Brick, new Vector2(0.75f, 0.75f), wallHp);
-            CreateObstacle(new Vector2(0.75f, -5.05f), ObstacleKind.Brick, new Vector2(0.75f, 0.75f), wallHp);
+            CreateObstacle(new Vector2(-0.75f, -5.05f), crownKind, new Vector2(0.75f, 0.75f), defense.CrownHitPoints);
+            CreateObstacle(new Vector2(0.75f, -5.05f), crownKind, new Vector2(0.75f, 0.75f), defense.CrownHitPoints);
         }
 
         private void OnEagleDamaged(Health eagle, int amount)
@@ -448,15 +467,27 @@ namespace TankRevival
             VisualFactory.RingPulse(go.transform.position, new Color(0.18f, 0.86f, 1f), 1.0f);
         }
 
+        private void RefreshEncounterDoctrineBudget()
+        {
+            if (Time.time < _nextEncounterDoctrineRefresh) return;
+            _nextEncounterDoctrineRefresh = Time.time + EncounterCrossSystemDoctrineV130.RefreshSeconds;
+            EncounterReadinessV130 readiness = EncounterCrossSystemDoctrineV130.CaptureReadOnly();
+            _encounterRuntimeBudget = EncounterCrossSystemDoctrineV130.Resolve(_encounterPlan, readiness);
+            _maxAlive = _encounterRuntimeBudget.MaxAlive;
+        }
+
         private void HandleSpawning()
         {
+            RefreshEncounterDoctrineBudget();
             if (_aliveEnemies >= _maxAlive || Time.time < _nextSpawn) return;
 
             if (_enemiesToSpawn > 0)
             {
+                EnemyKind kind = EncounterPlannerV130.EnemyForSpawn(_encounterPlan, _spawnOrdinal);
+                _spawnOrdinal++;
                 _enemiesToSpawn--;
-                SpawnEnemy(ChooseEnemyKind(_round));
-                _nextSpawn = Time.time + Mathf.Max(0.28f, 1.10f - _round * 0.0068f);
+                SpawnEnemy(kind);
+                _nextSpawn = Time.time + Mathf.Max(EncounterPlannerV130.MinSpawnInterval, _encounterRuntimeBudget.SpawnInterval);
                 return;
             }
 
@@ -464,7 +495,7 @@ namespace TankRevival
             {
                 _bossPending = false;
                 SpawnEnemy(EnemyKind.Boss);
-                ShowToast($"BOSS // ROUND {_round:000}", 2.1f);
+                ShowToast($"BOSS // ROUND {_round:000} // {BossPhaseWarfareV130.PhaseCountForRound(_round)} PHASES", 2.1f);
                 KickCamera(0.38f, 0.16f);
                 BattleAudio.PlayGlobal(SoundCue.BossAlarm, 0.78f, 0f);
             }
@@ -498,15 +529,7 @@ namespace TankRevival
 
         private void SpawnEnemy(EnemyKind kind)
         {
-            Vector2[] spawnPoints =
-            {
-                new Vector2(-9.5f, 5.65f),
-                new Vector2(-3.2f, 5.65f),
-                new Vector2(3.2f, 5.65f),
-                new Vector2(9.5f, 5.65f)
-            };
-
-            Vector2 pos = spawnPoints[Random.Range(0, spawnPoints.Length)];
+            Vector2 pos = EnemySpawnPoints[Random.Range(0, EnemySpawnPoints.Length)];
             pos += new Vector2(Random.Range(-0.25f, 0.25f), Random.Range(-0.15f, 0.15f));
             AmmoType supplyAmmo = kind == EnemyKind.Supply ? ChooseSupplyAmmo(_round) : AmmoType.Basic;
 
@@ -785,10 +808,16 @@ namespace TankRevival
             int activeCount = _player != null ? _player.GetAmmoCount(active) : (active == AmmoType.Basic ? -1 : _savedAmmo[(int)active]);
             string ammoCount = active == AmmoType.Basic ? "∞" : activeCount.ToString();
 
-            GUI.Box(new Rect(14f, 12f, 480f, 108f), string.Empty);
+            GUI.Box(new Rect(14f, 12f, 480f, 183f), string.Empty);
             GUI.Label(new Rect(28f, 19f, 455f, 27f), $"ROUND {_round:000}/100     SCORE {_score:N0}     ENEMY {remaining}", _hudStyle);
             GUI.Label(new Rect(28f, 47f, 455f, 27f), $"LIVES {_lives}   ARMOR {playerHp}   ORZEŁEK {eagleHp}/{EagleMaxHealth}", eagleHp <= 2 ? _warningStyle : _hudStyle);
             GUI.Label(new Rect(28f, 75f, 455f, 27f), $"AMMO {AmmoDatabase.DisplayName(active)}  [{ammoCount}]   •   Q/E switch", _hudStyle);
+            GUI.Label(new Rect(28f, 103f, 455f, 25f), $"ACT {_encounterPlan.Act}   DOCTRINE {_encounterPlan.Doctrine}", _smallStyle);
+            string bossTelemetry = _encounterPlan.BossRound && EncounterWarfareDirector.Instance != null && EncounterWarfareDirector.Instance.BossPhase > 0
+                ? $"   BOSS {EncounterWarfareDirector.Instance.BossPhase}/{EncounterWarfareDirector.Instance.BossPhaseCount} {EncounterWarfareDirector.Instance.BossPhaseLabel}"
+                : string.Empty;
+            GUI.Label(new Rect(28f, 128f, 455f, 25f), $"THREAT {_encounterPlan.EnemyCount}/{_encounterPlan.MaxAlive}   EAGLE P{Mathf.RoundToInt(_encounterPlan.EaglePressure * 100f):00}   SIG {_encounterPlan.Signature:X8}{bossTelemetry}", _smallStyle);
+            GUI.Label(new Rect(28f, 153f, 455f, 25f), $"XSYS {_encounterRuntimeBudget.ActiveChannels}/6   READY {Mathf.RoundToInt(_encounterRuntimeBudget.Readiness * 100f):00}%   CONC {_encounterRuntimeBudget.ConcurrencyDelta:+#;-#;0}   RT {_encounterRuntimeBudget.Signature:X8}", _smallStyle);
 
             if (_player != null)
             {

@@ -1,0 +1,62 @@
+name: v13.0 Live Encounter Integration Registrar
+
+on:
+  push:
+    branches: ['dev-v13-0']
+    paths:
+      - 'Tools/apply_v130_live_encounter.py'
+      - '.github/workflows/v130-live-encounter-registrar.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v130-live-encounter-registrar
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v13-0
+          fetch-depth: 0
+      - name: Verify exact source head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "$(git branch --show-current)" = 'dev-v13-0'
+          python -m py_compile Tools/apply_v130_live_encounter.py
+      - name: Apply deterministic live v13.0 integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Tools/apply_v130_live_encounter.py
+          git diff --check
+          grep -q '_encounterPlan = EncounterPlannerV130.PlanForRound(round)' Assets/Scripts/TankGame.cs
+          grep -q 'EncounterPlannerV130.EnemyForSpawn(_encounterPlan, _spawnOrdinal)' Assets/Scripts/TankGame.cs
+          grep -q 'EncounterPlannerV130.EagleDefenseFor(_encounterPlan)' Assets/Scripts/TankGame.cs
+          grep -q 'spawnFold=' Assets/Scripts/EncounterWarfareCISmokeProbe.cs
+          grep -q -- "- 'Assets/Scripts/TankGame.cs'" .github/workflows/encounter-warfare-v130-windows.yml
+      - name: Commit integrated gameplay package
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # Workflow updates are intentionally left unstaged here because the
+          # default Actions token cannot modify workflow files. The gameplay,
+          # smoke and changelog package is still committed atomically; the
+          # hardened gate workflow is applied separately through the GitHub
+          # connector with workflow-file permission.
+          git add Assets/Scripts/EncounterWarfareV130.cs Assets/Scripts/TankGame.cs Assets/Scripts/EncounterWarfareCISmokeProbe.cs CHANGELOG_v13.0.md
+          if git diff --cached --quiet; then
+            echo 'No gameplay integration changes to commit.'
+            exit 0
+          fi
+          git commit -m 'feat(v13.0): drive live campaign from encounter doctrine'
+          git push origin HEAD:dev-v13-0

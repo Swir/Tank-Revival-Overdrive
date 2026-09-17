@@ -1,0 +1,263 @@
+name: Encounter & Boss Warfare v13.0 Windows Qualification Gate
+
+on:
+  push:
+    branches: ['dev-v13-0']
+    paths:
+      - '.v130-windows-gate-trigger'
+      - 'Assets/Scripts/EncounterWarfareV130.cs'
+      - 'Assets/Scripts/EncounterWarfareV130.cs.meta'
+      - 'Assets/Scripts/EncounterWarfareCISmokeProbe.cs'
+      - 'Assets/Scripts/EncounterWarfareCISmokeProbe.cs.meta'
+      - 'Assets/Scripts/TankGame.cs'
+      - 'Assets/Scripts/BossWeaponController.cs'
+      - 'Assets/Scripts/ArmorSystem.cs'
+      - 'Assets/Scripts/Health.cs'
+      - 'Assets/Scripts/EnemyTank.cs'
+      - 'Assets/Scripts/CombinedArmsMobileFrontDirector.cs'
+      - 'Assets/Scripts/OperationalSustainmentDirector.cs'
+      - 'Assets/Scripts/LogisticsRouteIntelligenceDirector.cs'
+      - 'Assets/Scripts/ReconElectronicWarfareDirector.cs'
+      - 'Assets/Scripts/MobileSignalWarfareDirector.cs'
+      - 'Assets/Scripts/SignalsIntelligenceFireSupportDirector.cs'
+      - '.github/scripts/package_v130_encounter_warfare.py'
+      - '.github/scripts/test_package_v130_encounter_warfare.py'
+      - '.github/workflows/encounter-warfare-v130-windows.yml'
+      - 'CHANGELOG_v13.0.md'
+      - 'VERSION'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UNITY_VERSION: 6000.3.17f1
+  CANDIDATE_ZIP: TankRevivalOverdrive-v13.0-encounter-warfare-Windows-x64.zip
+  PACKAGE_DIR: tro-v130-package
+
+jobs:
+  source-contracts:
+    name: Verify v13.0 encounter, cross-stack doctrine, boss phase, authority and roadmap contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact branch checkout and packager fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "${GITHUB_REF_NAME}" = 'dev-v13-0'
+          python -m py_compile .github/scripts/package_v130_encounter_warfare.py .github/scripts/test_package_v130_encounter_warfare.py
+          python .github/scripts/test_package_v130_encounter_warfare.py
+      - name: Verify implementation and canonical authority integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in Assets/Scripts/EncounterWarfareV130.cs Assets/Scripts/EncounterWarfareCISmokeProbe.cs Assets/Scripts/TankGame.cs Assets/Scripts/BossWeaponController.cs Assets/Scripts/ArmorSystem.cs Assets/Scripts/Health.cs Assets/Scripts/EnemyTank.cs Assets/Scripts/CombinedArmsMobileFrontDirector.cs Assets/Scripts/OperationalSustainmentDirector.cs Assets/Scripts/LogisticsRouteIntelligenceDirector.cs Assets/Scripts/ReconElectronicWarfareDirector.cs Assets/Scripts/MobileSignalWarfareDirector.cs Assets/Scripts/SignalsIntelligenceFireSupportDirector.cs CHANGELOG_v13.0.md; do test -f "$f"; done
+          test "$(cat VERSION)" = 'v13.0.0-dev'
+
+          # Deterministic 100-round encounter contract and hard budgets.
+          grep -q 'PlannedRounds = 100' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'MaxEnemyBudget = 62' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'MaxConcurrentEnemies = 14' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'MaxTrackedRounds = 100' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'MaxTrackedBosses = 2' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'BossGauntlet' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'EnemyForSpawn' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'EagleDefenseFor' Assets/Scripts/EncounterWarfareV130.cs
+
+          # Safe Orzelek escalation: strong flanks, but a permanent destructible center route.
+          grep -q 'DestructibleBreachLane = true' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'SteelCrown = false' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'CrownHitPoints' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'ObstacleKind crownKind = ObstacleKind.Brick' Assets/Scripts/TankGame.cs
+          grep -q 'defense.CrownHitPoints' Assets/Scripts/TankGame.cs
+          if grep -Fq 'defense.SteelCrown ? ObstacleKind.Steel' Assets/Scripts/TankGame.cs; then
+            echo 'tier-3 center crown can still remove the universal normal-ammo breach lane' >&2; exit 1
+          fi
+
+          # Read-only orchestration across all six v12 operational systems.
+          grep -q 'public static class EncounterCrossSystemDoctrineV130' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'MaxConcurrencyDelta = 1' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'MinSpawnScale = 0.92f' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'MaxSpawnScale = 1.10f' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'RefreshSeconds = 0.75f' Assets/Scripts/EncounterWarfareV130.cs
+          for service in CombinedArmsMobileFrontDirector OperationalSustainmentDirector LogisticsRouteIntelligenceDirector ReconElectronicWarfareDirector MobileSignalWarfareDirector SignalsIntelligenceFireSupportDirector; do
+            grep -q "${service}.Instance" Assets/Scripts/EncounterWarfareV130.cs
+          done
+          grep -q '_encounterRuntimeBudget = EncounterCrossSystemDoctrineV130.Resolve' Assets/Scripts/TankGame.cs
+          grep -q 'EncounterCrossSystemDoctrineV130.CaptureReadOnly()' Assets/Scripts/TankGame.cs
+          grep -q '_maxAlive = _encounterRuntimeBudget.MaxAlive' Assets/Scripts/TankGame.cs
+          grep -q '_encounterRuntimeBudget.SpawnInterval' Assets/Scripts/TankGame.cs
+          grep -q 'XSYS {_encounterRuntimeBudget.ActiveChannels}/6' Assets/Scripts/TankGame.cs
+
+          # Live campaign stays under TankGame / existing combat authorities.
+          grep -q '_encounterPlan = EncounterPlannerV130.PlanForRound(round)' Assets/Scripts/TankGame.cs
+          grep -q '_enemiesToSpawn = _encounterPlan.EnemyCount' Assets/Scripts/TankGame.cs
+          grep -q 'EncounterPlannerV130.EnemyForSpawn(_encounterPlan, _spawnOrdinal)' Assets/Scripts/TankGame.cs
+          grep -q 'EncounterPlannerV130.EagleDefenseFor(_encounterPlan)' Assets/Scripts/TankGame.cs
+          grep -q 'DOCTRINE {_encounterPlan.Doctrine}' Assets/Scripts/TankGame.cs
+          if grep -q 'SpawnEnemy(ChooseEnemyKind(_round))' Assets/Scripts/TankGame.cs; then
+            echo 'legacy random enemy composition still owns live spawn selection' >&2; exit 1
+          fi
+
+          # Boss phase directives remain consumers of the existing weapon authority.
+          grep -q 'ResolvePhase' Assets/Scripts/BossWeaponController.cs
+          grep -q 'CadenceScale' Assets/Scripts/BossWeaponController.cs
+          grep -q 'PatternTierBonus' Assets/Scripts/BossWeaponController.cs
+          grep -q 'IsWeaponDisabled' Assets/Scripts/BossWeaponController.cs
+          grep -q 'SpawnProjectile' Assets/Scripts/BossWeaponController.cs
+
+          # Packaged smoke must cover 100 rounds, doctrines, safe fortification and cross-stack pressure/relief.
+          grep -q 'V13_0_ENCOUNTER_WARFARE_OK.txt' Assets/Scripts/EncounterWarfareCISmokeProbe.cs
+          grep -q 'bossRounds != 10' Assets/Scripts/EncounterWarfareCISmokeProbe.cs
+          grep -q 'doctrineCount != 8' Assets/Scripts/EncounterWarfareCISmokeProbe.cs
+          grep -q 'lateDefense.SteelCrown' Assets/Scripts/EncounterWarfareCISmokeProbe.cs
+          grep -q 'lateDefense.DestructibleBreachLane' Assets/Scripts/EncounterWarfareCISmokeProbe.cs
+          grep -q 'hostileBudget.ConcurrencyDelta != 1' Assets/Scripts/EncounterWarfareCISmokeProbe.cs
+          grep -q 'favorableBudget.ConcurrencyDelta != -1' Assets/Scripts/EncounterWarfareCISmokeProbe.cs
+          grep -q 'crossSystem=6 channels' Assets/Scripts/EncounterWarfareCISmokeProbe.cs
+
+          if grep -Eq '\.Damage\(|\.Heal\(|SpawnProjectile|\.MovePosition\(|AddWarBonds|AwardMissionBonds|BindingFlags\.NonPublic|GetField\(' Assets/Scripts/EncounterWarfareV130.cs; then
+            echo 'v13.0 encounter planning/cross-stack layer contains forbidden Health/projectile/movement/economy/private-reflection authority.' >&2; exit 1
+          fi
+      - name: Verify ROADMAP scope and SWIR v1 dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s=Path('ROADMAP.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',s,re.M))==1
+          for t in ['<!-- ROADMAP-PROGRESS:START -->','<!-- ROADMAP-PROGRESS:END -->','## 📊 Overall progress','| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |']: assert t in s,t
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
+          assert (done,open_,total)==(383,8,391),(done,open_,total)
+          assert 'ROADMAP-98.0%25-yellow' in s and 'DONE-383%2F391' in s and 'STATUS-V13.0%20IN%20DEVELOPMENT-yellow' in s
+          assert '███████████████████░ 98.0%' in s and '| **383** | **8** | **391** | **98.0%** |' in s
+          section=s[s.index('## v13.0 — 100-Round Encounter Director & Boss Phase Warfare — IN DEVELOPMENT'):]
+          assert section.count('- [ ]')==8 and section.count('- [x]')==0
+          print('v13.0 roadmap scope: PASS')
+
+  build-candidate:
+    name: Build and package one exact v13.0 Windows x64 candidate
+    needs: source-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          set -euo pipefail; test -n "$UNITY_LICENSE"; test -n "$UNITY_EMAIL"; test -n "$UNITY_PASSWORD"
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: V130EncounterWarfare-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            V130EncounterWarfare-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-
+            V129ComponentWarfare-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-
+            V128ReleaseTrain-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-
+            Dev-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-
+      - name: Build development player once
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Discover, stage and package exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python .github/scripts/package_v130_encounter_warfare.py --build-root build --output-dir "${RUNNER_TEMP}/${PACKAGE_DIR}" --candidate-sha "${GITHUB_SHA}" --commit-sha "${GITHUB_SHA}" --unity-version "${UNITY_VERSION}" --version-file VERSION --zip-name "${CANDIDATE_ZIP}" --diagnostics-path "${GITHUB_WORKSPACE}/V130_ENCOUNTER_WARFARE_BUILD_TREE.txt"
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v13.0-encounter-warfare-build-discovery
+          path: V130_ENCOUNTER_WARFARE_BUILD_TREE.txt
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v13.0-encounter-warfare-Windows-x64
+          path: |
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/${{ env.CANDIDATE_ZIP }}
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/V130_ENCOUNTER_WARFARE_SHA256.txt
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/V130_ENCOUNTER_WARFARE_PROVENANCE.json
+          if-no-files-found: error
+          retention-days: 14
+
+  packaged-exe-regression:
+    name: Run v13.0 plus v12.9/v12.8 and 80/90/100 regression on the same EXE
+    needs: build-candidate
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v13.0-encounter-warfare-Windows-x64
+          path: candidate
+      - name: Verify package digest, provenance and attribution
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location candidate
+          $zip='${{ env.CANDIDATE_ZIP }}'; $expected=((Get-Content V130_ENCOUNTER_WARFARE_SHA256.txt -Raw).Trim() -split '\s+')[0].ToLowerInvariant(); $actual=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if($actual -ne $expected){throw 'candidate ZIP digest mismatch'}
+          $p=Get-Content V130_ENCOUNTER_WARFARE_PROVENANCE.json -Raw|ConvertFrom-Json
+          if($p.candidate_sha -ne '${{ github.sha }}' -or $p.commit_sha -ne '${{ github.sha }}' -or $p.sha256 -ne $actual){throw 'candidate provenance mismatch'}
+          Expand-Archive $zip -DestinationPath runtime -Force
+          if(!(Test-Path runtime/TankRevivalOverdrive.exe) -or !(Test-Path runtime/TankRevivalOverdrive_Data)){throw 'packaged Unity runtime incomplete'}
+          $info=Get-Content runtime/V130_ENCOUNTER_WARFARE_BUILD.txt -Raw; if($info -notmatch 'candidate_sha=${{ github.sha }}'){throw 'runtime attribution mismatch'}
+          Write-Host "Verified exact v13.0 candidate SHA256: $actual"
+      - name: Run exact single-binary qualification matrix
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location candidate/runtime
+          $blocking='Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|UnityException|TargetInvocationException'
+          function Invoke-Smoke([string]$Name,[string]$Flag,[string]$Pass,[string]$Fail,[string]$Log,[int]$TimeoutMs){
+            Remove-Item $Pass,$Fail,$Log -ErrorAction SilentlyContinue
+            $p=Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics',$Flag,'-logFile',$Log -PassThru
+            if(!$p.WaitForExit($TimeoutMs)){Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; throw "$Name timed out"}
+            if(Test-Path $Fail){Get-Content $Fail; if(Test-Path $Log){Get-Content $Log -Tail 350}; throw "$Name emitted FAIL"}
+            if(!(Test-Path $Pass)){if(Test-Path $Log){Get-Content $Log -Tail 350}; throw "$Name exited without PASS (exit=$($p.ExitCode))"}
+            if($p.ExitCode -ne 0){throw "$Name non-zero exit $($p.ExitCode)"}
+            if(Test-Path $Log){if(Select-String -Path $Log -Pattern $blocking -Quiet){Get-Content $Log -Tail 400; throw "$Name blocking exception signature"}}
+            Get-Content $Pass; Write-Host "$Name PASS"
+          }
+          Invoke-Smoke 'v13.0 encounter/cross-stack/boss warfare' '-tr-v130-smoke' 'V13_0_ENCOUNTER_WARFARE_OK.txt' 'V13_0_ENCOUNTER_WARFARE_FAIL.txt' 'V130Player.log' 80000
+          Invoke-Smoke 'v12.9 component/repair/casualty/presentation regression' '-tr-v129-smoke' 'V12_9_COMPONENT_DAMAGE_REPAIR_OK.txt' 'V12_9_COMPONENT_DAMAGE_REPAIR_FAIL.txt' 'V129Regression.log' 80000
+          Invoke-Smoke 'v12.8 integration regression' '-tr-v128-smoke' 'V12_8_RELEASE_TRAIN_INTEGRATION_OK.txt' 'V12_8_RELEASE_TRAIN_INTEGRATION_FAIL.txt' 'V128Regression.log' 80000
+          Invoke-Smoke 'round 80/90/100 soak regression' '-demo-ci-soak' 'DEMO_SOAK_PASS.txt' 'DEMO_SOAK_FAIL.txt' 'V130Soak.log' 110000
+          'v13.0 exact-candidate qualification matrix PASS' | Set-Content V13_0_WINDOWS_MATRIX_OK.txt
+      - name: Upload runtime diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v13.0-encounter-warfare-diagnostics
+          path: |
+            candidate/runtime/V13_0_ENCOUNTER_WARFARE_OK.txt
+            candidate/runtime/V13_0_ENCOUNTER_WARFARE_FAIL.txt
+            candidate/runtime/V12_9_COMPONENT_DAMAGE_REPAIR_OK.txt
+            candidate/runtime/V12_9_COMPONENT_DAMAGE_REPAIR_FAIL.txt
+            candidate/runtime/V12_8_RELEASE_TRAIN_INTEGRATION_OK.txt
+            candidate/runtime/V12_8_RELEASE_TRAIN_INTEGRATION_FAIL.txt
+            candidate/runtime/DEMO_SOAK_PASS.txt
+            candidate/runtime/DEMO_SOAK_FAIL.txt
+            candidate/runtime/V13_0_WINDOWS_MATRIX_OK.txt
+            candidate/runtime/V130Player.log
+            candidate/runtime/V129Regression.log
+            candidate/runtime/V128Regression.log
+            candidate/runtime/V130Soak.log
+          if-no-files-found: ignore
+          retention-days: 14
