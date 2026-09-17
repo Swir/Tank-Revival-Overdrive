@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-7"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-8"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-367%2F367-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.7%20QUALIFIED-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-375%2F375-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.8%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **367** | **0** | **367** | **100.0%** |
+| **375** | **0** | **375** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -567,4 +567,15 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] v12.7 integration consumes existing Projectile Fired/Impacted events plus Health state only; it does not spawn projectiles, call Damage, move gameplay Rigidbody2D objects or replace AI/navigation authority.
 - [x] Packaged runtime smoke validates the ammo/material style matrix, damage-state thresholds, budget monotonicity, pool caps, audio priority and authority boundaries across representative late-game pressure.
 - [x] Dedicated Windows x64 v12.7 gate builds the exact candidate, runs packaged-EXE cinematic-combat smoke on a fresh Windows runner and records a passing runtime marker before qualification.
+
+
+## v12.8 — Full-Stack Integration & Release Train Hardening — QUALIFIED
+- [x] **Unified release-train integration harness** — exercise the complete v12.0–v12.7 stack from one packaged executable instead of treating milestone gates as isolated binaries.
+- [x] **Round 80/90/100 full-stack soak** — verify Mobile Front, sustainment, route intelligence, Recon/EW, Mobile Signal, SIGINT, unified HUD and cinematic FX together under representative late-wave pressure.
+- [x] **Gameplay-authority audit** — prove Projectile, Health, movement/navigation and War Bond/economy ownership remain canonical with no duplicate damage, motion or reward paths introduced by integration.
+- [x] **Presentation-conflict audit** — verify unified HUD, world telegraphs, signal markers and cinematic combat feedback remain readable, bounded and non-overlapping when multiple operational systems are simultaneously active.
+- [x] **Bounded resource/performance contract** — enforce hard caps for integration pools, fixed buffers, world cues, AI helper groups and presentation density, including monotonic late-wave degradation without gameplay changes.
+- [x] **Deterministic integration diagnostics** — emit exact per-round subsystem/cap/authority results and stable PASS/FAIL markers suitable for CI triage and release-candidate attribution.
+- [x] **Single-binary Windows smoke matrix** — build one Windows x64 candidate and run every v12.0–v12.8 smoke probe against that exact packaged EXE on a fresh Windows runner.
+- [x] **Exact-SHA qualification finalizer** — qualify v12.8 only after the release-train gate is green for the pinned candidate SHA and the SWIR Roadmap Standard v1 dashboard/checklist is revalidated.
 

@@ -1,0 +1,56 @@
+name: ROADMAP v12.8 Scope Registrar
+
+on:
+  push:
+    branches:
+      - dev-v12-8
+    paths:
+      - .v128-scope-trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          ref: dev-v12-8
+          fetch-depth: 0
+
+      - name: Register v12.8 milestone in canonical roadmap
+        run: python Tools/register_v128_scope.py
+
+      - name: Re-read and verify SWIR Roadmap Standard v1
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          text = Path("ROADMAP.md").read_text(encoding="utf-8")
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$', text, re.M)) == 1
+          assert "## 📊 Overall progress" in text
+          assert "badge.svg?branch=dev-v12-8" in text
+          assert "ROADMAP-97.9%25-yellow?style=for-the-badge" in text
+          assert "DONE-367%2F375-1f6feb?style=for-the-badge" in text
+          assert "STATUS-V12.8%20IN%20DEVELOPMENT-yellow?style=for-the-badge" in text
+          assert "███████████████████░ 97.9%" in text
+          assert "| **367** | **8** | **375** | **97.9%** |" in text
+          section = text.split("## v12.8 — Full-Stack Integration & Release Train Hardening", 1)[1]
+          assert section.count("- [ ]") == 8
+          assert section.count("- [x]") == 0
+          print("ROADMAP v12.8 scope invariants: PASS")
+
+      - name: Commit roadmap scope
+        run: |
+          if git diff --quiet -- ROADMAP.md; then
+            echo "ROADMAP already contains v12.8 scope; no commit needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ROADMAP.md
+          git commit -m "docs(v12.8): register release-train integration milestone"
+          git push origin HEAD:dev-v12-8
