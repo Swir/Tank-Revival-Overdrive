@@ -15,6 +15,13 @@ v12.8 is an integration milestone rather than another isolated combat subsystem.
 - The exact same EXE is relaunched under the established v12.0, v12.1, v12.2, v12.3, v12.4, v12.5, v12.6, v12.7 and v12.8 smoke flags.
 - The same artifact also runs the established `DemoCISoakProbe` through rounds 80, 90 and 100 under heavy specialist pressure.
 - Runtime logs are rejected on blocking crash/type/load/index/unity exception signatures and are retained as diagnostics.
+- Candidate packaging discovers the generated Windows player instead of trusting one runner-specific directory layout, requires exactly one EXE/data pair and records the discovered layout plus a deterministic build-tree artifact.
+
+### Full-stack late-round soak
+- `DemoCISoakProbe` now verifies that all eight v12.0–v12.7 runtime directors remain present exactly once before pressure and again after sustained pressure in rounds 80, 90 and 100.
+- The soak evaluates every exposed public `ConfigurationValid` contract while the campaign is live, so configuration drift cannot hide behind a standalone topology smoke.
+- PASS diagnostics record stack-check count, minimum live-service count and maximum duplicate count together with FPS, managed-memory and projectile-pool telemetry.
+- Any missing/duplicated director, invalid configuration, campaign stop, projectile-pool integrity failure or runtime-stability repair/warning fails the exact packaged candidate.
 
 ### Authority and performance hardening
 - Source contracts prohibit v12.8 integration code from spawning projectiles, dealing damage, moving gameplay rigidbodies, issuing tactical navigation orders or creating an alternate economy path.
