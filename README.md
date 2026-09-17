@@ -1,12 +1,45 @@
-# TANK REVIVAL: ORZEŁ OVERDRIVE
+<!-- SWIR-README-STANDARD:v2 -->
 
-Original top-down tank combat for Unity 6, inspired by the fast readable feel of classic console tank games and rebuilt from scratch with modern effects, progression and a 100-round campaign.
+<div align="center">
 
-## Mission
+<img width="100%" src="assets/readme/hero.svg" alt="Tank Revival: Orzeł Overdrive — original top-down tank combat campaign" />
+
+<br>
+
+![Unity](https://img.shields.io/badge/Unity-6-02050A?style=for-the-badge&logo=unity&logoColor=62E5FF)
+![CSharp](https://img.shields.io/badge/C%23-Gameplay-02050A?style=for-the-badge&logo=csharp&logoColor=62E5FF)
+![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)
+![Campaign](https://img.shields.io/badge/Campaign-100%20Rounds-02050A?style=for-the-badge&logoColor=62E5FF)
+
+[![Author](https://img.shields.io/badge/Author-Swir-0088FF?style=flat-square&logo=github)](https://github.com/Swir)
+[![Stars](https://img.shields.io/github/stars/Swir/Tank-Revival-Overdrive?style=flat-square&color=0088FF)](https://github.com/Swir/Tank-Revival-Overdrive/stargazers)
+
+**Original top-down tank combat rebuilt from scratch with modern effects, progression and a 100-round campaign.**
+
+[**Highlights**](#-highlights) · [**Controls**](#-controls) · [**Windows Build**](#-windows-build) · [**Releases**](https://github.com/Swir/Tank-Revival-Overdrive/releases)
+
+</div>
+
+<img width="100%" src="https://raw.githubusercontent.com/Swir/Swir/main/assets/power-divider-v4.svg" alt="SWIR electric divider" />
+
+## 🎯 Mission
 
 Defend the **Orzełek stronghold** through 100 increasingly dangerous rounds. Enemy formations become faster, tougher and more aggressive as the campaign advances. Siege units prioritize the stronghold, elite tanks pressure the player, supply tanks carry special ammunition, and every tenth round ends with a boss assault.
 
-## v0.4 development milestone — REAL ARMOR
+## ✨ Highlights
+
+| Feature | What it does |
+|---|---|
+| 🛡️ Real Armor | Directional front/side/rear armor, ricochets, penetration and critical module damage. |
+| 🎯 Independent turret | Drive in one direction while aiming and firing in another. |
+| 🦅 Orzełek defense | Protect the stronghold through the full campaign. |
+| 💥 100 rounds | Progressive enemy pressure with a boss assault every tenth round. |
+| 🧰 Field Command | Spend War Bonds on permanent campaign upgrades and repairs. |
+| 🔫 Seven ammo modes | Standard, AP, HE, Incendiary, EMP, Twin Shot and Plasma. |
+| 🤖 Enemy variety | Basic, Fast, Heavy, Sniper, Siege, Elite, Supply and Boss classes. |
+| ✨ Procedural presentation | 2.5D tank visuals, tracks, recoil, muzzle flashes, smoke, sparks and explosions. |
+
+## 🛡️ v0.4 development milestone — REAL ARMOR
 
 The combat model now treats tanks as armored fighting vehicles instead of simple HP boxes.
 
@@ -26,7 +59,7 @@ The combat model now treats tanks as armored fighting vehicles instead of simple
 - new **REAL ARMOR HUD** reports engine condition, gun condition, last impact zone and critical hits
 - new ricochet sparks, shock rings and critical-impact feedback integrate with the existing procedural FX/audio stack
 
-## v0.3 milestone — Field Command
+## 🦅 v0.3 milestone — Field Command
 
 - **War Bonds** earned from destroyed enemies and secured rounds
 - **Field Command Center every five cleared rounds** before the next deployment
@@ -37,7 +70,7 @@ The combat model now treats tanks as armored fighting vehicles instead of simple
 - doctrine-specific reinforcement armor, coordinated extra fire, target pressure, projectile speed and salvage rewards
 - commander upgrades stack safely with normal field power-ups instead of overwriting the saved tank loadout
 
-## Combat foundation
+## ⚔️ Combat foundation
 
 - 100 progressively harder rounds
 - Orzełek stronghold with persistent health and critical-damage alarm
@@ -51,7 +84,7 @@ The combat model now treats tanks as armored fighting vehicles instead of simple
 - procedural 2.5D tank visuals, animated tracks, muzzle flashes, trails, smoke, sparks, explosions and screen shake
 - runtime-generated combat audio and persistent high scores
 
-## Special ammunition
+## 💣 Special ammunition
 
 | Key | Ammunition | Role | First available |
 |---|---|---|---:|
@@ -65,7 +98,7 @@ The combat model now treats tanks as armored fighting vehicles instead of simple
 
 Use **Q / E** to cycle through ammunition currently in inventory. Destroy colored Supply Tanks to obtain new ammunition; their glow identifies what they carry.
 
-## Controls
+## 🎮 Controls
 
 - **WASD / Arrow keys** — move the hull
 - **Mouse** — aim the turret independently
@@ -77,12 +110,28 @@ Use **Q / E** to cycle through ammunition currently in inventory. Destroy colore
 - **1–6 while Command Center is open** — buy the corresponding permanent upgrade
 - **7 while Command Center is open** — repair Orzełek
 
-## Windows build
+## 🪟 Windows build
 
-Windows 10/11 x64 is the primary target. GitHub Actions compiles `TankRevivalOverdrive.exe`, verifies the executable and `_Data` directory, creates a portable ZIP and publishes stable builds under GitHub Releases. Players do **not** need Unity installed.
+Windows 10/11 x64 is the primary target. The repository contains the Windows build workflow for `TankRevivalOverdrive.exe` and its `_Data` directory. Published builds, when available, belong under [GitHub Releases](https://github.com/Swir/Tank-Revival-Overdrive/releases). Players using a verified packaged build do not need the Unity editor installed.
 
-Stable code lives on `main`. Major development milestones are built on dedicated `dev-vX.Y` branches and validated by Windows CI before merge.
+Stable code lives on `main`. Major development milestones are built on dedicated development branches and validated before merge.
 
-## Creative direction
+## 🎨 Creative direction
 
 The game is an original project using its own code, procedural visuals and procedural audio. It draws on broad top-down tank-game conventions but does not use ripped maps, sprites, audio or other assets from existing games.
+
+## 🔎 Search Keywords
+
+`tank game windows` • `top down tank game` • `Unity 6 tank game` • `100 round tank campaign` • `armored combat game` • `tank defense game` • `boss tank battles` • `directional armor game` • `ricochet mechanics` • `C# Unity game` • `Windows indie tank game` • `Orzel Overdrive` • `Tank Revival` • `procedural 2.5D tank game`
+
+<img width="100%" src="https://raw.githubusercontent.com/Swir/Swir/main/assets/power-divider-v4.svg" alt="SWIR electric divider" />
+
+<div align="center">
+
+### `DEFEND • UPGRADE • OVERDRIVE`
+
+⭐ **If this project interests you, consider leaving a star.**
+
+[**← SWIR profile**](https://github.com/Swir) · [**All projects →**](https://github.com/Swir?tab=repositories)
+
+</div>
