@@ -68,6 +68,15 @@ namespace TankRevival
         private GUIStyle _body;
         private GUIStyle _warning;
 
+        // v13.1 read-only bridge. Objective warfare may observe the existing convoy mission,
+        // but ConvoyWarfareDirector remains the sole route/movement/Health/reward authority.
+        public bool MissionActive => HasMissionForRound(_round) && _convoyHealth != null && !_missionResolved;
+        public bool MissionResolved => _missionResolved;
+        public bool MissionSucceeded => _missionResolved && _threat == ConvoyThreatState.Complete;
+        public ConvoyMissionKind CurrentMission => _kind;
+        public float RouteProgress01 => _routeDuration > 0f ? Mathf.Clamp01(_routeElapsed / _routeDuration) : 0f;
+        public int CurrentConvoyHealth => _convoyHealth != null ? _convoyHealth.Current : 0;
+
         public static int MissionCount => Enum.GetValues(typeof(ConvoyMissionKind)).Length;
 
         public static bool ConfigurationValid =>

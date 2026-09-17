@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-0"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-1"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-391%2F391-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.0%20QUALIFIED-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-399%2F399-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.1%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
@@ -17,7 +17,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **391** | **0** | **391** | **100.0%** |
+| **399** | **0** | **399** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -601,3 +601,13 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Packaged-EXE v13.0 runtime smoke** — validate all 100 round plans, anti-repetition, boss phase transitions, authority boundaries and hard budgets, then rerun v12.9/v12.8 regression plus rounds 80/90/100 soak on the same executable.
 - [x] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.0 gate to pass and only then finalize the SWIR roadmap dashboard/checklist.
 
+
+## v13.1 — Dynamic Objective Warfare & Battlefield Mutators — QUALIFIED
+- [x] **Deterministic 100-round objective planner** — assign bounded objective doctrine across rounds 1–100 with anti-repetition, boss-safe scheduling and at least seven playable archetypes while v13.0 Encounter Planner remains the campaign pressure source.
+- [x] **Playable objective runtime orchestration** — connect objective progress/success/failure to the existing TankGame round loop and existing objective/operation/convoy systems without creating a second round, spawn, Health, movement or projectile authority.
+- [x] **Bounded battlefield mutators** — deterministically layer readable combat conditions over objectives with strict spawn/concurrency/timing bounds and no hidden direct HP damage, forced player lockout or outcome-changing presentation degradation.
+- [x] **Orzeł mission defense and counterattack logic** — support sector defense, command-post breakthrough and counterattack objectives around Orzełek with explicit fair completion/failure rules and a permanently breakable player route.
+- [x] **Cross-system objective doctrine** — fold Combined Arms, sustainment/logistics, Route Intelligence, Recon/EW, Mobile Signal and SIGINT public readiness into objective/mutator selection through bounded read-only directives rather than duplicating those systems.
+- [x] **Objective HUD and tactical telemetry** — expose active objective, progress, time/pressure state, mutator, doctrine and deterministic signature through the existing HUD/presentation stack with strict refresh/cue limits.
+- [x] **Packaged-EXE v13.1 runtime smoke** — validate all 100 objective plans, archetype coverage, anti-repetition, bounded mutators, authority contracts and objective state transitions, then rerun v13.0/v12.9/v12.8 regressions plus rounds 80/90/100 soak on the same executable.
+- [x] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.1 gate to pass and only then finalize the SWIR roadmap dashboard/checklist.

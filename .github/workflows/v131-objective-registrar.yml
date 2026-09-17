@@ -1,0 +1,63 @@
+name: v13.1 Objective Warfare Gameplay Registrar
+
+on:
+  push:
+    branches: ['dev-v13-1']
+    paths:
+      - 'Tools/apply_v131_objective_warfare.py'
+      - '.github/workflows/v131-objective-registrar.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v131-objective-gameplay-registrar
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v13-1
+          fetch-depth: 0
+      - name: Verify exact source head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "$(git branch --show-current)" = 'dev-v13-1'
+          python -m py_compile Tools/apply_v131_objective_warfare.py
+          test "$(cat VERSION)" = 'v13.0.0-dev'
+      - name: Apply deterministic v13.1 objective warfare package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Tools/apply_v131_objective_warfare.py
+          git diff --check
+          test "$(cat VERSION)" = 'v13.1.0-dev'
+          for f in Assets/Scripts/ObjectiveWarfareV131.cs Assets/Scripts/ObjectiveWarfareV131.cs.meta Assets/Scripts/ObjectiveWarfareCISmokeProbe.cs Assets/Scripts/ObjectiveWarfareCISmokeProbe.cs.meta CHANGELOG_v13.1.md; do test -f "$f"; done
+          grep -q 'public static class ObjectivePlannerV131' Assets/Scripts/ObjectiveWarfareV131.cs
+          grep -q 'public static class ObjectiveRuntimeV131' Assets/Scripts/ObjectiveWarfareV131.cs
+          grep -q 'public sealed class ObjectiveWarfareDirector' Assets/Scripts/ObjectiveWarfareV131.cs
+          grep -q 'ObjectivePlannerV131.EnemyForObjectiveSpawn' Assets/Scripts/TankGame.cs
+          grep -q 'ObjectiveWarfareDirector.CanResolveRound' Assets/Scripts/TankGame.cs
+          grep -q 'ApplyObjectiveResult' Assets/Scripts/TankGame.cs
+          grep -q 'MissionActive =>' Assets/Scripts/ConvoyWarfareDirector.cs
+          grep -q 'V13_1_OBJECTIVE_WARFARE_OK.txt' Assets/Scripts/ObjectiveWarfareCISmokeProbe.cs
+      - name: Commit integrated gameplay package
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Assets/Scripts/ObjectiveWarfareV131.cs Assets/Scripts/ObjectiveWarfareV131.cs.meta Assets/Scripts/ObjectiveWarfareCISmokeProbe.cs Assets/Scripts/ObjectiveWarfareCISmokeProbe.cs.meta Assets/Scripts/TankGame.cs Assets/Scripts/ConvoyWarfareDirector.cs CHANGELOG_v13.1.md VERSION
+          if git diff --cached --quiet; then
+            echo 'No v13.1 gameplay integration changes to commit.'
+            exit 0
+          fi
+          git commit -m 'feat(v13.1): integrate dynamic objective warfare'
+          git push origin HEAD:dev-v13-1

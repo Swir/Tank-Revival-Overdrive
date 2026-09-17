@@ -46,6 +46,8 @@ namespace TankRevival
         private int _spawnOrdinal;
         private EncounterPlan _encounterPlan;
         private EncounterRuntimeBudgetV130 _encounterRuntimeBudget;
+        private ObjectivePlanV131 _objectivePlan;
+        private ObjectiveRuntimeBudgetV131 _objectiveRuntimeBudget;
         private float _nextEncounterDoctrineRefresh;
         private float _roundClearAt = -1f;
         private float _nextEagleAlarm;
@@ -75,6 +77,8 @@ namespace TankRevival
         public int CurrentRound => _round;
         public EncounterPlan CurrentEncounterPlan => _encounterPlan;
         public EncounterRuntimeBudgetV130 CurrentEncounterRuntimeBudget => _encounterRuntimeBudget;
+        public ObjectivePlanV131 CurrentObjectivePlan => _objectivePlan;
+        public ObjectiveRuntimeBudgetV131 CurrentObjectiveRuntimeBudget => _objectiveRuntimeBudget;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureGameExists()
@@ -152,7 +156,8 @@ namespace TankRevival
 
             HandleSpawning();
 
-            if (_enemiesToSpawn <= 0 && _aliveEnemies <= 0 && !_bossPending)
+            bool combatCleared = _enemiesToSpawn <= 0 && _aliveEnemies <= 0 && !_bossPending;
+            if (combatCleared && ObjectiveWarfareDirector.CanResolveRound(combatCleared))
             {
                 _roundClearAt = Time.time + 1.9f;
                 ShowToast(_round == FinalRound ? "FINAL ARENA CLEARED" : $"ROUND {_round} CLEARED // ORZEŁEK SAFE", 1.8f);
@@ -212,12 +217,17 @@ namespace TankRevival
             _aliveEnemies = 0;
             _encounterPlan = EncounterPlannerV130.PlanForRound(round);
             _enemiesToSpawn = _encounterPlan.EnemyCount;
-            _encounterRuntimeBudget = EncounterCrossSystemDoctrineV130.Resolve(_encounterPlan, EncounterCrossSystemDoctrineV130.CaptureReadOnly());
-            _maxAlive = _encounterRuntimeBudget.MaxAlive;
+            EncounterReadinessV130 readiness = EncounterCrossSystemDoctrineV130.CaptureReadOnly();
+            _encounterRuntimeBudget = EncounterCrossSystemDoctrineV130.Resolve(_encounterPlan, readiness);
+            ObjectiveWarfareDirector objectiveDirector = ObjectiveWarfareDirector.EnsureInstalled();
+            objectiveDirector.BeginRound(this, _encounterPlan, readiness);
+            _objectivePlan = objectiveDirector.CurrentPlan;
+            _objectiveRuntimeBudget = objectiveDirector.CurrentRuntimeBudget;
+            _maxAlive = ResolveActiveMaxAlive();
             _bossPending = _encounterPlan.BossRound;
             _spawnOrdinal = 0;
             _nextEncounterDoctrineRefresh = Time.time + EncounterCrossSystemDoctrineV130.RefreshSeconds;
-            _nextSpawn = Time.time + _encounterRuntimeBudget.SpawnInterval;
+            _nextSpawn = Time.time + ResolveActiveSpawnInterval();
             BuildArena(round);
 
             if (_bossPending)
@@ -355,6 +365,7 @@ namespace TankRevival
         private void OnEagleDamaged(Health eagle, int amount)
         {
             _eagleHp = eagle.Current;
+            ObjectiveWarfareDirector.Instance?.NotifyEagleDamaged(amount);
             KickCamera(0.20f, 0.12f);
             VisualFactory.RingPulse(eagle.transform.position, new Color(1f, 0.12f, 0.08f), 1.15f);
 
@@ -473,7 +484,18 @@ namespace TankRevival
             _nextEncounterDoctrineRefresh = Time.time + EncounterCrossSystemDoctrineV130.RefreshSeconds;
             EncounterReadinessV130 readiness = EncounterCrossSystemDoctrineV130.CaptureReadOnly();
             _encounterRuntimeBudget = EncounterCrossSystemDoctrineV130.Resolve(_encounterPlan, readiness);
-            _maxAlive = _encounterRuntimeBudget.MaxAlive;
+            _maxAlive = ResolveActiveMaxAlive();
+        }
+
+        private int ResolveActiveMaxAlive()
+        {
+            return Mathf.Clamp(_encounterRuntimeBudget.MaxAlive + _objectiveRuntimeBudget.ConcurrencyDelta, 4, EncounterPlannerV130.MaxConcurrentEnemies);
+        }
+
+        private float ResolveActiveSpawnInterval()
+        {
+            float scaled = _encounterRuntimeBudget.SpawnInterval * _objectiveRuntimeBudget.SpawnIntervalScale;
+            return Mathf.Clamp(scaled, EncounterPlannerV130.MinSpawnInterval, EncounterPlannerV130.MaxSpawnInterval);
         }
 
         private void HandleSpawning()
@@ -483,11 +505,12 @@ namespace TankRevival
 
             if (_enemiesToSpawn > 0)
             {
-                EnemyKind kind = EncounterPlannerV130.EnemyForSpawn(_encounterPlan, _spawnOrdinal);
+                EnemyKind baseKind = EncounterPlannerV130.EnemyForSpawn(_encounterPlan, _spawnOrdinal);
+                EnemyKind kind = ObjectivePlannerV131.EnemyForObjectiveSpawn(_objectivePlan, _encounterPlan, _spawnOrdinal, baseKind);
                 _spawnOrdinal++;
                 _enemiesToSpawn--;
                 SpawnEnemy(kind);
-                _nextSpawn = Time.time + Mathf.Max(EncounterPlannerV130.MinSpawnInterval, _encounterRuntimeBudget.SpawnInterval);
+                _nextSpawn = Time.time + ResolveActiveSpawnInterval();
                 return;
             }
 
@@ -555,6 +578,7 @@ namespace TankRevival
         public void OnEnemyDestroyed(EnemyTank enemy, Vector3 position, EnemyKind kind)
         {
             _aliveEnemies = Mathf.Max(0, _aliveEnemies - 1);
+            ObjectiveWarfareDirector.Instance?.NotifyEnemyDestroyed(kind);
             int points = kind switch
             {
                 EnemyKind.Fast => 150,
@@ -699,6 +723,14 @@ namespace TankRevival
             PlayerPrefs.Save();
         }
 
+        public void ApplyObjectiveResult(bool success, int scoreBonus, string label)
+        {
+            if (_state != GameState.Playing) return;
+            if (success && scoreBonus > 0) _score += Mathf.Clamp(scoreBonus, 0, 2500);
+            ShowToast(success ? $"OBJECTIVE COMPLETE // {label} // +{scoreBonus:N0}" : $"OBJECTIVE FAILED // {label}", 1.75f);
+            BattleAudio.PlayGlobal(success ? SoundCue.RoundClear : SoundCue.EnemyShot, success ? 0.36f : 0.24f, success ? 0.04f : -0.08f);
+        }
+
         public void KickCamera(float duration, float amount)
         {
             _shakeUntil = Mathf.Max(_shakeUntil, Time.unscaledTime + duration);
@@ -808,7 +840,7 @@ namespace TankRevival
             int activeCount = _player != null ? _player.GetAmmoCount(active) : (active == AmmoType.Basic ? -1 : _savedAmmo[(int)active]);
             string ammoCount = active == AmmoType.Basic ? "∞" : activeCount.ToString();
 
-            GUI.Box(new Rect(14f, 12f, 480f, 183f), string.Empty);
+            GUI.Box(new Rect(14f, 12f, 560f, 208f), string.Empty);
             GUI.Label(new Rect(28f, 19f, 455f, 27f), $"ROUND {_round:000}/100     SCORE {_score:N0}     ENEMY {remaining}", _hudStyle);
             GUI.Label(new Rect(28f, 47f, 455f, 27f), $"LIVES {_lives}   ARMOR {playerHp}   ORZEŁEK {eagleHp}/{EagleMaxHealth}", eagleHp <= 2 ? _warningStyle : _hudStyle);
             GUI.Label(new Rect(28f, 75f, 455f, 27f), $"AMMO {AmmoDatabase.DisplayName(active)}  [{ammoCount}]   •   Q/E switch", _hudStyle);
@@ -817,7 +849,9 @@ namespace TankRevival
                 ? $"   BOSS {EncounterWarfareDirector.Instance.BossPhase}/{EncounterWarfareDirector.Instance.BossPhaseCount} {EncounterWarfareDirector.Instance.BossPhaseLabel}"
                 : string.Empty;
             GUI.Label(new Rect(28f, 128f, 455f, 25f), $"THREAT {_encounterPlan.EnemyCount}/{_encounterPlan.MaxAlive}   EAGLE P{Mathf.RoundToInt(_encounterPlan.EaglePressure * 100f):00}   SIG {_encounterPlan.Signature:X8}{bossTelemetry}", _smallStyle);
-            GUI.Label(new Rect(28f, 153f, 455f, 25f), $"XSYS {_encounterRuntimeBudget.ActiveChannels}/6   READY {Mathf.RoundToInt(_encounterRuntimeBudget.Readiness * 100f):00}%   CONC {_encounterRuntimeBudget.ConcurrencyDelta:+#;-#;0}   RT {_encounterRuntimeBudget.Signature:X8}", _smallStyle);
+            GUI.Label(new Rect(28f, 153f, 530f, 25f), $"XSYS {_encounterRuntimeBudget.ActiveChannels}/6   READY {Mathf.RoundToInt(_encounterRuntimeBudget.Readiness * 100f):00}%   CONC {_encounterRuntimeBudget.ConcurrencyDelta:+#;-#;0}   RT {_encounterRuntimeBudget.Signature:X8}", _smallStyle);
+            string objectiveHud = ObjectiveWarfareDirector.Instance != null ? ObjectiveWarfareDirector.Instance.HudText : "OBJ STANDBY";
+            GUI.Label(new Rect(28f, 178f, 530f, 25f), objectiveHud, _smallStyle);
 
             if (_player != null)
             {

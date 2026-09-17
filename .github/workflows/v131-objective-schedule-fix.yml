@@ -1,0 +1,44 @@
+name: v13.1 Objective Schedule Hardening Registrar
+
+on:
+  push:
+    branches: ['dev-v13-1']
+    paths:
+      - 'Tools/fix_v131_objective_schedule.py'
+      - '.github/workflows/v131-objective-schedule-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v13-1
+          fetch-depth: 0
+      - name: Apply and verify scheduling fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          python -m py_compile Tools/fix_v131_objective_schedule.py
+          python Tools/fix_v131_objective_schedule.py
+          git diff --check
+          grep -q 'return GenericKindForSlot(slot);' Assets/Scripts/ObjectiveWarfareV131.cs
+          grep -q 'ObjectiveArchetypeV131 previous = ResolveKind(round - 1, band);' Assets/Scripts/ObjectiveWarfareV131.cs
+          grep -q 'default: return ObjectiveArchetypeV131.Counterattack;' Assets/Scripts/ObjectiveWarfareV131.cs
+          grep -q 'return GenericKindForSlot(slot);' Tools/apply_v131_objective_warfare.py
+          if grep -q 'return (ObjectiveArchetypeV131)slot;' Assets/Scripts/ObjectiveWarfareV131.cs; then echo 'unsafe enum slot cast still present' >&2; exit 1; fi
+      - name: Commit hardened objective scheduling
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Assets/Scripts/ObjectiveWarfareV131.cs Tools/apply_v131_objective_warfare.py
+          git commit -m 'fix(v13.1): reserve convoy objectives for live convoy rounds'
+          git push origin HEAD:dev-v13-1
