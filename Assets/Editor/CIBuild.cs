@@ -2,9 +2,7 @@ using System;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
-using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace TankRevival.Editor
 {
@@ -27,7 +25,6 @@ namespace TankRevival.Editor
         private static void BuildInternal(bool demoCandidate)
         {
             Debug.Log("[Tank Revival CI] Preparing " + (demoCandidate ? "DEMO CANDIDATE" : "development") + " Windows build...");
-            Directory.CreateDirectory("Assets/Scenes");
             if (Directory.Exists(BuildFolder)) Directory.Delete(BuildFolder, true);
             Directory.CreateDirectory(BuildFolder);
 
@@ -36,12 +33,7 @@ namespace TankRevival.Editor
                 throw new Exception("Demo candidate VERSION must not contain '-dev': " + version);
 
             Debug.Log("[Tank Revival CI] Project version=" + version);
-
-            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            var root = new GameObject("TankGame");
-            root.AddComponent<TankRevival.TankGame>();
-            if (!EditorSceneManager.SaveScene(scene, ScenePath))
-                throw new Exception("Could not save bootstrap scene: " + ScenePath);
+            ValidateStaticBootstrapScene();
 
             PlayerSettings.companyName = "SWIR Games";
             PlayerSettings.productName = "Tank Revival Overdrive";
@@ -106,6 +98,22 @@ namespace TankRevival.Editor
             }
 
             Debug.Log("[Tank Revival CI] Windows executable created at: " + ExePath);
+        }
+
+        private static void ValidateStaticBootstrapScene()
+        {
+            if (!File.Exists(ScenePath))
+                throw new Exception("Versioned bootstrap scene is missing: " + ScenePath);
+
+            string guid = AssetDatabase.AssetPathToGUID(ScenePath);
+            if (string.IsNullOrWhiteSpace(guid))
+                throw new Exception("Bootstrap scene has no stable Unity asset GUID: " + ScenePath);
+
+            SceneAsset sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
+            if (sceneAsset == null)
+                throw new Exception("Bootstrap scene could not be imported as a SceneAsset: " + ScenePath);
+
+            Debug.Log("[Tank Revival CI] Using immutable bootstrap scene " + ScenePath + " guid=" + guid);
         }
 
         private static string ResolveVersion()

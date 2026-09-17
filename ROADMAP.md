@@ -3,11 +3,15 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-1"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-2"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-399%2F399-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.1%20QUALIFIED-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-407%2F407-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.2%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
+
+<!-- SWIR-PROGRESS-SVG-PRO:v1 -->
+<p align="center"><img src="assets/readme/progress-mini.svg" alt="SWIR roadmap progress mini" width="700"></p>
+<p align="center"><sub>Roadmap progress: 407 / 407 completed (100.0%) — V13.2 QUALIFIED. Release readiness is tracked separately by Windows qualification gates.</sub></p>
 
 ## 📊 Overall progress
 
@@ -17,7 +21,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **399** | **0** | **399** | **100.0%** |
+| **407** | **0** | **407** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -611,3 +615,14 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Objective HUD and tactical telemetry** — expose active objective, progress, time/pressure state, mutator, doctrine and deterministic signature through the existing HUD/presentation stack with strict refresh/cue limits.
 - [x] **Packaged-EXE v13.1 runtime smoke** — validate all 100 objective plans, archetype coverage, anti-repetition, bounded mutators, authority contracts and objective state transitions, then rerun v13.0/v12.9/v12.8 regressions plus rounds 80/90/100 soak on the same executable.
 - [x] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.1 gate to pass and only then finalize the SWIR roadmap dashboard/checklist.
+
+
+## v13.2 — Adaptive Enemy Command & Counter-Doctrine Warfare — QUALIFIED
+- [x] **Bounded combat-history telemetry** — retain a fixed recent-round history of objective outcome, player losses, Orzełek damage and kill pressure without scene scans, unbounded allocations or a parallel persistence/economy path.
+- [x] **Deterministic adaptive counter-doctrine planner** — derive readable enemy command doctrine from recent combat history plus the active v13.0/v13.1 encounter/objective plans, with hysteresis and repeat caps that prevent per-frame or per-round thrashing.
+- [x] **Canonical spawn-composition directives** — feed tightly bounded specialist composition, concurrency and cadence adjustments back through TankGame's existing spawn path; no second spawner, hidden reinforcements or extra boss authority.
+- [x] **Enemy AI posture integration** — let existing EnemyTank targeting, maneuver and reload decisions consume bounded command posture multipliers while EnemyTank/Rigidbody2D/Projectile remain the only movement and firing authorities.
+- [x] **Fair recovery and anti-snowball policy** — detect sustained player/Orzełek distress and permit a deterministic recovery doctrine that can only soften pressure within hard limits, never heal the player, delete enemies or grant scripted invulnerability.
+- [x] **Adaptive command HUD telemetry** — expose current doctrine, confidence/history pressure, bounded spawn delta and specialist intent through the existing tactical presentation language with fixed refresh and text budgets.
+- [x] **Packaged-EXE v13.2 runtime smoke** — validate synthetic history bands, doctrine determinism/hysteresis, budget caps, specialist directives, AI posture bounds and authority contracts, then rerun v13.1/v13.0/v12.9/v12.8 regressions plus rounds 80/90/100 soak on the same executable.
+- [x] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.2 gate to pass and only then finalize the SWIR roadmap dashboard/checklist.

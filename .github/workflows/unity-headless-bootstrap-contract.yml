@@ -1,0 +1,41 @@
+name: Unity Headless Bootstrap Contract
+
+on:
+  push:
+    branches: ['dev-v13-2']
+    paths:
+      - 'Assets/Editor/CIBuild.cs'
+      - 'Assets/Scenes/**'
+      - 'Assets/*.meta'
+      - 'Assets/Resources/**/*.meta'
+      - 'Tools/verify_unity_ci_bootstrap.py'
+      - '.github/workflows/unity-headless-bootstrap-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-bootstrap-contract:
+    name: Verify immutable Unity CI bootstrap and asset identity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact checkout and static bootstrap contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          python -m py_compile Tools/verify_unity_ci_bootstrap.py Tools/generate_progress_svgs.py
+          python Tools/verify_unity_ci_bootstrap.py
+          python Tools/generate_progress_svgs.py --check
+      - name: Verify headless build does not mutate Assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -Fq 'EditorSceneManager' Assets/Editor/CIBuild.cs
+          ! grep -Fq 'Directory.CreateDirectory("Assets/Scenes")' Assets/Editor/CIBuild.cs
+          grep -Fq 'ValidateStaticBootstrapScene();' Assets/Editor/CIBuild.cs
+          grep -Fq 'AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath)' Assets/Editor/CIBuild.cs
+          test -f Assets/Scenes/Bootstrap.unity
+          test -f Assets/Scenes/Bootstrap.unity.meta

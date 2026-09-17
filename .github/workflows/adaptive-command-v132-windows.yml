@@ -1,0 +1,226 @@
+name: Adaptive Enemy Command v13.2 Windows Qualification Gate
+
+on:
+  push:
+    branches: ['dev-v13-2']
+    paths:
+      - '.v132-windows-gate-trigger'
+      - 'Assets/Scripts/AdaptiveEnemyCommandV132.cs'
+      - 'Assets/Scripts/AdaptiveEnemyCommandCISmokeProbe.cs'
+      - 'Assets/Scripts/TankGame.cs'
+      - 'Assets/Scripts/EnemyTank.cs'
+      - 'Assets/Scripts/ObjectiveWarfareV131.cs'
+      - 'Assets/Scripts/EncounterWarfareV130.cs'
+      - '.github/scripts/package_v132_adaptive_command.py'
+      - '.github/scripts/test_package_v132_adaptive_command.py'
+      - '.github/workflows/adaptive-command-v132-windows.yml'
+      - 'Tools/generate_progress_svgs.py'
+      - 'CHANGELOG_v13.2.md'
+      - 'VERSION'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UNITY_VERSION: 6000.3.17f1
+  CANDIDATE_ZIP: TankRevivalOverdrive-v13.2-adaptive-command-Windows-x64.zip
+  PACKAGE_DIR: tro-v132-package
+
+jobs:
+  source-contracts:
+    name: Verify v13.2 command, authority, progress and package contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact branch, deterministic packaging and progress assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "${GITHUB_REF_NAME}" = 'dev-v13-2'
+          python -m py_compile .github/scripts/package_v132_adaptive_command.py .github/scripts/test_package_v132_adaptive_command.py Tools/generate_progress_svgs.py
+          python .github/scripts/test_package_v132_adaptive_command.py
+          python Tools/generate_progress_svgs.py --check
+      - name: Verify clean exact-candidate Unity qualification policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflow='.github/workflows/adaptive-command-v132-windows.yml'
+          grep -Fq 'Enforce clean Unity qualification state' "$workflow"
+          cache_action='actions/'"cache@"
+          if grep -Fq "uses: ${cache_action}" "$workflow"; then
+            echo 'Exact-candidate qualification must not restore or save Unity Library caches.' >&2
+            exit 1
+          fi
+          restore_key='restore'"-keys:"
+          if grep -Fq "$restore_key" "$workflow"; then
+            echo 'Cross-candidate Unity Library restore keys are forbidden for qualification.' >&2
+            exit 1
+          fi
+      - name: Verify adaptive command implementation and canonical authorities
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in Assets/Scripts/AdaptiveEnemyCommandV132.cs Assets/Scripts/AdaptiveEnemyCommandCISmokeProbe.cs Assets/Scripts/TankGame.cs Assets/Scripts/EnemyTank.cs CHANGELOG_v13.2.md; do test -f "$f"; done
+          test "$(cat VERSION)" = 'v13.2.0-dev'
+          grep -q 'public const int Capacity = 8' Assets/Scripts/AdaptiveEnemyCommandV132.cs
+          grep -q 'public const int DoctrineCount = 7' Assets/Scripts/AdaptiveEnemyCommandV132.cs
+          grep -q 'public const int MaximumRepeatRounds = 3' Assets/Scripts/AdaptiveEnemyCommandV132.cs
+          grep -q 'public const int MaxConcurrencyDelta = 1' Assets/Scripts/AdaptiveEnemyCommandV132.cs
+          grep -q 'public const float MinSpawnScale = 0.92f' Assets/Scripts/AdaptiveEnemyCommandV132.cs
+          grep -q 'public const float MaxSpawnScale = 1.08f' Assets/Scripts/AdaptiveEnemyCommandV132.cs
+          grep -q 'public const int MinForcedStride = 5' Assets/Scripts/AdaptiveEnemyCommandV132.cs
+          for doctrine in Balanced HunterKiller SiegePressure FortressBreaker Interdiction ElasticDefense RecoveryWindow; do grep -q "$doctrine" Assets/Scripts/AdaptiveEnemyCommandV132.cs; done
+          grep -q 'AdaptiveEnemyCommandDirector.EnsureInstalled' Assets/Scripts/TankGame.cs
+          grep -q 'AdaptiveEnemyCommandPlannerV132.EnemyForSpawn' Assets/Scripts/TankGame.cs
+          grep -q 'AdaptiveEnemyCommandDirector.MovementScale' Assets/Scripts/EnemyTank.cs
+          grep -q 'AdaptiveEnemyCommandDirector.ReloadScale' Assets/Scripts/EnemyTank.cs
+          grep -q 'AdaptiveEnemyCommandDirector.SpreadScale' Assets/Scripts/EnemyTank.cs
+          grep -q 'AdaptiveEnemyCommandDirector.PreferPlayer' Assets/Scripts/EnemyTank.cs
+          grep -q 'V13_2_ADAPTIVE_COMMAND_OK.txt' Assets/Scripts/AdaptiveEnemyCommandCISmokeProbe.cs
+          grep -q -- '-tr-v132-smoke' Assets/Scripts/AdaptiveEnemyCommandCISmokeProbe.cs
+          if grep -Eq '\.Damage\(|\.Heal\(|SpawnProjectile|\.MovePosition\(|AddWarBonds|AwardMissionBonds|BindingFlags\.NonPublic|GetField\(' Assets/Scripts/AdaptiveEnemyCommandV132.cs; then
+            echo 'v13.2 command layer contains forbidden damage/projectile/movement/economy/private-reflection authority.' >&2; exit 1
+          fi
+          if grep -Eq 'new Rigidbody2D|AddComponent<Rigidbody2D>|AddComponent<Health>|AddComponent<Projectile>' Assets/Scripts/AdaptiveEnemyCommandV132.cs; then
+            echo 'v13.2 command layer creates duplicate gameplay authorities.' >&2; exit 1
+          fi
+      - name: Verify open v13.2 ROADMAP state and protected dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s=Path('ROADMAP.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',s,re.M))==1
+          for t in ['<!-- ROADMAP-PROGRESS:START -->','<!-- ROADMAP-PROGRESS:END -->','## 📊 Overall progress','| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |','<!-- SWIR-PROGRESS-SVG-PRO:v1 -->']: assert t in s,t
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
+          assert (done,open_,total)==(399,8,407),(done,open_,total)
+          assert 'ROADMAP-98.0%25-yellow' in s and 'DONE-399%2F407' in s and 'STATUS-V13.2%20IN%20DEVELOPMENT-yellow' in s
+          assert '███████████████████░ 98.0%' in s and '| **399** | **8** | **407** | **98.0%** |' in s
+          section=s[s.index('## v13.2 — Adaptive Enemy Command & Counter-Doctrine Warfare — IN DEVELOPMENT'):]
+          assert section.count('- [ ]')==8 and section.count('- [x]')==0
+          print('v13.2 open roadmap state: PASS')
+
+  build-candidate:
+    name: Build and package one exact v13.2 Windows x64 candidate
+    needs: source-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$UNITY_LICENSE"; test -n "$UNITY_EMAIL"; test -n "$UNITY_PASSWORD"
+      - name: Enforce clean Unity qualification state
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf Library Temp obj
+          test ! -e Library
+          test ! -e Temp
+          echo 'Exact-candidate qualification starts from a clean Unity import state; cross-candidate Library caches are intentionally disabled.'
+      - name: Build development player once
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Discover, stage and package exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python .github/scripts/package_v132_adaptive_command.py --build-root build --output-dir "${RUNNER_TEMP}/${PACKAGE_DIR}" --candidate-sha "${GITHUB_SHA}" --commit-sha "${GITHUB_SHA}" --unity-version "${UNITY_VERSION}" --version-file VERSION --zip-name "${CANDIDATE_ZIP}" --diagnostics-path "${GITHUB_WORKSPACE}/V132_ADAPTIVE_COMMAND_BUILD_TREE.txt"
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v13.2-adaptive-command-build-discovery
+          path: V132_ADAPTIVE_COMMAND_BUILD_TREE.txt
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v13.2-adaptive-command-Windows-x64
+          path: |
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/${{ env.CANDIDATE_ZIP }}
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/V132_ADAPTIVE_COMMAND_SHA256.txt
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/V132_ADAPTIVE_COMMAND_PROVENANCE.json
+          if-no-files-found: error
+          retention-days: 14
+
+  packaged-exe-regression:
+    name: Run v13.2 plus v13.1/v13.0/v12.9/v12.8 and 80/90/100 regression on the same EXE
+    needs: build-candidate
+    runs-on: windows-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v13.2-adaptive-command-Windows-x64
+          path: candidate
+      - name: Verify package digest, provenance and attribution
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location candidate
+          $zip='${{ env.CANDIDATE_ZIP }}'; $expected=((Get-Content V132_ADAPTIVE_COMMAND_SHA256.txt -Raw).Trim() -split '\s+')[0].ToLowerInvariant(); $actual=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if($actual -ne $expected){throw 'candidate ZIP digest mismatch'}
+          $p=Get-Content V132_ADAPTIVE_COMMAND_PROVENANCE.json -Raw|ConvertFrom-Json
+          if($p.candidate_sha -ne '${{ github.sha }}' -or $p.commit_sha -ne '${{ github.sha }}' -or $p.sha256 -ne $actual -or $p.version -ne 'v13.2.0-dev'){throw 'candidate provenance mismatch'}
+          Expand-Archive $zip -DestinationPath runtime -Force
+          if(!(Test-Path runtime/TankRevivalOverdrive.exe) -or !(Test-Path runtime/TankRevivalOverdrive_Data)){throw 'packaged Unity runtime incomplete'}
+          $info=Get-Content runtime/V132_ADAPTIVE_COMMAND_BUILD.txt -Raw; if($info -notmatch 'candidate_sha=${{ github.sha }}'){throw 'runtime attribution mismatch'}
+          Write-Host "Verified exact v13.2 candidate SHA256: $actual"
+      - name: Run exact single-binary qualification matrix
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location candidate/runtime
+          $blocking='Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|UnityException|TargetInvocationException'
+          function Invoke-Smoke([string]$Name,[string]$Flag,[string]$Pass,[string]$Fail,[string]$Log,[int]$TimeoutMs){
+            Remove-Item $Pass,$Fail,$Log -ErrorAction SilentlyContinue
+            $p=Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics',$Flag,'-logFile',$Log -PassThru
+            if(!$p.WaitForExit($TimeoutMs)){Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; throw "$Name timed out"}
+            if(Test-Path $Fail){Get-Content $Fail; if(Test-Path $Log){Get-Content $Log -Tail 350}; throw "$Name emitted FAIL"}
+            if(!(Test-Path $Pass)){if(Test-Path $Log){Get-Content $Log -Tail 350}; throw "$Name exited without PASS (exit=$($p.ExitCode))"}
+            if($p.ExitCode -ne 0){throw "$Name non-zero exit $($p.ExitCode)"}
+            if(Test-Path $Log){if(Select-String -Path $Log -Pattern $blocking -Quiet){Get-Content $Log -Tail 400; throw "$Name blocking exception signature"}}
+            Get-Content $Pass; Write-Host "$Name PASS"
+          }
+          Invoke-Smoke 'v13.2 adaptive enemy command' '-tr-v132-smoke' 'V13_2_ADAPTIVE_COMMAND_OK.txt' 'V13_2_ADAPTIVE_COMMAND_FAIL.txt' 'V132Player.log' 80000
+          Invoke-Smoke 'v13.1 dynamic objective warfare regression' '-tr-v131-smoke' 'V13_1_OBJECTIVE_WARFARE_OK.txt' 'V13_1_OBJECTIVE_WARFARE_FAIL.txt' 'V131Regression.log' 80000
+          Invoke-Smoke 'v13.0 encounter warfare regression' '-tr-v130-smoke' 'V13_0_ENCOUNTER_WARFARE_OK.txt' 'V13_0_ENCOUNTER_WARFARE_FAIL.txt' 'V130Regression.log' 80000
+          Invoke-Smoke 'v12.9 component warfare regression' '-tr-v129-smoke' 'V12_9_COMPONENT_DAMAGE_REPAIR_OK.txt' 'V12_9_COMPONENT_DAMAGE_REPAIR_FAIL.txt' 'V129Regression.log' 80000
+          Invoke-Smoke 'v12.8 integration regression' '-tr-v128-smoke' 'V12_8_RELEASE_TRAIN_INTEGRATION_OK.txt' 'V12_8_RELEASE_TRAIN_INTEGRATION_FAIL.txt' 'V128Regression.log' 80000
+          Invoke-Smoke 'round 80/90/100 soak regression' '-demo-ci-soak' 'DEMO_SOAK_PASS.txt' 'DEMO_SOAK_FAIL.txt' 'V132Soak.log' 110000
+          'v13.2 exact-candidate qualification matrix PASS' | Set-Content V13_2_WINDOWS_MATRIX_OK.txt
+      - name: Upload runtime diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v13.2-adaptive-command-diagnostics
+          path: |
+            candidate/runtime/V13_2_ADAPTIVE_COMMAND_OK.txt
+            candidate/runtime/V13_2_ADAPTIVE_COMMAND_FAIL.txt
+            candidate/runtime/V13_1_OBJECTIVE_WARFARE_OK.txt
+            candidate/runtime/V13_0_ENCOUNTER_WARFARE_OK.txt
+            candidate/runtime/V12_9_COMPONENT_DAMAGE_REPAIR_OK.txt
+            candidate/runtime/V12_8_RELEASE_TRAIN_INTEGRATION_OK.txt
+            candidate/runtime/DEMO_SOAK_PASS.txt
+            candidate/runtime/V13_2_WINDOWS_MATRIX_OK.txt
+            candidate/runtime/V132Player.log
+            candidate/runtime/V132Soak.log
+          if-no-files-found: warn
+          retention-days: 14

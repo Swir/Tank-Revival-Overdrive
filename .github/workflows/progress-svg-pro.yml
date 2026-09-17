@@ -1,0 +1,80 @@
+name: SWIR Progress SVG Pro v1 Rollout
+
+on:
+  push:
+    branches: ['dev-v13-2']
+    paths:
+      - 'ROADMAP.md'
+      - 'README.md'
+      - 'assets/readme/hero.svg'
+      - 'assets/readme/progress-card.svg'
+      - 'assets/readme/progress-mini.svg'
+      - 'assets/readme/progress-template.svg'
+      - 'Tools/generate_progress_svgs.py'
+      - '.github/workflows/progress-svg-pro.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rollout:
+    name: Generate, embed and verify deterministic progress assets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v13-2
+          fetch-depth: 0
+      - name: Generate and embed SWIR Progress SVG Pro
+        run: python Tools/generate_progress_svgs.py --write --embed --check
+      - name: Verify deterministic no-op regeneration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Tools/generate_progress_svgs.py --write --embed --check
+          git diff --check
+          test -f assets/readme/progress-card.svg
+          test -f assets/readme/progress-mini.svg
+          test -f assets/readme/progress-template.svg
+          test -f assets/readme/hero.svg
+          grep -q '^<!-- SWIR-ROADMAP-STANDARD:v1 -->$' ROADMAP.md
+          grep -q '^<!-- SWIR-README-STANDARD:v2 -->$' README.md
+          grep -q '^<!-- SWIR-PROGRESS-SVG-PRO:v1 -->$' README.md
+          grep -q '^## 🔎 Search Keywords$' README.md
+          grep -q 'assets/readme/hero.svg' README.md
+          grep -q 'assets/readme/progress-card.svg' README.md
+          grep -q 'assets/readme/progress-mini.svg' ROADMAP.md
+      - name: Verify SVG XML and bounded README hero geometry
+        shell: python
+        run: |
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          for path in (
+              Path('assets/readme/hero.svg'),
+              Path('assets/readme/progress-card.svg'),
+              Path('assets/readme/progress-mini.svg'),
+              Path('assets/readme/progress-template.svg'),
+          ):
+              root = ET.parse(path).getroot()
+              if not root.tag.endswith('svg'):
+                  raise SystemExit(f'{path}: root is not svg')
+          hero = ET.parse('assets/readme/hero.svg').getroot()
+          if hero.attrib.get('viewBox') != '0 0 1200 320':
+              raise SystemExit('hero.svg must keep canonical 1200x320 viewBox')
+          if hero.attrib.get('width') != '1200' or hero.attrib.get('height') != '320':
+              raise SystemExit('hero.svg canvas dimensions are not bounded to 1200x320')
+          print('SWIR README/Progress SVG XML + hero geometry: PASS')
+      - name: Commit verified rollout
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- README.md ROADMAP.md assets/readme; then
+            echo 'SWIR Progress SVG Pro already current; no commit needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md ROADMAP.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
+          git commit -m 'docs(progress): roll out SWIR Progress SVG Pro v1'
+          git push origin HEAD:dev-v13-2

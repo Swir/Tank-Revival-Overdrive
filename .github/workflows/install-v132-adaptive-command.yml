@@ -1,0 +1,67 @@
+name: Integrate v13.2 Adaptive Enemy Command
+
+on:
+  push:
+    branches:
+      - dev-v13-2
+    paths:
+      - .v132-implementation-trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          ref: dev-v13-2
+          fetch-depth: 0
+
+      - name: Apply guarded TankGame and EnemyTank integration
+        run: python Tools/install_v132_adaptive_command.py
+
+      - name: Verify source and authority contracts
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          adaptive = Path("Assets/Scripts/AdaptiveEnemyCommandV132.cs").read_text(encoding="utf-8")
+          smoke = Path("Assets/Scripts/AdaptiveEnemyCommandCISmokeProbe.cs").read_text(encoding="utf-8")
+          tank = Path("Assets/Scripts/TankGame.cs").read_text(encoding="utf-8")
+          enemy = Path("Assets/Scripts/EnemyTank.cs").read_text(encoding="utf-8")
+          assert "CombatHistoryBufferV132" in adaptive and "Capacity = 8" in adaptive
+          assert "MaxConcurrencyDelta = 1" in adaptive
+          assert "MinSpawnScale = 0.92f" in adaptive and "MaxSpawnScale = 1.08f" in adaptive
+          assert "RecoveryWindow" in adaptive
+          assert "SpawnProjectile(" not in adaptive
+          assert ".Damage(" not in adaptive and ".Heal(" not in adaptive
+          assert "MovePosition(" not in adaptive
+          assert "new Rigidbody2D" not in adaptive and "AddComponent<Rigidbody2D>" not in adaptive
+          assert "WarBond" not in adaptive and "PlayerPrefs" not in adaptive
+          assert "AdaptiveEnemyCommandPlannerV132.EnemyForSpawn" in tank
+          assert "AdaptiveEnemyCommandDirector.MovementScale(Kind)" in enemy
+          assert "AdaptiveEnemyCommandDirector.ReloadScale(Kind)" in enemy
+          assert "AdaptiveEnemyCommandDirector.SpreadScale(Kind)" in enemy
+          assert "-tr-v132-smoke" in smoke and "V13_2_ADAPTIVE_COMMAND_OK.txt" in smoke
+          roadmap = Path("ROADMAP.md").read_text(encoding="utf-8")
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$', roadmap, re.M)) == 1
+          assert "DONE-399%2F407-1f6feb" in roadmap and "V13.2%20IN%20DEVELOPMENT" in roadmap
+          assert len(re.findall(r'^- \[x\] ', roadmap, re.M)) == 399
+          assert len(re.findall(r'^- \[ \] ', roadmap, re.M)) == 8
+          print("v13.2 integration source/authority contracts: PASS")
+
+      - name: Commit gameplay integration
+        run: |
+          if git diff --quiet -- Assets/Scripts/TankGame.cs Assets/Scripts/EnemyTank.cs; then
+            echo "v13.2 gameplay integration already applied; no commit needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Assets/Scripts/TankGame.cs Assets/Scripts/EnemyTank.cs
+          git commit -m "feat(v13.2): integrate adaptive enemy command runtime"
+          git push origin HEAD:dev-v13-2
