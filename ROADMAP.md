@@ -3,21 +3,21 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-9"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-383%2F383-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.9%20QUALIFIED-brightgreen?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-0"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.0%25-yellow?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-383%2F391-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.0%20IN%20DEVELOPMENT-yellow?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+███████████████████░ 98.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **383** | **0** | **383** | **100.0%** |
+| **383** | **8** | **391** | **98.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -589,4 +589,15 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Component damage language and repair presentation** — integrate v12.7 pooled combat feedback/HUD with readable module-specific critical/disabled/repair cues under strict presentation budgets.
 - [x] **Deterministic component/repair runtime smoke** — verify threshold transitions, ammo profiles, finite repair invariants, handling/fire-control multipliers, AI response contracts and hard resource caps in the packaged executable.
 - [x] **Exact-candidate Windows qualification** — build Windows x64, run packaged-EXE v12.9 smoke plus v12.8 integration regression checks, record exact SHA/artifact provenance and only then finalize roadmap qualification.
+
+
+## v13.0 — 100-Round Encounter Director & Boss Phase Warfare — IN DEVELOPMENT
+- [ ] **Deterministic 100-round encounter planner** — generate bounded encounter doctrines and threat budgets for rounds 1–100 with anti-repetition, campaign-band escalation and boss-safe scheduling while `TankGame` remains round/spawn authority.
+- [ ] **Multi-phase boss warfare** — derive readable boss phases from canonical `Health` plus v12.9 component state, exposing bounded movement/fire/support directives without creating a second survivability, movement or projectile authority.
+- [ ] **Orzeł defense escalation** — connect early/mid/late campaign pressure to the existing Orzełek/base-defense state so objective intensity grows across 100 rounds without hidden direct damage or scripted invulnerability.
+- [ ] **Cross-system encounter doctrine** — fold Combined Arms, sustainment, route intelligence, Recon/EW, Mobile Signal and SIGINT readiness into encounter pressure/relief decisions through read-only public state instead of duplicating those systems.
+- [ ] **Hard encounter/performance budgets** — enforce deterministic caps for threat score, specialist density, support actions, boss reinforcements and presentation cues with monotonic late-round degradation of visuals rather than gameplay outcomes.
+- [ ] **Readable encounter and boss telemetry** — publish compact doctrine, threat, objective and boss-phase snapshots to the existing unified tactical HUD/presentation stack with strict refresh and cue limits.
+- [ ] **Packaged-EXE v13.0 runtime smoke** — validate all 100 round plans, anti-repetition, boss phase transitions, authority boundaries and hard budgets, then rerun v12.9/v12.8 regression plus rounds 80/90/100 soak on the same executable.
+- [ ] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.0 gate to pass and only then finalize the SWIR roadmap dashboard/checklist.
 
