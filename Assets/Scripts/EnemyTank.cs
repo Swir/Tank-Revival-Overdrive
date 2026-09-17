@@ -91,14 +91,14 @@ namespace TankRevival
                 if (hold > 0f) { _nextShot = Time.time + hold; return; }
                 Fire();
                 float reload = _armor != null ? _armor.ReloadMultiplier : 1f;
-                _nextShot = Time.time + Random.Range(_shotDelay * .82f, _shotDelay * 1.18f) * reload;
+                _nextShot = Time.time + Random.Range(_shotDelay * .82f, _shotDelay * 1.18f) * reload * AdaptiveEnemyCommandDirector.ReloadScale(Kind);
             }
         }
 
         private bool ResolvePlatoonTarget(bool localPreference)
         {
             bool counter = CounterFireThreatMemory.ShouldRetaliate(this, _round);
-            bool doctrine = localPreference || AdvancedGunneryDoctrineDirector.PreferPlayer(Kind, _round) || counter;
+            bool doctrine = localPreference || AdvancedGunneryDoctrineDirector.PreferPlayer(Kind, _round) || AdaptiveEnemyCommandDirector.PreferPlayer(Kind) || counter;
             return PlatoonFireMissionCoordinator.PreferPlayer(this, Kind, _round, doctrine, counter);
         }
 
@@ -120,7 +120,7 @@ namespace TankRevival
             float casualtyScale = ComponentCasualtyTactics.SpeedScale(CurrentCasualtyTactic);
             if (casualtyScale <= 0f) return;
             float m = _armor != null ? _armor.MobilityMultiplier : 1f;
-            _body.MovePosition(_body.position + _facing * (_speed * m * casualtyScale * Time.fixedDeltaTime));
+            _body.MovePosition(_body.position + _facing * (_speed * m * casualtyScale * AdaptiveEnemyCommandDirector.MovementScale(Kind) * Time.fixedDeltaTime));
         }
 
         private void ChooseDirection(bool random)
@@ -200,7 +200,7 @@ namespace TankRevival
             }
             float movement = _body != null ? Mathf.Clamp01(_body.linearVelocity.magnitude / Mathf.Max(.1f, _speed)) : 0;
             bool coordinated = FireControlVolleyCoordinator.IsEligible(Kind, _round);
-            float spread = FireControlBallisticsDirector.EnemySpreadDegrees(Kind, movement, _armor, coordinated) * AdvancedGunneryDoctrineDirector.SpreadMultiplier(Kind, _round) * CounterFireThreatMemory.AccuracyMultiplier(this);
+            float spread = FireControlBallisticsDirector.EnemySpreadDegrees(Kind, movement, _armor, coordinated) * AdvancedGunneryDoctrineDirector.SpreadMultiplier(Kind, _round) * CounterFireThreatMemory.AccuracyMultiplier(this) * AdaptiveEnemyCommandDirector.SpreadScale(Kind);
             Vector2 dir = FireControlBallisticsDirector.ApplySpread(raw, spread);
             float md = Kind == EnemyKind.Boss ? 1.03f : Kind == EnemyKind.Siege ? .86f : .76f;
             Vector2 muzzle = (Vector2)transform.position + dir * md;
