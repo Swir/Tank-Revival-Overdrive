@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace TankRevival
@@ -27,9 +28,8 @@ namespace TankRevival
     }
 
     /// <summary>
-    /// v11.1 ARMOR FACINGS / COMPONENT DAMAGE REFORGE.
-    /// Keeps Health as the only vehicle life authority while making directional armor,
-    /// ammunition and four persistent modules create explicit mobility/weapon outcomes.
+    /// Canonical directional armor and component authority. Health remains the only vehicle-life authority;
+    /// module integrity only modifies handling, fire control and recovery behavior.
     /// </summary>
     public sealed class ArmorSystem : MonoBehaviour
     {
@@ -64,6 +64,9 @@ namespace TankRevival
         public bool IsWeaponDisabled => GunIntegrity <= DisabledThreshold || AmmoRackIntegrity <= DisabledThreshold;
         public bool IsAmmoRackVolatile => AmmoRackIntegrity <= CriticalThreshold;
         public int AverageIntegrity => (EngineIntegrity + TrackIntegrity + GunIntegrity + AmmoRackIntegrity) / 4;
+        public bool HasRepairableDamage => EngineIntegrity < 100 || TrackIntegrity < 100 || GunIntegrity < 100 || AmmoRackIntegrity < 100;
+
+        public event Action<TankModule, int, int> ModuleIntegrityChanged;
 
         private float _frontDamage = 0.72f;
         private float _sideDamage = 0.94f;
@@ -76,7 +79,8 @@ namespace TankRevival
         public static bool ConfigurationValid =>
             DamagedThreshold > CriticalThreshold &&
             CriticalThreshold > DisabledThreshold &&
-            DisabledThreshold >= 8 && DisabledThreshold <= 18;
+            DisabledThreshold >= 8 && DisabledThreshold <= 18 &&
+            ComponentDamageWarfare.ConfigurationValid();
 
         public static ModuleCondition ConditionFor(int integrity)
         {
@@ -211,7 +215,7 @@ namespace TankRevival
 
             ricochetChance /= Mathf.Max(1f, 0.72f + rawDamage * 0.28f);
             if (LastOvermatch) ricochetChance *= 0.20f;
-            ricochet = Random.value < ricochetChance;
+            ricochet = UnityEngine.Random.value < ricochetChance;
             if (ricochet)
             {
                 VisualFactory.MicroBurst(hitPoint, new Color(1f, 0.82f, 0.48f), 0.66f);
@@ -223,15 +227,21 @@ namespace TankRevival
             float zoneCrit = LastZone == ArmorZone.Rear ? 0.24f : LastZone == ArmorZone.Side ? 0.10f : 0f;
             float ammoCrit = ammo == AmmoType.ArmorPiercing ? 0.10f : ammo == AmmoType.Plasma ? 0.16f : ammo == AmmoType.EMP ? 0.12f : 0f;
             if (LastOvermatch) ammoCrit += 0.08f;
-            critical = Random.value < Mathf.Clamp01(_criticalChance + zoneCrit + ammoCrit);
+            critical = UnityEngine.Random.value < Mathf.Clamp01(_criticalChance + zoneCrit + ammoCrit);
             LastCritical = critical;
 
-            bool forcedModuleEffect = ammo == AmmoType.EMP || (ammo == AmmoType.Explosive && LastZone == ArmorZone.Side);
+            bool forcedModuleEffect =
+                ammo == AmmoType.EMP ||
+                (ammo == AmmoType.Explosive && LastZone == ArmorZone.Side) ||
+                (ammo == AmmoType.ArmorPiercing && LastOvermatch) ||
+                (ammo == AmmoType.Plasma && LastOvermatch) ||
+                (ammo == AmmoType.Incendiary && LastZone == ArmorZone.Rear);
+
             if (critical || forcedModuleEffect)
             {
-                LastDamagedModule = PickModuleForImpact(LastZone, ammo);
-                int moduleDamage = ComputeModuleDamage(rawDamage, ammo, LastZone, critical, LastOvermatch);
-                ApplyModuleDamage(LastDamagedModule, moduleDamage, hitPoint);
+                LastDamagedModule = ComponentDamageWarfare.PreferredModule(ammo, LastZone);
+                int moduleDamage = ComponentDamageWarfare.ComputeDamage(rawDamage, ammo, LastZone, LastDamagedModule, critical, LastOvermatch);
+                ApplyModuleDamageDeterministic(LastDamagedModule, moduleDamage, hitPoint, true);
                 if (critical)
                     damageMultiplier *= LastDamagedModule == TankModule.AmmoRack ? 1.42f : 1.25f;
             }
@@ -243,23 +253,74 @@ namespace TankRevival
             return LastResolvedDamage;
         }
 
+        public int GetModuleIntegrity(TankModule module)
+        {
+            switch (module)
+            {
+                case TankModule.Engine: return EngineIntegrity;
+                case TankModule.Tracks: return TrackIntegrity;
+                case TankModule.Gun: return GunIntegrity;
+                case TankModule.AmmoRack: return AmmoRackIntegrity;
+                default: return 100;
+            }
+        }
+
+        public TankModule MostDamagedModule()
+        {
+            TankModule best = TankModule.Engine;
+            int integrity = EngineIntegrity;
+            if (TrackIntegrity < integrity) { best = TankModule.Tracks; integrity = TrackIntegrity; }
+            if (GunIntegrity < integrity) { best = TankModule.Gun; integrity = GunIntegrity; }
+            if (AmmoRackIntegrity < integrity) best = TankModule.AmmoRack;
+            return best;
+        }
+
+        public int ApplyModuleDamageDeterministic(TankModule module, int amount, Vector2 hitPoint, bool feedback = true)
+        {
+            amount = Mathf.Clamp(amount, 0, ComponentDamageWarfare.MaxModuleDamage);
+            if (module == TankModule.None || amount <= 0) return 0;
+            int before = GetModuleIntegrity(module);
+            SetModuleIntegrity(module, Mathf.Max(0, before - amount));
+            int after = GetModuleIntegrity(module);
+            if (after == before) return 0;
+
+            LastDamagedModule = module;
+            LastImpactAt = Time.time;
+            RecalculatePerformance();
+            ModuleIntegrityChanged?.Invoke(module, before, after);
+            if (feedback) EmitModuleFeedback(module, hitPoint, false);
+            return before - after;
+        }
+
+        public int RepairModule(TankModule module, int amount, bool feedback = true)
+        {
+            amount = Mathf.Clamp(amount, 0, 100);
+            if (module == TankModule.None || amount <= 0) return 0;
+            int before = GetModuleIntegrity(module);
+            SetModuleIntegrity(module, Mathf.Min(100, before + amount));
+            int after = GetModuleIntegrity(module);
+            if (after == before) return 0;
+            RecalculatePerformance();
+            ModuleIntegrityChanged?.Invoke(module, before, after);
+            if (feedback) EmitModuleFeedback(module, transform.position, true);
+            return after - before;
+        }
+
         public int RepairModules(int amount)
         {
             amount = Mathf.Clamp(amount, 0, 100);
             if (amount <= 0) return 0;
-            int before = EngineIntegrity + TrackIntegrity + GunIntegrity + AmmoRackIntegrity;
-            EngineIntegrity = Mathf.Min(100, EngineIntegrity + amount);
-            TrackIntegrity = Mathf.Min(100, TrackIntegrity + amount);
-            GunIntegrity = Mathf.Min(100, GunIntegrity + amount);
-            AmmoRackIntegrity = Mathf.Min(100, AmmoRackIntegrity + amount);
-            RecalculatePerformance();
-            int after = EngineIntegrity + TrackIntegrity + GunIntegrity + AmmoRackIntegrity;
-            if (after > before)
+            int repaired = 0;
+            repaired += RepairModule(TankModule.Engine, amount, false);
+            repaired += RepairModule(TankModule.Tracks, amount, false);
+            repaired += RepairModule(TankModule.Gun, amount, false);
+            repaired += RepairModule(TankModule.AmmoRack, amount, false);
+            if (repaired > 0)
             {
                 VisualFactory.RingPulse(transform.position, new Color(0.20f, 1f, 0.48f), 0.92f);
                 BattleAudio.PlayGlobal(SoundCue.Pickup, 0.48f, 0.04f);
             }
-            return after - before;
+            return repaired;
         }
 
         public string CompactStatus()
@@ -277,69 +338,34 @@ namespace TankRevival
             RecalculatePerformance();
         }
 
-        private TankModule PickModuleForImpact(ArmorZone zone, AmmoType ammo)
+        private void SetModuleIntegrity(TankModule module, int value)
         {
-            float r = Random.value;
-            if (ammo == AmmoType.EMP)
-                return r < 0.46f ? TankModule.Engine : r < 0.78f ? TankModule.Gun : TankModule.Tracks;
-            if (ammo == AmmoType.Explosive)
-                return r < 0.58f ? TankModule.Tracks : r < 0.78f ? TankModule.Gun : TankModule.Engine;
-            if (ammo == AmmoType.Incendiary && zone == ArmorZone.Rear)
-                return r < 0.52f ? TankModule.Engine : TankModule.AmmoRack;
-            if (zone == ArmorZone.Rear)
-                return r < 0.46f ? TankModule.Engine : r < 0.72f ? TankModule.AmmoRack : r < 0.88f ? TankModule.Tracks : TankModule.Gun;
-            if (zone == ArmorZone.Side)
-                return r < 0.34f ? TankModule.Tracks : r < 0.58f ? TankModule.AmmoRack : r < 0.79f ? TankModule.Engine : TankModule.Gun;
-            return r < 0.43f ? TankModule.Gun : r < 0.69f ? TankModule.Tracks : r < 0.86f ? TankModule.AmmoRack : TankModule.Engine;
-        }
-
-        private static int ComputeModuleDamage(int rawDamage, AmmoType ammo, ArmorZone zone, bool critical, bool overmatch)
-        {
-            int value = 12 + rawDamage * 7;
-            if (critical) value += 8;
-            if (overmatch) value += 8;
-            if (zone == ArmorZone.Rear) value += 6;
-            switch (ammo)
-            {
-                case AmmoType.Plasma: value += 14; break;
-                case AmmoType.ArmorPiercing: value += 8; break;
-                case AmmoType.EMP: value += 12; break;
-                case AmmoType.Explosive: value += 6; break;
-                case AmmoType.Incendiary: value += 4; break;
-            }
-            return Mathf.Clamp(value, 14, 58);
-        }
-
-        private void ApplyModuleDamage(TankModule module, int amount, Vector2 hitPoint)
-        {
+            value = Mathf.Clamp(value, 0, 100);
             switch (module)
             {
-                case TankModule.Engine: EngineIntegrity = Mathf.Max(0, EngineIntegrity - amount); break;
-                case TankModule.Tracks: TrackIntegrity = Mathf.Max(0, TrackIntegrity - amount); break;
-                case TankModule.Gun: GunIntegrity = Mathf.Max(0, GunIntegrity - amount); break;
-                case TankModule.AmmoRack: AmmoRackIntegrity = Mathf.Max(0, AmmoRackIntegrity - amount); break;
+                case TankModule.Engine: EngineIntegrity = value; break;
+                case TankModule.Tracks: TrackIntegrity = value; break;
+                case TankModule.Gun: GunIntegrity = value; break;
+                case TankModule.AmmoRack: AmmoRackIntegrity = value; break;
+            }
+        }
+
+        private void EmitModuleFeedback(TankModule module, Vector2 point, bool repair)
+        {
+            if (repair)
+            {
+                VisualFactory.RingPulse(point, new Color(0.20f, 1f, 0.48f), 0.78f);
+                BattleAudio.PlayGlobal(SoundCue.Pickup, 0.34f, 0.08f);
+                return;
             }
 
-            RecalculatePerformance();
             Color pulse = module == TankModule.Engine ? new Color(1f, 0.34f, 0.08f) :
                           module == TankModule.Tracks ? new Color(1f, 0.65f, 0.12f) :
                           module == TankModule.Gun ? new Color(1f, 0.10f, 0.05f) : new Color(1f, 0.05f, 0.22f);
-            float intensity = ConditionFor(ModuleIntegrity(module)) == ModuleCondition.Disabled ? 1.18f : 0.82f;
-            VisualFactory.RingPulse(hitPoint, pulse, intensity);
-            VisualFactory.MicroBurst(hitPoint, new Color(1f, 0.18f, 0.05f), intensity);
+            float intensity = ConditionFor(GetModuleIntegrity(module)) == ModuleCondition.Disabled ? 1.18f : 0.82f;
+            VisualFactory.RingPulse(point, pulse, intensity);
+            VisualFactory.MicroBurst(point, new Color(1f, 0.18f, 0.05f), intensity);
             BattleAudio.PlayGlobal(SoundCue.ExplosionSmall, 0.38f, 0.04f);
-        }
-
-        private int ModuleIntegrity(TankModule module)
-        {
-            switch (module)
-            {
-                case TankModule.Engine: return EngineIntegrity;
-                case TankModule.Tracks: return TrackIntegrity;
-                case TankModule.Gun: return GunIntegrity;
-                case TankModule.AmmoRack: return AmmoRackIntegrity;
-                default: return 100;
-            }
         }
 
         private void RecalculatePerformance()
