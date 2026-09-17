@@ -46,12 +46,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet; then
-            echo 'No integration changes to commit.'
-            exit 0
-          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add Assets/Scripts/EncounterWarfareV130.cs Assets/Scripts/TankGame.cs Assets/Scripts/EncounterWarfareCISmokeProbe.cs .github/workflows/encounter-warfare-v130-windows.yml CHANGELOG_v13.0.md
+          # Workflow updates are intentionally left unstaged here because the
+          # default Actions token cannot modify workflow files. The gameplay,
+          # smoke and changelog package is still committed atomically; the
+          # hardened gate workflow is applied separately through the GitHub
+          # connector with workflow-file permission.
+          git add Assets/Scripts/EncounterWarfareV130.cs Assets/Scripts/TankGame.cs Assets/Scripts/EncounterWarfareCISmokeProbe.cs CHANGELOG_v13.0.md
+          if git diff --cached --quiet; then
+            echo 'No gameplay integration changes to commit.'
+            exit 0
+          fi
           git commit -m 'feat(v13.0): drive live campaign from encounter doctrine'
           git push origin HEAD:dev-v13-0
