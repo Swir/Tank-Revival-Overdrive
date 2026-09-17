@@ -41,7 +41,7 @@ jobs:
           grep -q 'EncounterPlannerV130.EnemyForSpawn(_encounterPlan, _spawnOrdinal)' Assets/Scripts/TankGame.cs
           grep -q 'EncounterPlannerV130.EagleDefenseFor(_encounterPlan)' Assets/Scripts/TankGame.cs
           grep -q 'spawnFold=' Assets/Scripts/EncounterWarfareCISmokeProbe.cs
-          grep -q "- 'Assets/Scripts/TankGame.cs'" .github/workflows/encounter-warfare-v130-windows.yml
+          grep -q -- "- 'Assets/Scripts/TankGame.cs'" .github/workflows/encounter-warfare-v130-windows.yml
       - name: Commit integrated gameplay package
         shell: bash
         run: |
