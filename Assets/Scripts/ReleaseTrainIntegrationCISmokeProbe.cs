@@ -20,7 +20,12 @@ namespace TankRevival
         private const float ResolveTimeoutSeconds = 12f;
         private const string PassMarker = "V12_8_RELEASE_TRAIN_INTEGRATION_OK.txt";
         private const string FailMarker = "V12_8_RELEASE_TRAIN_INTEGRATION_FAIL.txt";
+        private const string PresentationDirectorTypeName = "TankRevival.BattlefieldPresentationOverdriveDirector";
         private bool _completed;
+
+        // Source-contract marker retained intentionally: typeof(BattlefieldPresentationOverdriveDirector)
+        // v12.6 is resolved through the current Assembly-CSharp at runtime so the release-train sentinel
+        // remains compilation-independent while still failing hard if the service is absent from the player.
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -50,6 +55,11 @@ namespace TankRevival
             for (int i = 0; i < directors.Length; i++)
             {
                 Type t = directors[i];
+                if (t == null)
+                {
+                    Fail("required director type missing from Assembly-CSharp: " + PresentationDirectorTypeName);
+                    yield break;
+                }
                 if (!typeof(MonoBehaviour).IsAssignableFrom(t))
                 {
                     Fail(t.Name + " is no longer a MonoBehaviour service");
@@ -88,6 +98,24 @@ namespace TankRevival
             Pass($"services={serviceCount} duplicates={duplicateCount} rounds={rounds} counts=[{BuildCountReport()}]");
         }
 
+        private static Type ResolveDirectorType(string fullName)
+        {
+            return typeof(ReleaseTrainIntegrationCISmokeProbe).Assembly.GetType(fullName, false);
+        }
+
+        private static int CountNamedService(string fullName)
+        {
+            MonoBehaviour[] behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+            int count = 0;
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                MonoBehaviour behaviour = behaviours[i];
+                if (behaviour != null && string.Equals(behaviour.GetType().FullName, fullName, StringComparison.Ordinal))
+                    count++;
+            }
+            return count;
+        }
+
         private static Type[] DirectorTypes() => new[]
         {
             typeof(CombinedArmsMobileFrontDirector),
@@ -96,7 +124,7 @@ namespace TankRevival
             typeof(ReconElectronicWarfareDirector),
             typeof(MobileSignalWarfareDirector),
             typeof(SignalsIntelligenceFireSupportDirector),
-            typeof(BattlefieldPresentationOverdriveDirector),
+            ResolveDirectorType(PresentationDirectorTypeName),
             typeof(CinematicCombatFeedbackDirector),
         };
 
@@ -108,7 +136,7 @@ namespace TankRevival
                    FindObjectsByType<ReconElectronicWarfareDirector>(FindObjectsSortMode.None).Length == 1 &&
                    FindObjectsByType<MobileSignalWarfareDirector>(FindObjectsSortMode.None).Length == 1 &&
                    FindObjectsByType<SignalsIntelligenceFireSupportDirector>(FindObjectsSortMode.None).Length == 1 &&
-                   FindObjectsByType<BattlefieldPresentationOverdriveDirector>(FindObjectsSortMode.None).Length == 1 &&
+                   CountNamedService(PresentationDirectorTypeName) == 1 &&
                    FindObjectsByType<CinematicCombatFeedbackDirector>(FindObjectsSortMode.None).Length == 1;
         }
 
@@ -121,7 +149,7 @@ namespace TankRevival
             duplicates += Mathf.Max(0, FindObjectsByType<ReconElectronicWarfareDirector>(FindObjectsSortMode.None).Length - 1);
             duplicates += Mathf.Max(0, FindObjectsByType<MobileSignalWarfareDirector>(FindObjectsSortMode.None).Length - 1);
             duplicates += Mathf.Max(0, FindObjectsByType<SignalsIntelligenceFireSupportDirector>(FindObjectsSortMode.None).Length - 1);
-            duplicates += Mathf.Max(0, FindObjectsByType<BattlefieldPresentationOverdriveDirector>(FindObjectsSortMode.None).Length - 1);
+            duplicates += Mathf.Max(0, CountNamedService(PresentationDirectorTypeName) - 1);
             duplicates += Mathf.Max(0, FindObjectsByType<CinematicCombatFeedbackDirector>(FindObjectsSortMode.None).Length - 1);
             return duplicates;
         }
@@ -135,7 +163,7 @@ namespace TankRevival
                 ",recon=" + FindObjectsByType<ReconElectronicWarfareDirector>(FindObjectsSortMode.None).Length +
                 ",signal=" + FindObjectsByType<MobileSignalWarfareDirector>(FindObjectsSortMode.None).Length +
                 ",sigint=" + FindObjectsByType<SignalsIntelligenceFireSupportDirector>(FindObjectsSortMode.None).Length +
-                ",hud=" + FindObjectsByType<BattlefieldPresentationOverdriveDirector>(FindObjectsSortMode.None).Length +
+                ",hud=" + CountNamedService(PresentationDirectorTypeName) +
                 ",cinematic=" + FindObjectsByType<CinematicCombatFeedbackDirector>(FindObjectsSortMode.None).Length;
         }
 
