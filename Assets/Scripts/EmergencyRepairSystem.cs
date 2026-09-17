@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace TankRevival
 {
-    /// <summary>Finite, interruptible module-only field repair. Never heals Health.</summary>
+    /// <summary>Finite, interruptible module-only field repair. Never heals Health or moves a Rigidbody2D.</summary>
     public sealed class EmergencyRepairSystem : MonoBehaviour
     {
         public const int MaxCharges = 2;
@@ -22,6 +22,8 @@ namespace TankRevival
         private ArmorSystem _armor;
         private Rigidbody2D _body;
         private Health _health;
+        private EnemyTank _enemy;
+        private bool _suspendedEnemyAuthority;
         private float _startedAt;
         private float _cooldownUntil;
         private float _impactStampAtStart;
@@ -35,6 +37,7 @@ namespace TankRevival
             _armor = GetComponent<ArmorSystem>();
             _body = GetComponent<Rigidbody2D>();
             _health = GetComponent<Health>();
+            _enemy = GetComponent<EnemyTank>();
         }
 
         private void OnEnable()
@@ -46,6 +49,7 @@ namespace TankRevival
         private void OnDisable()
         {
             if (_health != null) _health.Damaged -= OnHealthDamaged;
+            RestoreEnemyAuthority();
         }
 
         private void Update()
@@ -65,6 +69,7 @@ namespace TankRevival
             }
             IsRepairing = false;
             TargetModule = TankModule.None;
+            RestoreEnemyAuthority();
         }
 
         public bool TryBeginRepair()
@@ -72,6 +77,7 @@ namespace TankRevival
             if (IsRepairing || ChargesRemaining <= 0 || Time.time < _cooldownUntil) return false;
             if (_armor == null) _armor = GetComponent<ArmorSystem>();
             if (_body == null) _body = GetComponent<Rigidbody2D>();
+            if (_enemy == null) _enemy = GetComponent<EnemyTank>();
             if (_armor == null || !_armor.HasRepairableDamage) return false;
             if (_body != null && _body.linearVelocity.sqrMagnitude > MaxRepairSpeed * MaxRepairSpeed) return false;
 
@@ -81,6 +87,11 @@ namespace TankRevival
             _startedAt = Time.time;
             _impactStampAtStart = _armor.LastImpactAt;
             IsRepairing = true;
+            if (_enemy != null && _enemy.enabled)
+            {
+                _enemy.enabled = false;
+                _suspendedEnemyAuthority = true;
+            }
             return true;
         }
 
@@ -91,6 +102,14 @@ namespace TankRevival
             TargetModule = TankModule.None;
             Interruptions++;
             _cooldownUntil = Mathf.Max(_cooldownUntil, Time.time + 1.2f);
+            RestoreEnemyAuthority();
+        }
+
+        private void RestoreEnemyAuthority()
+        {
+            if (!_suspendedEnemyAuthority) return;
+            _suspendedEnemyAuthority = false;
+            if (_enemy != null) _enemy.enabled = true;
         }
 
         private void OnHealthDamaged(Health health, int amount)
@@ -106,18 +125,20 @@ namespace TankRevival
             TargetModule = TankModule.None;
             CompletedRepairs = 0;
             Interruptions = 0;
+            RestoreEnemyAuthority();
         }
 
         public bool CompleteImmediatelyForSmoke()
         {
             if (!TryBeginRepair()) return false;
             int repaired = _armor.RepairModule(TargetModule, RepairAmount, false);
-            if (repaired <= 0) { IsRepairing = false; TargetModule = TankModule.None; return false; }
+            if (repaired <= 0) { IsRepairing = false; TargetModule = TankModule.None; RestoreEnemyAuthority(); return false; }
             ChargesRemaining = Mathf.Max(0, ChargesRemaining - 1);
             CompletedRepairs++;
             IsRepairing = false;
             TargetModule = TankModule.None;
             _cooldownUntil = 0f;
+            RestoreEnemyAuthority();
             return true;
         }
     }
