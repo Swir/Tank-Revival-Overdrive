@@ -42,6 +42,20 @@ jobs:
           python -m py_compile .github/scripts/package_v132_adaptive_command.py .github/scripts/test_package_v132_adaptive_command.py Tools/generate_progress_svgs.py
           python .github/scripts/test_package_v132_adaptive_command.py
           python Tools/generate_progress_svgs.py --check
+      - name: Verify clean exact-candidate Unity qualification policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflow='.github/workflows/adaptive-command-v132-windows.yml'
+          grep -Fq 'Enforce clean Unity qualification state' "$workflow"
+          if grep -Fq 'uses: actions/cache@' "$workflow"; then
+            echo 'Exact-candidate qualification must not restore or save Unity Library caches.' >&2
+            exit 1
+          fi
+          if grep -Fq 'restore-keys:' "$workflow"; then
+            echo 'Cross-candidate Unity Library restore keys are forbidden for qualification.' >&2
+            exit 1
+          fi
       - name: Verify adaptive command implementation and canonical authorities
         shell: bash
         run: |
@@ -102,17 +116,14 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$UNITY_LICENSE"; test -n "$UNITY_EMAIL"; test -n "$UNITY_PASSWORD"
-      - name: Cache Unity Library
-        uses: actions/cache@v4
-        with:
-          path: Library
-          key: V132AdaptiveCommand-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-          restore-keys: |
-            V132AdaptiveCommand-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-
-            V131ObjectiveWarfare-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-
-            V130EncounterWarfare-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-
-            V129ComponentWarfare-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-
-            Dev-Library-${{ runner.os }}-${{ env.UNITY_VERSION }}-
+      - name: Enforce clean Unity qualification state
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf Library Temp obj
+          test ! -e Library
+          test ! -e Temp
+          echo 'Exact-candidate qualification starts from a clean Unity import state; cross-candidate Library caches are intentionally disabled.'
       - name: Build development player once
         uses: game-ci/unity-builder@v4
         env:
