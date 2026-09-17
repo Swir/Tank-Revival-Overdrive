@@ -105,6 +105,10 @@ namespace TankRevival
                 yield break;
             }
 
+            float stackUntil = Time.realtimeSinceStartup + ResolveTimeoutSeconds;
+            while (!IntegratedStackReady() && Time.realtimeSinceStartup < stackUntil)
+                yield return null;
+
             if (!ValidateIntegratedStack("pre-soak"))
                 yield break;
 
@@ -205,26 +209,17 @@ namespace TankRevival
             }
         }
 
+        private static bool IntegratedStackReady()
+        {
+            int[] counts = CaptureIntegratedServiceCounts();
+            for (int i = 0; i < counts.Length; i++)
+                if (counts[i] != 1) return false;
+            return true;
+        }
+
         private bool ValidateIntegratedStack(string stage)
         {
-            MonoBehaviour[] behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
-            int[] counts = new int[IntegratedDirectorTypeNames.Length];
-
-            for (int i = 0; i < behaviours.Length; i++)
-            {
-                MonoBehaviour behaviour = behaviours[i];
-                if (behaviour == null) continue;
-                string fullName = behaviour.GetType().FullName;
-                for (int j = 0; j < IntegratedDirectorTypeNames.Length; j++)
-                {
-                    if (string.Equals(fullName, IntegratedDirectorTypeNames[j], StringComparison.Ordinal))
-                    {
-                        counts[j]++;
-                        break;
-                    }
-                }
-            }
-
+            int[] counts = CaptureIntegratedServiceCounts();
             int liveServices = 0;
             int duplicates = 0;
             string report = string.Empty;
@@ -277,6 +272,27 @@ namespace TankRevival
 
             Debug.Log("[DemoCISoakProbe] full-stack " + stage + " PASS [" + report + "]");
             return true;
+        }
+
+        private static int[] CaptureIntegratedServiceCounts()
+        {
+            MonoBehaviour[] behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+            int[] counts = new int[IntegratedDirectorTypeNames.Length];
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                MonoBehaviour behaviour = behaviours[i];
+                if (behaviour == null) continue;
+                string fullName = behaviour.GetType().FullName;
+                for (int j = 0; j < IntegratedDirectorTypeNames.Length; j++)
+                {
+                    if (string.Equals(fullName, IntegratedDirectorTypeNames[j], StringComparison.Ordinal))
+                    {
+                        counts[j]++;
+                        break;
+                    }
+                }
+            }
+            return counts;
         }
 
         private static string ShortServiceName(string fullName)
