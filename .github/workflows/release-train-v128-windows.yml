@@ -63,6 +63,13 @@ jobs:
           grep -q 'CountDuplicateServices' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
           grep -q 'rounds=80,90,100' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
 
+          grep -q 'IntegratedDirectorTypeNames' Assets/Scripts/DemoCISoakProbe.cs
+          grep -q 'IntegratedStackReady' Assets/Scripts/DemoCISoakProbe.cs
+          grep -q 'ValidateIntegratedStack("pre-soak")' Assets/Scripts/DemoCISoakProbe.cs
+          grep -q 'ValidateIntegratedStack("round " + round + " pressure")' Assets/Scripts/DemoCISoakProbe.cs
+          grep -q 'minServices=' Assets/Scripts/DemoCISoakProbe.cs
+          grep -q 'maxDuplicates=' Assets/Scripts/DemoCISoakProbe.cs
+
           if grep -Eq 'SpawnProjectile|\.Damage\(|AddComponent<Health>|AddComponent<Projectile>|\.MovePosition\(|TacticalNavigationAgent|AwardMissionBonds|AddWarBonds|BindingFlags\.NonPublic|GetField\(' Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs; then
             echo 'v12.8 integration sentinel contains forbidden gameplay/damage/movement/economy/private-reflection authority.' >&2
             exit 1
@@ -150,52 +157,78 @@ jobs:
           allowDirtyBuild: true
 
       - name: Discover, verify and package exact Windows x64 candidate
-        shell: bash
+        shell: python
         run: |
-          set -euo pipefail
-          mkdir -p build
+          from pathlib import Path
+          import hashlib
+          import os
+          import zipfile
 
-          # Keep a deterministic discovery report even when the layout contract fails.
-          find build -maxdepth 6 -printf '%y %p\n' | sort | tee V128_RELEASE_TRAIN_BUILD_TREE.txt
+          build = Path('build')
+          build.mkdir(parents=True, exist_ok=True)
+          tree_path = Path('V128_RELEASE_TRAIN_BUILD_TREE.txt')
+          entries = []
+          for path in sorted(build.rglob('*'), key=lambda p: p.as_posix()):
+              entries.append(('d' if path.is_dir() else 'f') + ' ' + path.as_posix())
+          tree_text = '\n'.join(entries) + ('\n' if entries else '')
+          tree_path.write_text(tree_text, encoding='utf-8')
+          print(tree_text)
 
-          mapfile -t exe_candidates < <(find build -type f -name 'TankRevivalOverdrive.exe' -print | sort)
-          if [[ ${#exe_candidates[@]} -ne 1 ]]; then
-            echo "Expected exactly one TankRevivalOverdrive.exe below build/, found ${#exe_candidates[@]}." >&2
-            printf 'candidate: %s\n' "${exe_candidates[@]:-<none>}" >&2
-            exit 1
-          fi
+          exes = sorted(
+              (p for p in build.rglob('TankRevivalOverdrive.exe') if p.is_file()),
+              key=lambda p: p.as_posix())
+          data_dirs = sorted(
+              (p for p in build.rglob('TankRevivalOverdrive_Data') if p.is_dir()),
+              key=lambda p: p.as_posix())
+          pairs = [(exe, exe.parent / 'TankRevivalOverdrive_Data') for exe in exes
+                   if (exe.parent / 'TankRevivalOverdrive_Data').is_dir()]
 
-          exe_path="${exe_candidates[0]}"
-          runtime_dir="$(dirname "$exe_path")"
-          data_dir="$runtime_dir/TankRevivalOverdrive_Data"
-          if [[ ! -d "$data_dir" ]]; then
-            echo "EXE discovered at $exe_path but paired data directory is missing: $data_dir" >&2
-            exit 1
-          fi
+          print('EXE candidates:', [p.as_posix() for p in exes])
+          print('Data candidates:', [p.as_posix() for p in data_dirs])
+          if len(pairs) != 1 or len(data_dirs) != 1:
+              raise SystemExit(
+                  f'Expected exactly one complete EXE/data pair; exes={len(exes)} '
+                  f'data={len(data_dirs)} complete_pairs={len(pairs)}')
 
-          # Reject an ambiguous runtime layout instead of packaging the wrong build.
-          mapfile -t data_candidates < <(find build -type d -name 'TankRevivalOverdrive_Data' -print | sort)
-          if [[ ${#data_candidates[@]} -ne 1 || "${data_candidates[0]}" != "$data_dir" ]]; then
-            echo "Expected exactly one data directory paired with the EXE; found ${#data_candidates[@]}." >&2
-            printf 'data candidate: %s\n' "${data_candidates[@]:-<none>}" >&2
-            exit 1
-          fi
+          exe, data_dir = pairs[0]
+          if data_dir.resolve() != data_dirs[0].resolve():
+              raise SystemExit('The only data directory is not paired with the only complete EXE candidate.')
 
-          runtime_layout="$(realpath --relative-to=build "$runtime_dir")"
-          printf 'version=%s\ncommit=%s\nunity=%s\nruntime_layout=%s\nexe=TankRevivalOverdrive.exe\n' \
-            "$(cat VERSION)" "$GITHUB_SHA" "$UNITY_VERSION" "$runtime_layout" \
-            > "$runtime_dir/V128_RELEASE_TRAIN_BUILD.txt"
+          runtime = exe.parent.resolve()
+          build_root = build.resolve()
+          layout = runtime.relative_to(build_root).as_posix()
+          version = Path('VERSION').read_text(encoding='utf-8').strip()
+          attribution = runtime / 'V128_RELEASE_TRAIN_BUILD.txt'
+          attribution.write_text(
+              f'version={version}\n'
+              f'commit={os.environ["GITHUB_SHA"]}\n'
+              f'unity={os.environ["UNITY_VERSION"]}\n'
+              f'runtime_layout={layout}\n'
+              'exe=TankRevivalOverdrive.exe\n',
+              encoding='utf-8')
 
-          candidate_zip="$GITHUB_WORKSPACE/$CANDIDATE_ZIP"
-          rm -f "$candidate_zip"
-          (
-            cd "$runtime_dir"
-            zip -qr "$candidate_zip" .
-          )
-          test -s "$candidate_zip"
-          sha256sum "$candidate_zip" | tee V128_RELEASE_TRAIN_SHA256.txt
-          echo "Packaged runtime from: $runtime_dir"
-          cat "$runtime_dir/V128_RELEASE_TRAIN_BUILD.txt"
+          zip_path = Path(os.environ['GITHUB_WORKSPACE']) / os.environ['CANDIDATE_ZIP']
+          if zip_path.exists():
+              zip_path.unlink()
+          with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED, allowZip64=True) as archive:
+              for path in sorted(runtime.rglob('*'), key=lambda p: p.as_posix()):
+                  if path.is_file():
+                      archive.write(path, path.relative_to(runtime).as_posix())
+
+          if not zip_path.is_file() or zip_path.stat().st_size <= 0:
+              raise SystemExit('Candidate ZIP was not created or is empty.')
+
+          digest = hashlib.sha256()
+          with zip_path.open('rb') as stream:
+              for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                  digest.update(chunk)
+          sha_line = f'{digest.hexdigest()}  {zip_path.name}\n'
+          Path('V128_RELEASE_TRAIN_SHA256.txt').write_text(sha_line, encoding='utf-8')
+
+          print(f'Packaged runtime from: {runtime}')
+          print(attribution.read_text(encoding='utf-8'))
+          print(f'Candidate bytes: {zip_path.stat().st_size}')
+          print(sha_line.strip())
 
       - name: Upload build-discovery diagnostics
         if: always()
