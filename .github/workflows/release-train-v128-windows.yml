@@ -6,9 +6,13 @@ on:
     paths:
       - '.v128-release-train-trigger'
       - '.github/workflows/release-train-v128-windows.yml'
+      - '.github/scripts/package_v128_release_train.py'
+      - '.github/scripts/test_package_v128_release_train.py'
       - 'Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs'
       - 'Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs.meta'
       - 'Assets/Scripts/DemoCISoakProbe.cs'
+      - 'CHANGELOG_v12.8.md'
+      - 'VERSION'
   workflow_dispatch:
 
 permissions:
@@ -17,13 +21,28 @@ permissions:
 env:
   UNITY_VERSION: 6000.3.17f1
   CANDIDATE_ZIP: TankRevivalOverdrive-v12.8-release-train-Windows-x64.zip
+  PACKAGE_DIR: tro-v128-package
 
 jobs:
   source-contracts:
-    name: Verify v12.8 integration, authority and roadmap contracts
+    name: Verify v12.8 integration, packaging, authority and roadmap contracts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Verify exact workflow candidate checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "$(git rev-parse --abbrev-ref HEAD)" = 'dev-v12-8' || test "${GITHUB_REF_NAME}" = 'dev-v12-8'
+
+      - name: Run release-train packager fixture tests before Unity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile .github/scripts/package_v128_release_train.py .github/scripts/test_package_v128_release_train.py
+          python .github/scripts/test_package_v128_release_train.py
 
       - name: Verify release-train implementation and authority boundaries
         shell: bash
@@ -32,6 +51,8 @@ jobs:
           test -f Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs
           test -f Assets/Scripts/ReleaseTrainIntegrationCISmokeProbe.cs.meta
           test -f Assets/Scripts/DemoCISoakProbe.cs
+          test -f .github/scripts/package_v128_release_train.py
+          test -f .github/scripts/test_package_v128_release_train.py
           test -f CHANGELOG_v12.8.md
           test "$(cat VERSION)" = 'v12.8.0-dev'
 
@@ -75,7 +96,6 @@ jobs:
             exit 1
           fi
 
-          # Preserve key hard caps from the integrated stack.
           grep -q 'MaxRetaskedSpecialists = 8' Assets/Scripts/CombinedArmsMobileFrontDirector.cs
           grep -q 'MaxColumns = 1' Assets/Scripts/OperationalSustainmentDirector.cs
           grep -q 'MaxEscorts = 4' Assets/Scripts/OperationalSustainmentDirector.cs
@@ -115,7 +135,7 @@ jobs:
           print('v12.8 scope/dashboard: PASS')
 
   build-candidate:
-    name: Build one exact v12.8 Windows x64 release-train candidate
+    name: Build and package one exact v12.8 Windows x64 candidate
     needs: source-contracts
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -129,6 +149,7 @@ jobs:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         run: |
+          set -euo pipefail
           test -n "$UNITY_LICENSE"
           test -n "$UNITY_EMAIL"
           test -n "$UNITY_PASSWORD"
@@ -156,79 +177,19 @@ jobs:
           buildMethod: TankRevival.Editor.CIBuild.BuildWindows
           allowDirtyBuild: true
 
-      - name: Discover, verify and package exact Windows x64 candidate
-        shell: python
+      - name: Discover, stage, verify and package exact Windows x64 candidate
+        shell: bash
         run: |
-          from pathlib import Path
-          import hashlib
-          import os
-          import zipfile
-
-          build = Path('build')
-          build.mkdir(parents=True, exist_ok=True)
-          tree_path = Path('V128_RELEASE_TRAIN_BUILD_TREE.txt')
-          entries = []
-          for path in sorted(build.rglob('*'), key=lambda p: p.as_posix()):
-              entries.append(('d' if path.is_dir() else 'f') + ' ' + path.as_posix())
-          tree_text = '\n'.join(entries) + ('\n' if entries else '')
-          tree_path.write_text(tree_text, encoding='utf-8')
-          print(tree_text)
-
-          exes = sorted(
-              (p for p in build.rglob('TankRevivalOverdrive.exe') if p.is_file()),
-              key=lambda p: p.as_posix())
-          data_dirs = sorted(
-              (p for p in build.rglob('TankRevivalOverdrive_Data') if p.is_dir()),
-              key=lambda p: p.as_posix())
-          pairs = [(exe, exe.parent / 'TankRevivalOverdrive_Data') for exe in exes
-                   if (exe.parent / 'TankRevivalOverdrive_Data').is_dir()]
-
-          print('EXE candidates:', [p.as_posix() for p in exes])
-          print('Data candidates:', [p.as_posix() for p in data_dirs])
-          if len(pairs) != 1 or len(data_dirs) != 1:
-              raise SystemExit(
-                  f'Expected exactly one complete EXE/data pair; exes={len(exes)} '
-                  f'data={len(data_dirs)} complete_pairs={len(pairs)}')
-
-          exe, data_dir = pairs[0]
-          if data_dir.resolve() != data_dirs[0].resolve():
-              raise SystemExit('The only data directory is not paired with the only complete EXE candidate.')
-
-          runtime = exe.parent.resolve()
-          build_root = build.resolve()
-          layout = runtime.relative_to(build_root).as_posix()
-          version = Path('VERSION').read_text(encoding='utf-8').strip()
-          attribution = runtime / 'V128_RELEASE_TRAIN_BUILD.txt'
-          attribution.write_text(
-              f'version={version}\n'
-              f'commit={os.environ["GITHUB_SHA"]}\n'
-              f'unity={os.environ["UNITY_VERSION"]}\n'
-              f'runtime_layout={layout}\n'
-              'exe=TankRevivalOverdrive.exe\n',
-              encoding='utf-8')
-
-          zip_path = Path(os.environ['GITHUB_WORKSPACE']) / os.environ['CANDIDATE_ZIP']
-          if zip_path.exists():
-              zip_path.unlink()
-          with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED, allowZip64=True) as archive:
-              for path in sorted(runtime.rglob('*'), key=lambda p: p.as_posix()):
-                  if path.is_file():
-                      archive.write(path, path.relative_to(runtime).as_posix())
-
-          if not zip_path.is_file() or zip_path.stat().st_size <= 0:
-              raise SystemExit('Candidate ZIP was not created or is empty.')
-
-          digest = hashlib.sha256()
-          with zip_path.open('rb') as stream:
-              for chunk in iter(lambda: stream.read(1024 * 1024), b''):
-                  digest.update(chunk)
-          sha_line = f'{digest.hexdigest()}  {zip_path.name}\n'
-          Path('V128_RELEASE_TRAIN_SHA256.txt').write_text(sha_line, encoding='utf-8')
-
-          print(f'Packaged runtime from: {runtime}')
-          print(attribution.read_text(encoding='utf-8'))
-          print(f'Candidate bytes: {zip_path.stat().st_size}')
-          print(sha_line.strip())
+          set -euo pipefail
+          python .github/scripts/package_v128_release_train.py \
+            --build-root build \
+            --output-dir "${RUNNER_TEMP}/${PACKAGE_DIR}" \
+            --candidate-sha "${GITHUB_SHA}" \
+            --commit-sha "${GITHUB_SHA}" \
+            --unity-version "${UNITY_VERSION}" \
+            --version-file VERSION \
+            --zip-name "${CANDIDATE_ZIP}" \
+            --diagnostics-path "${GITHUB_WORKSPACE}/V128_RELEASE_TRAIN_BUILD_TREE.txt"
 
       - name: Upload build-discovery diagnostics
         if: always()
@@ -244,8 +205,9 @@ jobs:
         with:
           name: TankRevivalOverdrive-v12.8-release-train-Windows-x64
           path: |
-            ${{ env.CANDIDATE_ZIP }}
-            V128_RELEASE_TRAIN_SHA256.txt
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/${{ env.CANDIDATE_ZIP }}
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/V128_RELEASE_TRAIN_SHA256.txt
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/V128_RELEASE_TRAIN_PROVENANCE.json
           if-no-files-found: error
           retention-days: 14
 
@@ -253,7 +215,7 @@ jobs:
     name: Run v12.0-v12.8 plus 80/90/100 soak on the same EXE
     needs: build-candidate
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - name: Download exact candidate
         uses: actions/download-artifact@v4
@@ -261,18 +223,30 @@ jobs:
           name: TankRevivalOverdrive-v12.8-release-train-Windows-x64
           path: candidate
 
-      - name: Extract and verify candidate attribution
+      - name: Verify package digest, provenance and attribution
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location candidate
-          Expand-Archive '${{ env.CANDIDATE_ZIP }}' -DestinationPath runtime -Force
+          $zip = '${{ env.CANDIDATE_ZIP }}'
+          if (!(Test-Path $zip)) { throw 'release-train ZIP missing' }
+          if (!(Test-Path 'V128_RELEASE_TRAIN_SHA256.txt')) { throw 'release-train SHA256 file missing' }
+          if (!(Test-Path 'V128_RELEASE_TRAIN_PROVENANCE.json')) { throw 'release-train provenance missing' }
+          $expectedHash = ((Get-Content 'V128_RELEASE_TRAIN_SHA256.txt' -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
+          $actualHash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -ne $expectedHash) { throw "candidate ZIP digest mismatch: expected=$expectedHash actual=$actualHash" }
+          $provenance = Get-Content 'V128_RELEASE_TRAIN_PROVENANCE.json' -Raw | ConvertFrom-Json
+          if ($provenance.candidate_sha -ne '${{ github.sha }}') { throw 'provenance candidate SHA does not match workflow head SHA' }
+          if ($provenance.commit_sha -ne '${{ github.sha }}') { throw 'provenance commit SHA does not match workflow head SHA' }
+          if ($provenance.sha256 -ne $actualHash) { throw 'provenance SHA256 does not match downloaded ZIP' }
+          Expand-Archive $zip -DestinationPath runtime -Force
           if (!(Test-Path 'runtime/TankRevivalOverdrive.exe')) { throw 'EXE missing after extraction' }
           if (!(Test-Path 'runtime/TankRevivalOverdrive_Data')) { throw 'Unity data directory missing after extraction' }
           if (!(Test-Path 'runtime/V128_RELEASE_TRAIN_BUILD.txt')) { throw 'release-train attribution file missing' }
           $info = Get-Content 'runtime/V128_RELEASE_TRAIN_BUILD.txt' -Raw
-          if ($info -notmatch '${{ github.sha }}') { throw 'packaged build commit does not match workflow candidate SHA' }
+          if ($info -notmatch 'candidate_sha=${{ github.sha }}') { throw 'packaged build attribution does not match workflow candidate SHA' }
           Get-Content 'runtime/V128_RELEASE_TRAIN_BUILD.txt'
+          Write-Host "Verified package SHA256: $actualHash"
 
       - name: Run complete single-binary smoke matrix
         shell: pwsh
