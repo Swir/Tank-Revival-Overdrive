@@ -2,21 +2,22 @@
 
 <div align="center">
 
-# TANK REVIVAL: ORZEŁ OVERDRIVE
+<img width="100%" src="assets/readme/hero.svg" alt="Tank Revival: Orzeł Overdrive — 2.5D tank-defense action game" />
+
+<br>
 
 **A 2.5D top-down tank-defense action game built in Unity 6 for Windows.**
 
-Defend the **Orzełek stronghold** through a 100-round campaign of armored assaults, specialist formations, supply warfare, electronic operations and multi-phase boss battles.
+Defend the **Orzełek stronghold** through a 100-round campaign of armored assaults, specialist formations, supply warfare, electronic operations, adaptive enemy doctrine and multi-phase boss battles.
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)](https://github.com/Swir/Tank-Revival-Overdrive/releases)
 [![Unity](https://img.shields.io/badge/Unity-6000.3.17f1-02050A?style=for-the-badge&logo=unity&logoColor=62E5FF)](https://unity.com/)
 [![Roadmap](https://img.shields.io/badge/Roadmap-100.0%25%20V13.2%20Qualified-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
-[![v13.0 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/encounter-warfare-v130-windows.yml/badge.svg?branch=dev-v13-0)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/encounter-warfare-v130-windows.yml)
+[![v13.2 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/adaptive-command-v132-windows.yml/badge.svg?branch=dev-v13-2)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/adaptive-command-v132-windows.yml)
 
 [**Highlights**](#-highlights) · [**Download**](#-quick-start--download) · [**Controls**](#-controls) · [**Roadmap**](#-roadmap--quality-gates) · [**Releases**](#-releases)
 
 </div>
-
 
 <!-- SWIR-PROGRESS-SVG-PRO:v1 -->
 <p align="center"><img src="assets/readme/progress-card.svg" alt="SWIR project roadmap progress" width="760"></p>
@@ -34,7 +35,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 | Development engine | **Unity 6000.3.17f1** |
 | Latest public demo | **v6.3.0-demo** — prerelease |
 | Latest stable release | **v2.2.0** |
-| Main branch | Kept separate from active milestone development until integration is intentionally performed |
+| Public release readiness | Tracked separately from roadmap completion by packaged Windows gates |
 
 `ROADMAP.md` is the authoritative source for milestone completion. A checkbox is completed only after the corresponding implementation exists and its required verification has passed.
 
@@ -42,23 +43,25 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 Tank Revival: Orzeł Overdrive is an original top-down armored action game focused on defending the Orzełek stronghold while the battlefield becomes increasingly complex across 100 rounds.
 
-The campaign combines direct tank combat with directional armor, component damage, special ammunition, field repair, tactical enemy roles, supply and route pressure, electronic warfare, fire-support intelligence and deterministic encounter escalation. Every tenth round becomes a boss assault, while late-game encounter pressure is kept inside explicit runtime and CI budgets instead of relying on uncontrolled spawn growth.
+The campaign combines direct tank combat with directional armor, component damage, special ammunition, field repair, tactical enemy roles, dynamic objectives, supply and route pressure, electronic warfare, fire-support intelligence and deterministic encounter escalation. Every tenth round becomes a boss assault, while late-game pressure stays inside explicit runtime and CI budgets instead of relying on uncontrolled spawn growth.
 
 ## ⚡ Highlights
 
 | Feature | What it changes in play |
 |---|---|
 | 🦅 **Orzełek defense** | Protect a persistent stronghold whose defenses and battlefield pressure escalate through the campaign. |
-| 💯 **100-round encounter campaign** | Deterministic encounter plans, five campaign acts and eight doctrine families create controlled escalation from round 1 to 100. |
-| 👑 **Multi-phase bosses** | Boss behavior escalates through health/component-driven phases while the existing movement, projectile and survivability authorities remain canonical. |
+| 💯 **100-round encounter campaign** | Deterministic encounter planning creates controlled escalation from round 1 to 100. |
+| 🧠 **Adaptive enemy command v13.2** | A bounded 8-round combat history can shift enemy doctrine between seven tactical responses without creating a second AI/movement authority. |
+| 🎯 **Dynamic objective warfare** | Objective planning layers mission pressure onto the existing round/spawn loop instead of replacing it. |
+| 👑 **Multi-phase bosses** | Boss behavior escalates through health/component-driven phases while existing movement, projectile and survivability authorities remain canonical. |
 | 🛡️ **Directional armor & modules** | Front/side/rear armor, ricochets and engine/tracks/gun/ammo-rack degradation affect how vehicles move and fight. |
 | 🔧 **Emergency repair warfare** | Limited, interruptible field repair can recover damaged modules without healing vehicle HP. |
 | 💥 **7 ammunition modes** | Standard, AP, HE, Incendiary, EMP, Twin Shot and Plasma provide distinct anti-armor, area, disruption and penetration roles. |
 | 🚜 **8 enemy classes** | Basic, Fast, Heavy, Sniper, Siege, Elite, Supply and Boss units create different target and positioning priorities. |
-| 📡 **Operational warfare stack** | Combined Arms, sustainment, route intelligence, Recon/EW, Mobile Signal and SIGINT feed bounded read-only encounter pressure/relief decisions. |
+| 📡 **Operational warfare stack** | Combined Arms, sustainment, route intelligence, Recon/EW, Mobile Signal and SIGINT feed bounded encounter decisions. |
 | 🎯 **Independent hull and turret control** | Drive, aim and fire independently instead of locking the cannon to chassis direction. |
 | ✨ **Procedural 2.5D presentation** | Animated tracks, recoil, muzzle flashes, trails, smoke, sparks, explosions, tactical telegraphs and pooled combat feedback. |
-| 🧪 **Exact-candidate Windows qualification** | CI builds one Windows executable, verifies provenance, runs v13.0 smoke plus v12.9/v12.8 regressions and late-round 80/90/100 soak on that same binary. |
+| 🧪 **Exact-candidate qualification** | One packaged Windows EXE must pass v13.2 plus v13.1/v13.0/v12.9/v12.8 regressions and late-round 80/90/100 soak. |
 
 ## 🔫 Ammunition
 
@@ -90,6 +93,8 @@ Unity is **not required** to play a packaged Windows build.
 - Stable release: [`v2.2.0`](https://github.com/Swir/Tank-Revival-Overdrive/releases/tag/v2.2.0)
 - All releases: https://github.com/Swir/Tank-Revival-Overdrive/releases
 
+> A qualified development milestone is not automatically a public release. Use the Releases page for actual downloadable public versions.
+
 ### From source
 
 Clone the repository and open the Unity project with the editor version used by current CI:
@@ -108,7 +113,7 @@ Active milestone work lives on dedicated `dev-vX-Y` / `dev-vX.Y` branches. For r
 | OS | Windows 10 / 11 x64 |
 | Packaged game | Portable ZIP containing EXE + `_Data` runtime |
 | Unity required to play | No |
-| Source development | Unity 6000.3.17f1 for the current v13.0 CI path |
+| Source development | Unity 6000.3.17f1 for the qualified v13.2 CI path |
 | Input | Keyboard + mouse |
 
 Other platforms are not advertised as supported unless a dedicated verified build exists.
@@ -134,11 +139,15 @@ Other platforms are not advertised as supported unless a dedicated verified buil
 
 Vehicle survivability stays under the canonical `Health` authority, while `ArmorSystem` resolves directional protection and progressive module degradation. Engine, tracks, gun and ammunition-rack state can affect mobility, reload, weapon function and AI casualty behavior without creating a second HP model.
 
-### Encounter Director v13.0
+### Encounter and objective stack
 
-`EncounterPlannerV130` deterministically plans all 100 rounds with explicit enemy-count, concurrency and spawn-cadence limits. The live campaign consumes those plans through the existing `TankGame` round/spawn authority.
+`EncounterPlannerV130` deterministically plans the 100-round campaign with explicit enemy-count, concurrency and spawn-cadence limits. Objective warfare layers additional mission intent over that plan while the live campaign still consumes all spawning through the existing `TankGame` authority.
 
-The v13.0 cross-system doctrine layer reads bounded public state from Mobile Front, Operational Sustainment, Route Intelligence, Recon/EW, Mobile Signal and SIGINT. It can adjust live pressure only inside small hard limits; it does not take control of those systems, movement, damage, projectiles or rewards.
+The cross-system doctrine layer reads bounded public state from Mobile Front, Operational Sustainment, Route Intelligence, Recon/EW, Mobile Signal and SIGINT. It adjusts pressure only inside hard limits and does not take control of those systems, movement, damage, projectiles or rewards.
+
+### Adaptive Enemy Command v13.2
+
+`AdaptiveEnemyCommandV132` observes a fixed eight-round combat-history window and selects between seven bounded doctrines with hysteresis and repeat caps. It can influence composition, concurrency, cadence and existing `EnemyTank` intent only within hard limits. A deterministic `RecoveryWindow` can reduce pressure after sustained player/Orzełek distress instead of using hidden healing, enemy deletion or invulnerability.
 
 ### Orzełek escalation
 
@@ -156,7 +165,8 @@ Late-campaign defense can strengthen the flanking shoulders while preserving a d
 | Enemy movement/weapon ownership | Existing `EnemyTank` / Rigidbody2D combat path |
 | Tactical/operational layers | Bounded directors and read-only integration snapshots |
 | Windows CI | GitHub Actions + Unity builder + deterministic packaging/provenance checks |
-| Regression strategy | Packaged-EXE smoke plus late-round 80/90/100 soak |
+| CI bootstrap | Versioned static `Assets/Scenes/Bootstrap.unity`; headless build does not create/save scene assets |
+| Regression strategy | Same packaged EXE through current smoke, historical regressions and late-round soak |
 
 The project intentionally avoids parallel damage, movement and economy authorities when new tactical layers are introduced.
 
@@ -164,32 +174,34 @@ The project intentionally avoids parallel damage, movement and economy authoriti
 
 The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **407 / 407 (100.0%) — V13.2 QUALIFIED**. Release readiness is tracked separately by exact-candidate Windows qualification gates.
 
-Recent qualified milestone layers include full-stack v12.8 integration, v12.9 component damage/emergency repair warfare and v13.0 100-round encounter/boss phase warfare.
+Recent qualified milestone layers include v13.0 encounter/boss warfare, v13.1 objective warfare and v13.2 adaptive enemy command. The v13.2 exact-candidate gate requires source/authority contracts, a clean Unity Windows x64 build, deterministic packaging and one exact packaged EXE running:
 
-Qualification is not based on version numbers or commit count. The v13.0 gate requires source/authority contracts, a Unity Windows x64 build, deterministic packaging and one exact packaged EXE running:
-
-- v13.0 encounter/cross-stack/boss smoke;
+- v13.2 adaptive-command smoke across the planned campaign;
+- v13.1 objective regression;
+- v13.0 encounter/cross-stack/boss regression;
 - v12.9 component/repair/casualty/presentation regression;
 - v12.8 full-stack integration regression;
 - late-round soak covering rounds 80 / 90 / 100.
 
+The qualified v13.2 candidate is `538c4a3790749bcb9180f2d49e6fff4bed9f0f45`; its Windows qualification and exact-SHA roadmap finalization both completed successfully before the roadmap changed to 100%.
+
 ## 📦 Releases
 
-The development branch being qualified does **not** automatically replace the public release line.
+The qualified development branch does **not** automatically replace the public release line.
 
 - **Latest public demo:** `v6.3.0-demo` (prerelease)
 - **Latest stable release:** `v2.2.0`
-- **Development milestone:** v13.0 is qualified on its development branch but has not been published here as a new public v13.0 release.
+- **Development milestone:** v13.2 is qualified on `dev-v13-2` but has not been published as a new public v13.2 release.
 
-This separation keeps public downloads distinct from experimental or not-yet-integrated milestone work.
+This separation keeps public downloads distinct from qualified-but-not-yet-published development milestones.
 
 ## 🎨 Creative Direction
 
-Tank Revival: Orzeł Overdrive is an original project with its own code and procedural game presentation. It uses broad top-down tank-action conventions but does not depend on ripped maps, sprites, audio or other assets from existing games.
+Tank Revival: Orzeł Overdrive is an original project with its own code, project branding and procedural game presentation. It uses broad top-down tank-action conventions but does not depend on ripped maps, sprites, audio or other assets from existing games.
 
 ## 🔎 Search Keywords
 
-`tank defense game` • `Windows tank game` • `2.5D tank action` • `top down tank game` • `Unity 6 game` • `C# Unity game` • `100 round campaign` • `boss tank battles` • `tank armor simulation` • `component damage system` • `special ammunition game` • `Orzelek defense` • `procedural combat effects` • `Windows x64 game` • `GitHub Actions Unity build`
+`tank defense game` • `Windows tank game` • `2.5D tank action` • `top down tank game` • `Unity 6 game` • `C# Unity game` • `100 round campaign` • `adaptive enemy AI` • `tank command AI` • `boss tank battles` • `tank armor simulation` • `component damage system` • `special ammunition game` • `Orzelek defense` • `procedural combat effects` • `Windows x64 game` • `Unity GitHub Actions` • `headless Unity CI`
 
 ---
 
