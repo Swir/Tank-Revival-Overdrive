@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace TankRevival
 {
-    /// <summary>Packaged-EXE qualification for v12.9 component degradation, casualty tactics and finite emergency repair warfare.</summary>
+    /// <summary>Packaged-EXE qualification for v12.9 component degradation, casualty tactics, pooled presentation and finite emergency repair warfare.</summary>
     public sealed class ComponentDamageRepairCISmokeProbe : MonoBehaviour
     {
         public const string PassMarker = "V12_9_COMPONENT_DAMAGE_REPAIR_OK.txt";
@@ -34,8 +34,11 @@ namespace TankRevival
                 if (!ArmorSystem.ConfigurationValid) { Fail("ArmorSystem v12.9 configuration invalid"); return; }
                 if (!EmergencyRepairSystem.ConfigurationValid) { Fail("emergency repair configuration invalid"); return; }
                 if (!ComponentCasualtyTactics.ConfigurationValid) { Fail("component casualty tactics configuration invalid"); return; }
+                if (!ComponentDamagePresentationDirector.ConfigurationValid) { Fail("component presentation configuration invalid"); return; }
                 if (!ComponentDamageRepairDirector.ConfigurationValid) { Fail("component repair director configuration invalid"); return; }
                 if (ComponentDamageRepairDirector.Instance == null) { Fail("component repair director was not installed at runtime"); return; }
+                if (ComponentDamagePresentationDirector.Instance == null) { Fail("component presentation director was not installed at runtime"); return; }
+                if (CinematicCombatFeedbackDirector.Instance == null) { Fail("v12.7 cinematic combat feedback service missing"); return; }
 
                 if (ArmorSystem.ConditionFor(71) != ModuleCondition.Operational ||
                     ArmorSystem.ConditionFor(70) != ModuleCondition.Damaged ||
@@ -86,6 +89,14 @@ namespace TankRevival
                 if (ComponentCasualtyTactics.SpeedScale(ComponentCasualtyTactic.Recover) != 0f || ComponentCasualtyTactics.SpeedScale(ComponentCasualtyTactic.Screen) >= 1f)
                 { Fail("casualty speed policy violates hold/screen bounds"); return; }
 
+                float disabledPulse = ComponentDamagePresentationDirector.PulseRatio(ModuleCondition.Disabled, false);
+                float criticalPulse = ComponentDamagePresentationDirector.PulseRatio(ModuleCondition.Critical, false);
+                float damagedPulse = ComponentDamagePresentationDirector.PulseRatio(ModuleCondition.Damaged, false);
+                if (!(disabledPulse < criticalPulse && criticalPulse < damagedPulse && damagedPulse <= CinematicCombatFeedbackDirector.DamagedThreshold))
+                { Fail("component presentation severity does not map monotonically into v12.7 pooled damage language"); return; }
+                if (ComponentDamagePresentationDirector.GlyphPoolCapacity > 8 || ComponentDamagePresentationDirector.MaxTrackedEmitters > ComponentDamageRepairDirector.MaxTrackedRepairSystems)
+                { Fail("component presentation resource caps are invalid"); return; }
+
                 fixture = new GameObject("v12_9_component_repair_fixture");
                 Health health = fixture.AddComponent<Health>();
                 health.Initialize(Team.Player, 200, 173);
@@ -93,6 +104,17 @@ namespace TankRevival
                 armor.InitializePlayer();
                 EmergencyRepairSystem repair = fixture.AddComponent<EmergencyRepairSystem>();
                 repair.ConfigureForSmoke();
+
+                int presentationBefore = ComponentDamagePresentationDirector.Instance.PublishedCues;
+                if (!ComponentDamagePresentationDirector.RequestModuleCue(armor, TankModule.Engine, 100, 35))
+                { Fail("critical engine presentation cue was not accepted"); return; }
+                if (!ComponentDamagePresentationDirector.RequestModuleCue(armor, TankModule.Engine, 35, 73))
+                { Fail("repair presentation cue was not accepted"); return; }
+                if (ComponentDamagePresentationDirector.Instance.PublishedCues < presentationBefore + 2 ||
+                    ComponentDamagePresentationDirector.Instance.ActiveCueCount > ComponentDamagePresentationDirector.GlyphPoolCapacity ||
+                    ComponentDamagePresentationDirector.Instance.LastModule != TankModule.Engine ||
+                    !ComponentDamagePresentationDirector.Instance.LastWasRepair)
+                { Fail("bounded component presentation state/cap contract failed"); return; }
 
                 int hpBefore = health.Current;
                 float mobilityBefore = armor.MobilityMultiplier;
@@ -130,10 +152,11 @@ namespace TankRevival
                 { Fail("disabled weapon did not suppress firing through casualty doctrine"); return; }
 
                 string report =
-                    "v12.9 component damage + emergency repair + casualty tactics smoke: PASS\n" +
+                    "v12.9 component damage + emergency repair + casualty tactics + pooled presentation smoke: PASS\n" +
                     "Version: " + Application.version + "\n" +
                     "matrixCases=" + matrixCases + " severitySum=" + severitySum + " tacticCases=" + tacticCases + "\n" +
                     "thresholds=70/35/12 charges=" + repair.CompletedRepairs + "/" + EmergencyRepairSystem.MaxCharges + " remaining=" + repair.ChargesRemaining + "\n" +
+                    "presentationCues=" + ComponentDamagePresentationDirector.Instance.PublishedCues + " active=" + ComponentDamagePresentationDirector.Instance.ActiveCueCount + "/" + ComponentDamagePresentationDirector.GlyphPoolCapacity + " cinematicPool=" + CinematicCombatFeedbackDirector.PoolCapacity + "\n" +
                     "moduleStatus=" + armor.CompactStatus() + "\n" +
                     "mobility=" + armor.MobilityMultiplier.ToString("0.000") + " reload=" + armor.ReloadMultiplier.ToString("0.000") +
                     " weapon=" + armor.WeaponFunctionMultiplier.ToString("0.000") + " playerSpread=" + playerSpread.ToString("0.000") +

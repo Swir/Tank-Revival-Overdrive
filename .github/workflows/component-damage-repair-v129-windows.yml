@@ -8,9 +8,14 @@ on:
       - 'Assets/Scripts/ComponentDamageWarfare.cs'
       - 'Assets/Scripts/ArmorSystem.cs'
       - 'Assets/Scripts/EmergencyRepairSystem.cs'
+      - 'Assets/Scripts/ComponentCasualtyTactics.cs'
+      - 'Assets/Scripts/ComponentCasualtyTactics.cs.meta'
       - 'Assets/Scripts/ComponentDamageRepairDirector.cs'
+      - 'Assets/Scripts/ComponentDamagePresentationDirector.cs'
+      - 'Assets/Scripts/ComponentDamagePresentationDirector.cs.meta'
       - 'Assets/Scripts/ComponentDamageRepairCISmokeProbe.cs'
       - 'Assets/Scripts/ComponentDamageRepairCISmokeProbe.cs.meta'
+      - 'Assets/Scripts/CinematicCombatFeedbackDirector.cs'
       - 'Assets/Scripts/PlayerTank.cs'
       - 'Assets/Scripts/EnemyTank.cs'
       - 'Assets/Scripts/FireControlBallisticsDirector.cs'
@@ -32,7 +37,7 @@ env:
 
 jobs:
   source-contracts:
-    name: Verify v12.9 component, repair, authority and roadmap contracts
+    name: Verify v12.9 component, casualty AI, presentation, authority and roadmap contracts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +53,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in Assets/Scripts/ComponentDamageWarfare.cs Assets/Scripts/ArmorSystem.cs Assets/Scripts/EmergencyRepairSystem.cs Assets/Scripts/ComponentDamageRepairDirector.cs Assets/Scripts/ComponentDamageRepairCISmokeProbe.cs Assets/Scripts/PlayerTank.cs Assets/Scripts/EnemyTank.cs Assets/Scripts/FireControlBallisticsDirector.cs Assets/Scripts/Projectile.cs CHANGELOG_v12.9.md; do test -f "$f"; done
+          for f in Assets/Scripts/ComponentDamageWarfare.cs Assets/Scripts/ArmorSystem.cs Assets/Scripts/EmergencyRepairSystem.cs Assets/Scripts/ComponentCasualtyTactics.cs Assets/Scripts/ComponentDamageRepairDirector.cs Assets/Scripts/ComponentDamagePresentationDirector.cs Assets/Scripts/ComponentDamageRepairCISmokeProbe.cs Assets/Scripts/CinematicCombatFeedbackDirector.cs Assets/Scripts/PlayerTank.cs Assets/Scripts/EnemyTank.cs Assets/Scripts/FireControlBallisticsDirector.cs Assets/Scripts/Projectile.cs CHANGELOG_v12.9.md; do test -f "$f"; done
           test "$(cat VERSION)" = 'v12.9.0-dev'
           grep -q 'DamagedThreshold = 70' Assets/Scripts/ArmorSystem.cs
           grep -q 'CriticalThreshold = 35' Assets/Scripts/ArmorSystem.cs
@@ -60,6 +65,13 @@ jobs:
           grep -q 'ChannelSeconds = 2.6f' Assets/Scripts/EmergencyRepairSystem.cs
           grep -q 'CooldownSeconds = 10f' Assets/Scripts/EmergencyRepairSystem.cs
           grep -q 'MaxTrackedRepairSystems = 128' Assets/Scripts/ComponentDamageRepairDirector.cs
+          grep -q 'ComponentCasualtyTactics.Resolve' Assets/Scripts/EnemyTank.cs
+          grep -q 'CurrentCasualtyTactic' Assets/Scripts/EnemyTank.cs
+          grep -q 'ComponentCasualtyTactics.Resolve' Assets/Scripts/ComponentDamageRepairDirector.cs
+          grep -q 'GlyphPoolCapacity = 6' Assets/Scripts/ComponentDamagePresentationDirector.cs
+          grep -q 'MaxTrackedEmitters = 128' Assets/Scripts/ComponentDamagePresentationDirector.cs
+          grep -q 'CinematicCombatFeedbackDirector.RequestDamagePulse' Assets/Scripts/ComponentDamagePresentationDirector.cs
+          grep -q 'ComponentDamagePresentationEmitter' Assets/Scripts/ComponentDamageRepairDirector.cs
           grep -q 'MobilityMultiplier' Assets/Scripts/PlayerTank.cs
           grep -q 'ReloadMultiplier' Assets/Scripts/PlayerTank.cs
           grep -q 'MobilityMultiplier' Assets/Scripts/EnemyTank.cs
@@ -68,9 +80,11 @@ jobs:
           grep -q 'ComponentDamageWarfare.PreferredModule' Assets/Scripts/ArmorSystem.cs
           grep -q 'V12_9_COMPONENT_DAMAGE_REPAIR_OK.txt' Assets/Scripts/ComponentDamageRepairCISmokeProbe.cs
           grep -q 'matrixCases != 21' Assets/Scripts/ComponentDamageRepairCISmokeProbe.cs
+          grep -q 'tacticCases' Assets/Scripts/ComponentDamageRepairCISmokeProbe.cs
+          grep -q 'GlyphPoolCapacity' Assets/Scripts/ComponentDamageRepairCISmokeProbe.cs
           grep -q 'CompleteImmediatelyForSmoke' Assets/Scripts/ComponentDamageRepairCISmokeProbe.cs
-          if grep -Eq '\.Damage\(|\.Heal\(|SpawnProjectile|\.MovePosition\(|AddWarBonds|AwardMissionBonds|BindingFlags\.NonPublic|GetField\(' Assets/Scripts/ComponentDamageRepairDirector.cs Assets/Scripts/EmergencyRepairSystem.cs; then
-            echo 'v12.9 repair layer contains forbidden Health/projectile/movement/economy/private-reflection authority.' >&2; exit 1
+          if grep -Eq '\.Damage\(|\.Heal\(|SpawnProjectile|\.MovePosition\(|AddWarBonds|AwardMissionBonds|BindingFlags\.NonPublic|GetField\(' Assets/Scripts/ComponentCasualtyTactics.cs Assets/Scripts/ComponentDamageRepairDirector.cs Assets/Scripts/ComponentDamagePresentationDirector.cs Assets/Scripts/EmergencyRepairSystem.cs; then
+            echo 'v12.9 additive AI/repair/presentation layer contains forbidden Health/projectile/movement/economy/private-reflection authority.' >&2; exit 1
           fi
       - name: Verify ROADMAP scope and SWIR v1 dashboard
         shell: python
@@ -185,7 +199,7 @@ jobs:
             if(Test-Path $Log){if(Select-String -Path $Log -Pattern $blocking -Quiet){Get-Content $Log -Tail 400; throw "$Name blocking exception signature"}}
             Get-Content $Pass; Write-Host "$Name PASS"
           }
-          Invoke-Smoke 'v12.9 component/repair' '-tr-v129-smoke' 'V12_9_COMPONENT_DAMAGE_REPAIR_OK.txt' 'V12_9_COMPONENT_DAMAGE_REPAIR_FAIL.txt' 'V129Player.log' 80000
+          Invoke-Smoke 'v12.9 component/repair/casualty/presentation' '-tr-v129-smoke' 'V12_9_COMPONENT_DAMAGE_REPAIR_OK.txt' 'V12_9_COMPONENT_DAMAGE_REPAIR_FAIL.txt' 'V129Player.log' 80000
           Invoke-Smoke 'v12.8 integration regression' '-tr-v128-smoke' 'V12_8_RELEASE_TRAIN_INTEGRATION_OK.txt' 'V12_8_RELEASE_TRAIN_INTEGRATION_FAIL.txt' 'V128Regression.log' 80000
           Invoke-Smoke 'round 80/90/100 soak regression' '-demo-ci-soak' 'DEMO_SOAK_PASS.txt' 'DEMO_SOAK_FAIL.txt' 'V129Soak.log' 110000
           'v12.9 exact-candidate matrix PASS' | Set-Content V12_9_WINDOWS_MATRIX_OK.txt

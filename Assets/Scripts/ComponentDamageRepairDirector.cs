@@ -4,8 +4,9 @@ namespace TankRevival
 {
     /// <summary>
     /// v12.9 integration layer: attaches finite repair capability to canonical ArmorSystem actors,
-    /// exposes player repair on R, and lets component-casualty doctrine request bounded recovery.
-    /// It never moves a Rigidbody2D and never modifies Health.
+    /// installs the zero-authority component presentation observer, exposes player repair on R,
+    /// and lets component-casualty doctrine request bounded recovery. It never moves a Rigidbody2D
+    /// and never modifies Health, Projectile, navigation or economy state.
     /// </summary>
     public sealed class ComponentDamageRepairDirector : MonoBehaviour
     {
@@ -19,6 +20,7 @@ namespace TankRevival
         public int DiscoveryPasses { get; private set; }
         public int TacticEvaluations { get; private set; }
         public int RecoveryDecisions { get; private set; }
+        public int PresentationEmittersInstalled { get; private set; }
 
         private readonly EmergencyRepairSystem[] _systems = new EmergencyRepairSystem[MaxTrackedRepairSystems];
         private float _nextDiscovery;
@@ -85,20 +87,27 @@ namespace TankRevival
                 if (armor == null) continue;
                 EmergencyRepairSystem repair = armor.GetComponent<EmergencyRepairSystem>();
                 if (repair == null) repair = armor.gameObject.AddComponent<EmergencyRepairSystem>();
-                Track(repair);
+                if (!Track(repair)) continue;
+                if (armor.GetComponent<ComponentDamagePresentationEmitter>() == null)
+                {
+                    armor.gameObject.AddComponent<ComponentDamagePresentationEmitter>();
+                    PresentationEmittersInstalled++;
+                }
             }
         }
 
-        private void Track(EmergencyRepairSystem repair)
+        private bool Track(EmergencyRepairSystem repair)
         {
-            for (int i = 0; i < TrackedSystems; i++) if (_systems[i] == repair) return;
-            if (TrackedSystems >= MaxTrackedRepairSystems) return;
+            for (int i = 0; i < TrackedSystems; i++) if (_systems[i] == repair) return true;
+            if (TrackedSystems >= MaxTrackedRepairSystems) return false;
             _systems[TrackedSystems++] = repair;
+            return true;
         }
 
         public static bool ConfigurationValid =>
             DiscoveryInterval >= 0.75f && DiscoveryInterval <= 2f &&
             EnemyRepairSafeDistance >= 4f && MaxTrackedRepairSystems >= 64 &&
-            EmergencyRepairSystem.ConfigurationValid && ComponentCasualtyTactics.ConfigurationValid;
+            EmergencyRepairSystem.ConfigurationValid && ComponentCasualtyTactics.ConfigurationValid &&
+            ComponentDamagePresentationDirector.ConfigurationValid;
     }
 }
