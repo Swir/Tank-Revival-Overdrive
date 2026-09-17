@@ -4,20 +4,20 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v12-9"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-97.9%25-yellow?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-375%2F383-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.9%20IN%20DEVELOPMENT-yellow?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-383%2F383-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V12.9%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 ## 📊 Overall progress
 
 ```text
-███████████████████░ 97.9%
+████████████████████ 100.0%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **375** | **8** | **383** | **97.9%** |
+| **383** | **0** | **383** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -580,13 +580,13 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Exact-SHA qualification finalizer** — qualify v12.8 only after the release-train gate is green for the pinned candidate SHA and the SWIR Roadmap Standard v1 dashboard/checklist is revalidated.
 
 
-## v12.9 — Component Damage & Emergency Repair Warfare — IN DEVELOPMENT
-- [ ] **Progressive component degradation 2.0** — deepen the existing v11.1 ArmorSystem into deterministic Operational/Damaged/Critical/Disabled handling for engine, tracks, gun and ammunition rack without introducing a second vehicle-life authority.
-- [ ] **Ammo-to-subsystem coupling** — give Basic/Twin/AP/HE/Plasma/EMP/Incendiary distinct bounded module-damage profiles through the canonical Projectile → ArmorSystem impact path, including facing/overmatch context.
-- [ ] **Emergency field repair loop** — add finite per-vehicle repair charges, interruption/cooldown rules and prioritized module recovery that can never heal Health or create infinite sustainment.
-- [ ] **Canonical handling and fire-control integration** — make player/enemy movement, turning, reload, weapon function and existing fire-control systems consume progressive ArmorSystem state rather than binary parallel penalties.
-- [ ] **AI casualty and mobility response** — make existing tactical navigation/platoon logic react to Critical/Disabled mobility or weapon components with bounded screening, recovery and disengagement behavior while EnemyTank/Rigidbody2D remain movement authority.
-- [ ] **Component damage language and repair presentation** — integrate v12.7 pooled combat feedback/HUD with readable module-specific critical/disabled/repair cues under strict presentation budgets.
-- [ ] **Deterministic component/repair runtime smoke** — verify threshold transitions, ammo profiles, finite repair invariants, handling/fire-control multipliers, AI response contracts and hard resource caps in the packaged executable.
-- [ ] **Exact-candidate Windows qualification** — build Windows x64, run packaged-EXE v12.9 smoke plus v12.8 integration regression checks, record exact SHA/artifact provenance and only then finalize roadmap qualification.
+## v12.9 — Component Damage & Emergency Repair Warfare — QUALIFIED
+- [x] **Progressive component degradation 2.0** — deepen the existing v11.1 ArmorSystem into deterministic Operational/Damaged/Critical/Disabled handling for engine, tracks, gun and ammunition rack without introducing a second vehicle-life authority.
+- [x] **Ammo-to-subsystem coupling** — give Basic/Twin/AP/HE/Plasma/EMP/Incendiary distinct bounded module-damage profiles through the canonical Projectile → ArmorSystem impact path, including facing/overmatch context.
+- [x] **Emergency field repair loop** — add finite per-vehicle repair charges, interruption/cooldown rules and prioritized module recovery that can never heal Health or create infinite sustainment.
+- [x] **Canonical handling and fire-control integration** — make player/enemy movement, turning, reload, weapon function and existing fire-control systems consume progressive ArmorSystem state rather than binary parallel penalties.
+- [x] **AI casualty and mobility response** — make existing tactical navigation/platoon logic react to Critical/Disabled mobility or weapon components with bounded screening, recovery and disengagement behavior while EnemyTank/Rigidbody2D remain movement authority.
+- [x] **Component damage language and repair presentation** — integrate v12.7 pooled combat feedback/HUD with readable module-specific critical/disabled/repair cues under strict presentation budgets.
+- [x] **Deterministic component/repair runtime smoke** — verify threshold transitions, ammo profiles, finite repair invariants, handling/fire-control multipliers, AI response contracts and hard resource caps in the packaged executable.
+- [x] **Exact-candidate Windows qualification** — build Windows x64, run packaged-EXE v12.9 smoke plus v12.8 integration regression checks, record exact SHA/artifact provenance and only then finalize roadmap qualification.
 
