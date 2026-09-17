@@ -55,7 +55,6 @@ def main() -> None:
     ):
         require(core, token, "cohesion core")
 
-    # Registry ownership is fixed and explicit; no plural scene enumeration or gameplay authority is allowed.
     for forbidden in (
         "FindObjectsByType<",
         "FindObjectsOfType<",
@@ -80,7 +79,6 @@ def main() -> None:
     ):
         require(enemy, token, "EnemyTank integration")
 
-    # Canonical firing/movement authorities must remain in EnemyTank.
     require(enemy, "_body.MovePosition(", "EnemyTank movement authority")
     require(enemy, "_game.SpawnProjectile(", "EnemyTank projectile authority")
     require(enemy, "Health = gameObject.AddComponent<Health>();", "EnemyTank Health authority")
@@ -98,8 +96,9 @@ def main() -> None:
     ):
         require(smoke, token, "v13.3 smoke")
 
-    if roadmap.count("<!-- SWIR-ROADMAP-STANDARD:v1 -->") != 1:
-        fail("ROADMAP standard marker missing/duplicated")
+    marker_count = len(re.findall(r"^<!-- SWIR-ROADMAP-STANDARD:v1 -->$", roadmap, re.M))
+    if marker_count != 1:
+        fail(f"ROADMAP standalone standard marker count must be 1, found {marker_count}")
     for token in (
         "<!-- ROADMAP-PROGRESS:START -->",
         "<!-- ROADMAP-PROGRESS:END -->",
@@ -131,6 +130,7 @@ def main() -> None:
         "## 🔎 Search Keywords",
         "assets/readme/hero.svg",
         "assets/readme/progress-card.svg",
+        "**V13.3 IN DEVELOPMENT** on `dev-v13-3`",
     ):
         require(readme, token, "README PRO v2")
 
