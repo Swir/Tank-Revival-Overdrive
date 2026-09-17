@@ -9,6 +9,7 @@ on:
       - 'Assets/Scripts/EncounterWarfareV130.cs.meta'
       - 'Assets/Scripts/EncounterWarfareCISmokeProbe.cs'
       - 'Assets/Scripts/EncounterWarfareCISmokeProbe.cs.meta'
+      - 'Assets/Scripts/TankGame.cs'
       - 'Assets/Scripts/BossWeaponController.cs'
       - 'Assets/Scripts/ArmorSystem.cs'
       - 'Assets/Scripts/Health.cs'
@@ -46,7 +47,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in Assets/Scripts/EncounterWarfareV130.cs Assets/Scripts/EncounterWarfareCISmokeProbe.cs Assets/Scripts/BossWeaponController.cs Assets/Scripts/ArmorSystem.cs Assets/Scripts/Health.cs Assets/Scripts/EnemyTank.cs CHANGELOG_v13.0.md; do test -f "$f"; done
+          for f in Assets/Scripts/EncounterWarfareV130.cs Assets/Scripts/EncounterWarfareCISmokeProbe.cs Assets/Scripts/TankGame.cs Assets/Scripts/BossWeaponController.cs Assets/Scripts/ArmorSystem.cs Assets/Scripts/Health.cs Assets/Scripts/EnemyTank.cs CHANGELOG_v13.0.md; do test -f "$f"; done
           test "$(cat VERSION)" = 'v13.0.0-dev'
           grep -q 'PlannedRounds = 100' Assets/Scripts/EncounterWarfareV130.cs
           grep -q 'MaxEnemyBudget = 62' Assets/Scripts/EncounterWarfareV130.cs
@@ -62,6 +63,17 @@ jobs:
           grep -q 'V13_0_ENCOUNTER_WARFARE_OK.txt' Assets/Scripts/EncounterWarfareCISmokeProbe.cs
           grep -q 'bossRounds != 10' Assets/Scripts/EncounterWarfareCISmokeProbe.cs
           grep -q 'doctrineCount != 8' Assets/Scripts/EncounterWarfareCISmokeProbe.cs
+          grep -q 'EnemyForSpawn' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q 'EagleDefenseFor' Assets/Scripts/EncounterWarfareV130.cs
+          grep -q '_encounterPlan = EncounterPlannerV130.PlanForRound(round)' Assets/Scripts/TankGame.cs
+          grep -q '_enemiesToSpawn = _encounterPlan.EnemyCount' Assets/Scripts/TankGame.cs
+          grep -q '_maxAlive = _encounterPlan.MaxAlive' Assets/Scripts/TankGame.cs
+          grep -q 'EncounterPlannerV130.EnemyForSpawn(_encounterPlan, _spawnOrdinal)' Assets/Scripts/TankGame.cs
+          grep -q 'EncounterPlannerV130.EagleDefenseFor(_encounterPlan)' Assets/Scripts/TankGame.cs
+          grep -q 'DOCTRINE {_encounterPlan.Doctrine}' Assets/Scripts/TankGame.cs
+          if grep -q 'SpawnEnemy(ChooseEnemyKind(_round))' Assets/Scripts/TankGame.cs; then
+            echo 'legacy random enemy composition still owns live spawn selection' >&2; exit 1
+          fi
           if grep -Eq '\.Damage\(|\.Heal\(|SpawnProjectile|\.MovePosition\(|AddWarBonds|AwardMissionBonds|BindingFlags\.NonPublic|GetField\(' Assets/Scripts/EncounterWarfareV130.cs; then
             echo 'v13.0 encounter planning/director layer contains forbidden Health/projectile/movement/economy/private-reflection authority.' >&2; exit 1
           fi
