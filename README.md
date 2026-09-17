@@ -1,88 +1,201 @@
+<!-- SWIR-README-STANDARD:v2 -->
+
+<div align="center">
+
 # TANK REVIVAL: ORZEŁ OVERDRIVE
 
-Original top-down tank combat for Unity 6, inspired by the fast readable feel of classic console tank games and rebuilt from scratch with modern effects, progression and a 100-round campaign.
+**A 2.5D top-down tank-defense action game built in Unity 6 for Windows.**
 
-## Mission
+Defend the **Orzełek stronghold** through a 100-round campaign of armored assaults, specialist formations, supply warfare, electronic operations and multi-phase boss battles.
 
-Defend the **Orzełek stronghold** through 100 increasingly dangerous rounds. Enemy formations become faster, tougher and more aggressive as the campaign advances. Siege units prioritize the stronghold, elite tanks pressure the player, supply tanks carry special ammunition, and every tenth round ends with a boss assault.
+[![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)](https://github.com/Swir/Tank-Revival-Overdrive/releases)
+[![Unity](https://img.shields.io/badge/Unity-6000.3.17f1-02050A?style=for-the-badge&logo=unity&logoColor=62E5FF)](https://unity.com/)
+[![Roadmap](https://img.shields.io/badge/Roadmap-v13.0%20Qualified-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
+[![v13.0 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/encounter-warfare-v130-windows.yml/badge.svg?branch=dev-v13-0)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/encounter-warfare-v130-windows.yml)
 
-## v0.4 development milestone — REAL ARMOR
+[**Highlights**](#-highlights) · [**Download**](#-quick-start--download) · [**Controls**](#-controls) · [**Roadmap**](#-roadmap--quality-gates) · [**Releases**](#-releases)
 
-The combat model now treats tanks as armored fighting vehicles instead of simple HP boxes.
+</div>
 
-- **independent turret and hull rotation** — drive one way while aiming another
-- **mouse aiming + left-click fire** while keyboard fire remains available
-- enemy turrets track their tactical target independently from chassis movement
-- visible procedural **gun recoil** for player and enemy tanks
-- **directional armor zones**: front, side and rear armor resolve incoming shell damage differently
-- frontal and side armor can **ricochet** shells depending on tank class and ammunition type
-- AP and Plasma ammunition defeat angled armor far more reliably than standard shells
-- rear and side hits have elevated **critical-hit probability**
-- critical hits can damage the **engine module** or **gun/autoloader module**
-- damaged engine modules reduce movement speed for the lifetime of that tank
-- damaged weapon modules increase reload time for the lifetime of that tank
-- Heavy, Siege, Elite and Boss tanks have distinct armor profiles instead of relying only on higher HP
-- bosses gain progressively stronger frontal/side protection through the campaign
-- new **REAL ARMOR HUD** reports engine condition, gun condition, last impact zone and critical hits
-- new ricochet sparks, shock rings and critical-impact feedback integrate with the existing procedural FX/audio stack
+---
 
-## v0.3 milestone — Field Command
+## 📌 Project Status
 
-- **War Bonds** earned from destroyed enemies and secured rounds
-- **Field Command Center every five cleared rounds** before the next deployment
-- permanent campaign upgrades for cannon, autoloader, engine, composite armor, Eagle sentry network and logistics
-- paid field repair for Orzełek during Command Center visits
-- up to **three autonomous sentry cannons** around the stronghold with target prioritization and upgraded penetration
-- named tactical wave doctrines including Recon Patrol, Blitz Wave, Siege Column, Marksmen, Heavy Column, Supply Raid, Elite Hunters, Crossfire, Iron Storm and Boss Protocol
-- doctrine-specific reinforcement armor, coordinated extra fire, target pressure, projectile speed and salvage rewards
-- commander upgrades stack safely with normal field power-ups instead of overwriting the saved tank loadout
+| Item | Status |
+|---|---|
+| Development milestone | **v13.0 — QUALIFIED** on `dev-v13-0` |
+| Roadmap | **391 / 391 verified deliverables** for the current scoped milestone |
+| Primary platform | **Windows 10 / 11 x64** |
+| Development engine | **Unity 6000.3.17f1** |
+| Latest public demo | **v6.3.0-demo** — prerelease |
+| Latest stable release | **v2.2.0** |
+| Main branch | Kept separate from active milestone development until integration is intentionally performed |
 
-## Combat foundation
+`ROADMAP.md` is the authoritative source for milestone completion. A checkbox is completed only after the corresponding implementation exists and its required verification has passed.
 
-- 100 progressively harder rounds
-- Orzełek stronghold with persistent health and critical-damage alarm
-- 8 enemy classes: Basic, Fast, Heavy, Sniper, Siege, Elite, Supply and Boss
-- special glowing Supply Tanks that always drop ammunition
-- 7 ammunition modes: Standard, AP, HE, Incendiary, EMP, Twin Shot and Plasma
-- ammunition inventory persists between rounds and player respawns
-- cannon, fire-rate and engine upgrades persist through the campaign
-- 10 boss difficulty tiers with increasingly complex special salvos
-- destructible brick walls, steel barriers and water obstacles
-- procedural 2.5D tank visuals, animated tracks, muzzle flashes, trails, smoke, sparks, explosions and screen shake
-- runtime-generated combat audio and persistent high scores
+## 🎮 What is Tank Revival?
 
-## Special ammunition
+Tank Revival: Orzeł Overdrive is an original top-down armored action game focused on defending the Orzełek stronghold while the battlefield becomes increasingly complex across 100 rounds.
 
-| Key | Ammunition | Role | First available |
-|---|---|---|---:|
+The campaign combines direct tank combat with directional armor, component damage, special ammunition, field repair, tactical enemy roles, supply and route pressure, electronic warfare, fire-support intelligence and deterministic encounter escalation. Every tenth round becomes a boss assault, while late-game encounter pressure is kept inside explicit runtime and CI budgets instead of relying on uncontrolled spawn growth.
+
+## ⚡ Highlights
+
+| Feature | What it changes in play |
+|---|---|
+| 🦅 **Orzełek defense** | Protect a persistent stronghold whose defenses and battlefield pressure escalate through the campaign. |
+| 💯 **100-round encounter campaign** | Deterministic encounter plans, five campaign acts and eight doctrine families create controlled escalation from round 1 to 100. |
+| 👑 **Multi-phase bosses** | Boss behavior escalates through health/component-driven phases while the existing movement, projectile and survivability authorities remain canonical. |
+| 🛡️ **Directional armor & modules** | Front/side/rear armor, ricochets and engine/tracks/gun/ammo-rack degradation affect how vehicles move and fight. |
+| 🔧 **Emergency repair warfare** | Limited, interruptible field repair can recover damaged modules without healing vehicle HP. |
+| 💥 **7 ammunition modes** | Standard, AP, HE, Incendiary, EMP, Twin Shot and Plasma provide distinct anti-armor, area, disruption and penetration roles. |
+| 🚜 **8 enemy classes** | Basic, Fast, Heavy, Sniper, Siege, Elite, Supply and Boss units create different target and positioning priorities. |
+| 📡 **Operational warfare stack** | Combined Arms, sustainment, route intelligence, Recon/EW, Mobile Signal and SIGINT feed bounded read-only encounter pressure/relief decisions. |
+| 🎯 **Independent hull and turret control** | Drive, aim and fire independently instead of locking the cannon to chassis direction. |
+| ✨ **Procedural 2.5D presentation** | Animated tracks, recoil, muzzle flashes, trails, smoke, sparks, explosions, tactical telegraphs and pooled combat feedback. |
+| 🧪 **Exact-candidate Windows qualification** | CI builds one Windows executable, verifies provenance, runs v13.0 smoke plus v12.9/v12.8 regressions and late-round 80/90/100 soak on that same binary. |
+
+## 🔫 Ammunition
+
+| Key | Ammunition | Battlefield role | First available |
+|---:|---|---|---:|
 | 1 | Standard | Unlimited general-purpose shell | Round 1 |
-| 2 | AP Piercing | Faster anti-armor shot with penetration and lower ricochet chance | Round 3 |
-| 3 | HE Explosive | Area damage against enemies and brick cover | Round 8 |
-| 4 | Incendiary | Applies damage over time | Round 15 |
-| 5 | EMP Shock | Temporarily disables enemy movement and weapons | Round 25 |
-| 6 | Twin Shot | Fires two parallel shells | Round 35 |
+| 2 | AP Piercing | Faster anti-armor shot with stronger penetration and reduced ricochet risk | Round 3 |
+| 3 | HE Explosive | Area pressure against enemies and destructible brick cover | Round 8 |
+| 4 | Incendiary | Damage-over-time pressure and rear/engine threat | Round 15 |
+| 5 | EMP Shock | Temporary movement/weapon disruption with strong subsystem pressure | Round 25 |
+| 6 | Twin Shot | Two parallel projectiles for wider close/mid-range pressure | Round 35 |
 | 7 | Plasma | Fast, high-damage, multi-penetrating anti-armor projectile | Round 50 |
 
-Use **Q / E** to cycle through ammunition currently in inventory. Destroy colored Supply Tanks to obtain new ammunition; their glow identifies what they carry.
+Use **Q / E** to cycle through ammunition currently in inventory. Supply Tanks can provide additional ammunition during the campaign.
 
-## Controls
+## 🚀 Quick Start / Download
 
-- **WASD / Arrow keys** — move the hull
-- **Mouse** — aim the turret independently
-- **Left Mouse / Space / Left Ctrl** — fire
-- **Q / E** — previous / next available ammunition
-- **1–7** — directly select ammunition type
-- **P / Escape** — pause / resume
-- **Enter / Space** — start/restart and deploy from the Command Center
-- **1–6 while Command Center is open** — buy the corresponding permanent upgrade
-- **7 while Command Center is open** — repair Orzełek
+### Recommended — packaged Windows build
 
-## Windows build
+1. Open the repository **Releases** page.
+2. Download a Windows x64 ZIP from the release you want to run.
+3. Extract the **entire** archive to its own folder.
+4. Run `TankRevivalOverdrive.exe`.
+5. Keep `TankRevivalOverdrive_Data` beside the executable.
 
-Windows 10/11 x64 is the primary target. GitHub Actions compiles `TankRevivalOverdrive.exe`, verifies the executable and `_Data` directory, creates a portable ZIP and publishes stable builds under GitHub Releases. Players do **not** need Unity installed.
+Unity is **not required** to play a packaged Windows build.
 
-Stable code lives on `main`. Major development milestones are built on dedicated `dev-vX.Y` branches and validated by Windows CI before merge.
+- Public demo: [`v6.3.0-demo`](https://github.com/Swir/Tank-Revival-Overdrive/releases/tag/v6.3.0-demo)
+- Stable release: [`v2.2.0`](https://github.com/Swir/Tank-Revival-Overdrive/releases/tag/v2.2.0)
+- All releases: https://github.com/Swir/Tank-Revival-Overdrive/releases
 
-## Creative direction
+### From source
 
-The game is an original project using its own code, procedural visuals and procedural audio. It draws on broad top-down tank-game conventions but does not use ripped maps, sprites, audio or other assets from existing games.
+Clone the repository and open the Unity project with the editor version used by current CI:
+
+```bash
+git clone https://github.com/Swir/Tank-Revival-Overdrive.git
+cd Tank-Revival-Overdrive
+```
+
+Active milestone work lives on dedicated `dev-vX-Y` / `dev-vX.Y` branches. For reproducible development builds, match the Unity version declared by the branch CI instead of assuming the latest editor is compatible.
+
+## 💻 Requirements / Compatibility
+
+| Requirement | Current project target |
+|---|---|
+| OS | Windows 10 / 11 x64 |
+| Packaged game | Portable ZIP containing EXE + `_Data` runtime |
+| Unity required to play | No |
+| Source development | Unity 6000.3.17f1 for the current v13.0 CI path |
+| Input | Keyboard + mouse |
+
+Other platforms are not advertised as supported unless a dedicated verified build exists.
+
+## 🎮 Controls
+
+| Input | Action |
+|---|---|
+| **WASD / Arrow keys** | Move and turn the hull |
+| **Mouse** | Aim the turret independently |
+| **Left Mouse / Space / Left Ctrl** | Fire |
+| **Q / E** | Previous / next available ammunition |
+| **1–7** | Directly select ammunition type |
+| **R** | Attempt emergency field repair when the repair system permits it |
+| **P / Escape** | Pause / resume |
+| **Enter / Space** | Start/restart and deploy from the Command Center where applicable |
+| **1–6 in Command Center** | Purchase the corresponding permanent upgrade |
+| **7 in Command Center** | Repair Orzełek when that command action is available |
+
+## 🧠 Combat & Campaign Systems
+
+### Armor and component warfare
+
+Vehicle survivability stays under the canonical `Health` authority, while `ArmorSystem` resolves directional protection and progressive module degradation. Engine, tracks, gun and ammunition-rack state can affect mobility, reload, weapon function and AI casualty behavior without creating a second HP model.
+
+### Encounter Director v13.0
+
+`EncounterPlannerV130` deterministically plans all 100 rounds with explicit enemy-count, concurrency and spawn-cadence limits. The live campaign consumes those plans through the existing `TankGame` round/spawn authority.
+
+The v13.0 cross-system doctrine layer reads bounded public state from Mobile Front, Operational Sustainment, Route Intelligence, Recon/EW, Mobile Signal and SIGINT. It can adjust live pressure only inside small hard limits; it does not take control of those systems, movement, damage, projectiles or rewards.
+
+### Orzełek escalation
+
+Late-campaign defense can strengthen the flanking shoulders while preserving a destructible center approach. This keeps a visible breach route for standard loadouts instead of turning high-tier defense into an inaccessible objective wall.
+
+## 🧱 Technology & Authority Model
+
+| Area | Implementation |
+|---|---|
+| Engine | Unity 6 / C# |
+| Rendering | Procedural 2.5D gameplay presentation |
+| Player/enemy survivability | Canonical `Health` |
+| Projectile collision/damage flow | Canonical `Projectile` / existing spawn path |
+| Round and spawn ownership | `TankGame` |
+| Enemy movement/weapon ownership | Existing `EnemyTank` / Rigidbody2D combat path |
+| Tactical/operational layers | Bounded directors and read-only integration snapshots |
+| Windows CI | GitHub Actions + Unity builder + deterministic packaging/provenance checks |
+| Regression strategy | Packaged-EXE smoke plus late-round 80/90/100 soak |
+
+The project intentionally avoids parallel damage, movement and economy authorities when new tactical layers are introduced.
+
+## 🗺️ Roadmap & Quality Gates
+
+The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **391 / 391 (100.0%) — v13.0 QUALIFIED**.
+
+Recent qualified milestone layers include full-stack v12.8 integration, v12.9 component damage/emergency repair warfare and v13.0 100-round encounter/boss phase warfare.
+
+Qualification is not based on version numbers or commit count. The v13.0 gate requires source/authority contracts, a Unity Windows x64 build, deterministic packaging and one exact packaged EXE running:
+
+- v13.0 encounter/cross-stack/boss smoke;
+- v12.9 component/repair/casualty/presentation regression;
+- v12.8 full-stack integration regression;
+- late-round soak covering rounds 80 / 90 / 100.
+
+## 📦 Releases
+
+The development branch being qualified does **not** automatically replace the public release line.
+
+- **Latest public demo:** `v6.3.0-demo` (prerelease)
+- **Latest stable release:** `v2.2.0`
+- **Development milestone:** v13.0 is qualified on its development branch but has not been published here as a new public v13.0 release.
+
+This separation keeps public downloads distinct from experimental or not-yet-integrated milestone work.
+
+## 🎨 Creative Direction
+
+Tank Revival: Orzeł Overdrive is an original project with its own code and procedural game presentation. It uses broad top-down tank-action conventions but does not depend on ripped maps, sprites, audio or other assets from existing games.
+
+## 🔎 Search Keywords
+
+`tank defense game` • `Windows tank game` • `2.5D tank action` • `top down tank game` • `Unity 6 game` • `C# Unity game` • `100 round campaign` • `boss tank battles` • `tank armor simulation` • `component damage system` • `special ammunition game` • `Orzelek defense` • `procedural combat effects` • `Windows x64 game` • `GitHub Actions Unity build`
+
+---
+
+<div align="center">
+
+### `DEFEND • ADAPT • OVERDRIVE`
+
+Built and maintained by **SWIR**.
+
+⭐ **If Tank Revival is useful or fun to follow, consider leaving a star.**
+
+[**← SWIR profile**](https://github.com/Swir) · [**All projects →**](https://github.com/Swir?tab=repositories)
+
+</div>
