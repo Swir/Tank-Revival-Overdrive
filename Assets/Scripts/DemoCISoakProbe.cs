@@ -10,17 +10,31 @@ namespace TankRevival
     /// Release-only automated late-round qualification probe. It is dormant for normal players and
     /// runs only when the packaged standalone is launched with -demo-ci-soak. The probe drives the
     /// authoritative TankGame through rounds 80/90/100, injects heavy pressure, validates projectile
-    /// pool integrity and runtime-stability telemetry, then emits an explicit PASS/FAIL marker for CI.
-    /// The player side is made temporarily invulnerable only inside this opt-in CI path so the probe
-    /// measures runtime integrity rather than the survivability of an unattended tank.
+    /// pool integrity, runtime-stability telemetry and the complete v12.0-v12.7 service topology,
+    /// then emits an explicit PASS/FAIL marker for CI. The player side is made temporarily invulnerable
+    /// only inside this opt-in CI path so the probe measures runtime integrity rather than the
+    /// survivability of an unattended tank.
     /// </summary>
     [DefaultExecutionOrder(20010)]
     public sealed class DemoCISoakProbe : MonoBehaviour
     {
         private const BindingFlags InstancePrivate = BindingFlags.Instance | BindingFlags.NonPublic;
+        private const BindingFlags PublicStatic = BindingFlags.Public | BindingFlags.Static;
         private const float ResolveTimeoutSeconds = 12f;
         private const float TotalTimeoutSeconds = 70f;
         private const int PressureUnitsPerStage = 16;
+
+        private static readonly string[] IntegratedDirectorTypeNames =
+        {
+            "TankRevival.CombinedArmsMobileFrontDirector",
+            "TankRevival.OperationalSustainmentDirector",
+            "TankRevival.LogisticsRouteIntelligenceDirector",
+            "TankRevival.ReconElectronicWarfareDirector",
+            "TankRevival.MobileSignalWarfareDirector",
+            "TankRevival.SignalsIntelligenceFireSupportDirector",
+            "TankRevival.BattlefieldPresentationOverdriveDirector",
+            "TankRevival.CinematicCombatFeedbackDirector",
+        };
 
         private TankGame _game;
         private MethodInfo _startCampaign;
@@ -33,6 +47,9 @@ namespace TankRevival
         private int _startWarnings;
         private int _startRepairs;
         private int _startPoolFaults;
+        private int _stackChecks;
+        private int _minStackServices = IntegratedDirectorTypeNames.Length;
+        private int _maxDuplicateServices;
         private bool _completed;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -88,6 +105,9 @@ namespace TankRevival
                 yield break;
             }
 
+            if (!ValidateIntegratedStack("pre-soak"))
+                yield break;
+
             _startWarnings = stability.Warnings;
             _startRepairs = stability.Repairs;
             _startPoolFaults = ProjectilePool.IntegrityFaultCount;
@@ -95,9 +115,13 @@ namespace TankRevival
             int[] rounds = { 80, 90, 100 };
             for (int i = 0; i < rounds.Length; i++)
             {
-                if (!StartStage(rounds[i])) yield break;
+                int round = rounds[i];
+                if (!StartStage(round)) yield break;
                 yield return new WaitForSecondsRealtime(1.5f);
                 ProtectPlayerSide();
+
+                if (!ValidateIntegratedStack("round " + round + " warm"))
+                    yield break;
 
                 if (!InjectPressure()) yield break;
 
@@ -107,21 +131,24 @@ namespace TankRevival
                     ProtectPlayerSide();
                     if (!_game.IsPlaying)
                     {
-                        Fail("campaign stopped during round " + rounds[i]);
+                        Fail("campaign stopped during round " + round);
                         yield break;
                     }
                     yield return null;
                 }
 
+                if (!ValidateIntegratedStack("round " + round + " pressure"))
+                    yield break;
+
                 if (!ProjectilePool.ValidateIntegrity(out string reason))
                 {
-                    Fail("pool integrity round " + rounds[i] + ": " + reason);
+                    Fail("pool integrity round " + round + ": " + reason);
                     yield break;
                 }
 
                 if (!stability.Healthy)
                 {
-                    Fail("runtime stability unhealthy at round " + rounds[i]);
+                    Fail("runtime stability unhealthy at round " + round);
                     yield break;
                 }
             }
@@ -135,7 +162,11 @@ namespace TankRevival
                 yield break;
             }
 
-            Pass($"rounds=80,90,100 pressure={PressureUnitsPerStage}x3 minFPS={_minFps:0.0} maxGC={_maxGcMb:0.0}MB created={ProjectilePool.CreatedCount} reused={ProjectilePool.ReusedCount}");
+            Pass(
+                $"rounds=80,90,100 pressure={PressureUnitsPerStage}x3 " +
+                $"stackChecks={_stackChecks} minServices={_minStackServices}/{IntegratedDirectorTypeNames.Length} " +
+                $"maxDuplicates={_maxDuplicateServices} minFPS={_minFps:0.0} maxGC={_maxGcMb:0.0}MB " +
+                $"created={ProjectilePool.CreatedCount} reused={ProjectilePool.ReusedCount}");
         }
 
         private bool ResolveGame()
@@ -172,6 +203,87 @@ namespace TankRevival
                 Fail("stage start failed round " + round + ": " + ex.GetType().Name);
                 return false;
             }
+        }
+
+        private bool ValidateIntegratedStack(string stage)
+        {
+            MonoBehaviour[] behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+            int[] counts = new int[IntegratedDirectorTypeNames.Length];
+
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                MonoBehaviour behaviour = behaviours[i];
+                if (behaviour == null) continue;
+                string fullName = behaviour.GetType().FullName;
+                for (int j = 0; j < IntegratedDirectorTypeNames.Length; j++)
+                {
+                    if (string.Equals(fullName, IntegratedDirectorTypeNames[j], StringComparison.Ordinal))
+                    {
+                        counts[j]++;
+                        break;
+                    }
+                }
+            }
+
+            int liveServices = 0;
+            int duplicates = 0;
+            string report = string.Empty;
+            Assembly assembly = typeof(DemoCISoakProbe).Assembly;
+
+            for (int i = 0; i < IntegratedDirectorTypeNames.Length; i++)
+            {
+                string fullName = IntegratedDirectorTypeNames[i];
+                int count = counts[i];
+                if (count > 0) liveServices++;
+                duplicates += Mathf.Max(0, count - 1);
+                if (report.Length > 0) report += ",";
+                report += ShortServiceName(fullName) + "=" + count;
+
+                Type directorType = assembly.GetType(fullName, false);
+                if (directorType == null)
+                {
+                    Fail(stage + " missing type " + fullName);
+                    return false;
+                }
+
+                PropertyInfo config = directorType.GetProperty("ConfigurationValid", PublicStatic);
+                if (config != null && config.PropertyType == typeof(bool))
+                {
+                    try
+                    {
+                        if (!(bool)config.GetValue(null))
+                        {
+                            Fail(stage + " invalid configuration " + fullName);
+                            return false;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Fail(stage + " configuration check threw " + ex.GetType().Name + " for " + fullName);
+                        return false;
+                    }
+                }
+            }
+
+            _stackChecks++;
+            _minStackServices = Mathf.Min(_minStackServices, liveServices);
+            _maxDuplicateServices = Mathf.Max(_maxDuplicateServices, duplicates);
+
+            if (liveServices != IntegratedDirectorTypeNames.Length || duplicates != 0)
+            {
+                Fail(stage + $" service topology invalid live={liveServices}/{IntegratedDirectorTypeNames.Length} duplicates={duplicates} [{report}]");
+                return false;
+            }
+
+            Debug.Log("[DemoCISoakProbe] full-stack " + stage + " PASS [" + report + "]");
+            return true;
+        }
+
+        private static string ShortServiceName(string fullName)
+        {
+            int split = fullName.LastIndexOf('.');
+            string name = split >= 0 ? fullName.Substring(split + 1) : fullName;
+            return name.Replace("Director", string.Empty);
         }
 
         private static void ProtectPlayerSide()
