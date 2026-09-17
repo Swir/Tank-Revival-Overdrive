@@ -3,25 +3,25 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-2"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-407%2F407-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.2%20QUALIFIED-brightgreen?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-3"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.1%25-yellow?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-407%2F415-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.3%20IN%20DEVELOPMENT-yellow?style=for-the-badge">
 </p>
 
 <!-- SWIR-PROGRESS-SVG-PRO:v1 -->
 <p align="center"><img src="assets/readme/progress-mini.svg" alt="SWIR roadmap progress mini" width="700"></p>
-<p align="center"><sub>Roadmap progress: 407 / 407 completed (100.0%) — V13.2 QUALIFIED. Release readiness is tracked separately by Windows qualification gates.</sub></p>
+<p align="center"><sub>Roadmap progress: 407 / 415 completed (98.1%) — V13.3 IN DEVELOPMENT. Release readiness is tracked separately by Windows qualification gates.</sub></p>
 
 ## 📊 Overall progress
 
 ```text
-████████████████████ 100.0%
+███████████████████░ 98.1%
 ```
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **407** | **0** | **407** | **100.0%** |
+| **407** | **8** | **415** | **98.1%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numbers, percentage and the 20-segment bar. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -626,3 +626,14 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Adaptive command HUD telemetry** — expose current doctrine, confidence/history pressure, bounded spawn delta and specialist intent through the existing tactical presentation language with fixed refresh and text budgets.
 - [x] **Packaged-EXE v13.2 runtime smoke** — validate synthetic history bands, doctrine determinism/hysteresis, budget caps, specialist directives, AI posture bounds and authority contracts, then rerun v13.1/v13.0/v12.9/v12.8 regressions plus rounds 80/90/100 soak on the same executable.
 - [x] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.2 gate to pass and only then finalize the SWIR roadmap dashboard/checklist.
+
+
+## v13.3 — Battlefield Cohesion & Squad Command Warfare — IN DEVELOPMENT
+- [ ] **Deterministic bounded squad roster** — assign eligible enemy tanks into fixed four-vehicle squads at spawn registration time with at most 24 tracked actors / six squads, no scene scans, no unbounded collections and no second spawn authority.
+- [ ] **Leader, wingman, breacher and support roles** — maintain one effective leader per live squad, deterministic member roles and bounded leader promotion after casualties while existing EnemyTank / platoon systems retain movement, targeting and firing authority.
+- [ ] **Cohesion state machine and regroup warfare** — expose Forming / Cohesive / Shocked / Regrouping squad states with hard timers and deterministic recovery so formations react to losses without frame-by-frame command thrashing.
+- [ ] **Leader-loss counterplay** — destroying a squad leader creates a finite, readable cohesion shock that temporarily softens movement/fire-control intent and forces regroup before a promoted leader restores coordination; no hidden HP changes, enemy deletion or scripted stun authority.
+- [ ] **Formation intent integration** — feed bounded spacing/regroup direction plus movement/reload/spread multipliers through existing EnemyTank and AdaptivePlatoonManeuver paths only; Rigidbody2D, Projectile, Health, ArmorSystem and TankGame remain canonical authorities.
+- [ ] **Squad readability and tactical telemetry** — provide bounded world-space leader markers plus compact squad/cohesion/leader-loss telemetry with fixed refresh and actor budgets so the player can deliberately break enemy command structure.
+- [ ] **Packaged-EXE v13.3 runtime smoke** — validate roster capacity, deterministic assignments, leader promotion, shock/regroup timing, bounded posture/formation intent and authority contracts, then rerun v13.2/v13.1/v13.0/v12.9/v12.8 regressions plus rounds 80/90/100 soak on the same executable.
+- [ ] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.3 gate to pass and only then finalize the SWIR roadmap dashboard/checklist and progress SVGs.
