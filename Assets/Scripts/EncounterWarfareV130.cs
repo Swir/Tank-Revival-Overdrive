@@ -179,8 +179,12 @@ namespace TankRevival
             {
                 Tier = tier,
                 WallHitPoints = wallHp,
+                CrownHitPoints = Mathf.Clamp(wallHp + (tier >= 3 ? 1 : 0), 2, 5),
                 SteelSides = tier >= 2,
-                SteelCrown = tier >= 3
+                // The center approach deliberately remains Brick so every ammo loadout has a visible breach lane.
+                // Steel is reserved for the flanking shoulders and is still breachable by heavy ordnance.
+                SteelCrown = false,
+                DestructibleBreachLane = true
             };
         }
 
@@ -246,8 +250,182 @@ namespace TankRevival
     {
         public int Tier;
         public int WallHitPoints;
+        public int CrownHitPoints;
         public bool SteelSides;
         public bool SteelCrown;
+        public bool DestructibleBreachLane;
+    }
+
+    /// <summary>
+    /// Read-only readiness snapshot from the six v12 operational systems named by the v13.0 roadmap.
+    /// Values are player-readiness scores in [0,1]; inactive systems are neutral and do not increase
+    /// ActiveChannels. No state is written back to any v12 director.
+    /// </summary>
+    public struct EncounterReadinessV130
+    {
+        public float MobileFront;
+        public float Sustainment;
+        public float RouteIntelligence;
+        public float ReconEw;
+        public float MobileSignal;
+        public float Sigint;
+        public float Composite;
+        public int ActiveChannels;
+        public int Signature;
+    }
+
+    public struct EncounterRuntimeBudgetV130
+    {
+        public int MaxAlive;
+        public float SpawnInterval;
+        public int ConcurrencyDelta;
+        public float Readiness;
+        public int ActiveChannels;
+        public int Signature;
+    }
+
+    /// <summary>
+    /// v13.0 cross-system doctrine adapter. It consumes only public, read-only state from Mobile Front,
+    /// Operational Sustainment, Route Intelligence, Recon/EW, Mobile Signal and SIGINT. The resulting
+    /// bounded budget is advisory to TankGame, which remains the sole round/spawn authority.
+    /// </summary>
+    public static class EncounterCrossSystemDoctrineV130
+    {
+        public const int MaxConcurrencyDelta = 1;
+        public const float MinSpawnScale = 0.92f;
+        public const float MaxSpawnScale = 1.10f;
+        public const float RefreshSeconds = 0.75f;
+
+        public static bool ConfigurationValid =>
+            MaxConcurrencyDelta == 1 && RefreshSeconds >= 0.5f && RefreshSeconds <= 1.0f &&
+            MinSpawnScale >= 0.90f && MinSpawnScale < 1f && MaxSpawnScale > 1f && MaxSpawnScale <= 1.12f;
+
+        public static EncounterReadinessV130 CaptureReadOnly()
+        {
+            EncounterReadinessV130 snapshot = NeutralSnapshot();
+            float sum = 0f;
+            int active = 0;
+
+            CombinedArmsMobileFrontDirector front = CombinedArmsMobileFrontDirector.Instance;
+            if (front != null && front.IsOperationActive)
+            {
+                snapshot.MobileFront = front.CurrentKind == MobileFrontOperationKind.FriendlyAdvance ? 0.84f :
+                                       front.CurrentKind == MobileFrontOperationKind.EnemyBreakthrough ? 0.18f : 0.50f;
+                AddActive(snapshot.MobileFront, ref sum, ref active);
+            }
+
+            OperationalSustainmentDirector sustain = OperationalSustainmentDirector.Instance;
+            if (sustain != null && (sustain.ColumnActive || sustain.EnemySustainmentDeficit))
+            {
+                if (sustain.EnemySustainmentDeficit) snapshot.Sustainment = 0.78f;
+                else if (sustain.ColumnTeam == Team.Player)
+                {
+                    float manifest = (
+                        Mathf.Clamp01(sustain.FuelRemaining / (float)OperationalSustainmentDirector.FuelMax) +
+                        Mathf.Clamp01(sustain.AmmoRemaining / (float)OperationalSustainmentDirector.AmmoMax) +
+                        Mathf.Clamp01(sustain.RepairRemaining / (float)OperationalSustainmentDirector.RepairMax)) / 3f;
+                    snapshot.Sustainment = Mathf.Clamp01(0.56f + manifest * 0.38f);
+                }
+                else snapshot.Sustainment = 0.22f;
+                AddActive(snapshot.Sustainment, ref sum, ref active);
+            }
+
+            LogisticsRouteIntelligenceDirector route = LogisticsRouteIntelligenceDirector.Instance;
+            if (route != null && route.RouteActive)
+            {
+                float intel = route.IntelState == RouteIntelState.Verified ? 0.88f :
+                              route.IntelState == RouteIntelState.Contact ? 0.56f : 0.26f;
+                float threat = Mathf.Clamp01(route.CurrentThreat / LogisticsRouteIntelligenceDirector.ForceRerouteThreat);
+                bool enemyColumn = sustain != null && sustain.ColumnTeam == Team.Enemy;
+                snapshot.RouteIntelligence = Mathf.Clamp01(intel + (enemyColumn ? threat * 0.10f : -threat * 0.18f) - (route.DecoyActive ? 0.06f : 0f));
+                AddActive(snapshot.RouteIntelligence, ref sum, ref active);
+            }
+
+            ReconElectronicWarfareDirector recon = ReconElectronicWarfareDirector.Instance;
+            if (recon != null && recon.OperationActive)
+            {
+                snapshot.ReconEw = Mathf.Clamp01(0.14f + recon.SignalQuality * 0.72f +
+                                                  (recon.CounterJammingActive ? 0.14f : 0f) -
+                                                  (recon.SpoofRisk ? 0.16f : 0f) -
+                                                  (recon.EffectiveJammerActive ? 0.08f : 0f));
+                AddActive(snapshot.ReconEw, ref sum, ref active);
+            }
+
+            MobileSignalWarfareDirector mobileSignal = MobileSignalWarfareDirector.Instance;
+            if (mobileSignal != null && mobileSignal.OperationActive)
+            {
+                snapshot.MobileSignal = mobileSignal.ObjectiveResolved ? 1f :
+                    Mathf.Clamp01(0.24f + mobileSignal.InterceptProgress01 * 0.58f + (mobileSignal.MobileJammerActive ? 0f : 0.14f));
+                AddActive(snapshot.MobileSignal, ref sum, ref active);
+            }
+
+            SignalsIntelligenceFireSupportDirector sigint = SignalsIntelligenceFireSupportDirector.Instance;
+            if (sigint != null && sigint.OperationActive)
+            {
+                snapshot.Sigint = Mathf.Clamp01(0.16f + sigint.TriangulationQuality * 0.48f +
+                                                (sigint.TrueSignalVerified ? 0.18f : 0f) +
+                                                (sigint.DecoySignalVerified ? 0.08f : 0f) +
+                                                (sigint.FireSupportWindowActive ? 0.18f : 0f));
+                AddActive(snapshot.Sigint, ref sum, ref active);
+            }
+
+            snapshot.ActiveChannels = active;
+            snapshot.Composite = active > 0 ? Mathf.Clamp01(sum / active) : 0.50f;
+            snapshot.Signature = SnapshotSignature(snapshot);
+            return snapshot;
+        }
+
+        public static EncounterReadinessV130 UniformSnapshot(float readiness, int activeChannels)
+        {
+            float value = Mathf.Clamp01(readiness);
+            EncounterReadinessV130 snapshot = new EncounterReadinessV130
+            {
+                MobileFront = value, Sustainment = value, RouteIntelligence = value,
+                ReconEw = value, MobileSignal = value, Sigint = value,
+                Composite = value, ActiveChannels = Mathf.Clamp(activeChannels, 0, 6)
+            };
+            snapshot.Signature = SnapshotSignature(snapshot);
+            return snapshot;
+        }
+
+        public static EncounterRuntimeBudgetV130 Resolve(EncounterPlan plan, EncounterReadinessV130 snapshot)
+        {
+            float readiness = snapshot.ActiveChannels > 0 ? Mathf.Clamp01(snapshot.Composite) : 0.50f;
+            int delta = readiness <= 0.34f ? MaxConcurrencyDelta : readiness >= 0.66f ? -MaxConcurrencyDelta : 0;
+            int maxAlive = Mathf.Clamp(plan.MaxAlive + delta, 4, EncounterPlannerV130.MaxConcurrentEnemies);
+            float scale = Mathf.Clamp(1f + (readiness - 0.50f) * 0.24f, MinSpawnScale, MaxSpawnScale);
+            float interval = Mathf.Clamp(plan.SpawnInterval * scale, EncounterPlannerV130.MinSpawnInterval, EncounterPlannerV130.MaxSpawnInterval);
+            int signature = unchecked(plan.Signature * 31 + snapshot.Signature * 17 + maxAlive * 7 + Mathf.RoundToInt(interval * 1000f));
+            return new EncounterRuntimeBudgetV130
+            {
+                MaxAlive = maxAlive, SpawnInterval = interval, ConcurrencyDelta = delta,
+                Readiness = readiness, ActiveChannels = snapshot.ActiveChannels, Signature = signature
+            };
+        }
+
+        private static EncounterReadinessV130 NeutralSnapshot()
+        {
+            return UniformSnapshot(0.50f, 0);
+        }
+
+        private static void AddActive(float value, ref float sum, ref int active)
+        {
+            sum += Mathf.Clamp01(value);
+            active++;
+        }
+
+        private static int SnapshotSignature(EncounterReadinessV130 s)
+        {
+            int hash = 23;
+            hash = unchecked(hash * 31 + Mathf.RoundToInt(s.MobileFront * 1000f));
+            hash = unchecked(hash * 31 + Mathf.RoundToInt(s.Sustainment * 1000f));
+            hash = unchecked(hash * 31 + Mathf.RoundToInt(s.RouteIntelligence * 1000f));
+            hash = unchecked(hash * 31 + Mathf.RoundToInt(s.ReconEw * 1000f));
+            hash = unchecked(hash * 31 + Mathf.RoundToInt(s.MobileSignal * 1000f));
+            hash = unchecked(hash * 31 + Mathf.RoundToInt(s.Sigint * 1000f));
+            hash = unchecked(hash * 31 + s.ActiveChannels);
+            return hash;
+        }
     }
 
     /// <summary>Pure phase policy used by the real boss weapon authority.</summary>

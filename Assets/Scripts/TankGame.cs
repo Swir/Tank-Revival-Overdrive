@@ -45,6 +45,8 @@ namespace TankRevival
         private float _nextSpawn;
         private int _spawnOrdinal;
         private EncounterPlan _encounterPlan;
+        private EncounterRuntimeBudgetV130 _encounterRuntimeBudget;
+        private float _nextEncounterDoctrineRefresh;
         private float _roundClearAt = -1f;
         private float _nextEagleAlarm;
 
@@ -72,6 +74,7 @@ namespace TankRevival
         public Vector2 BasePosition => _baseObject != null ? (Vector2)_baseObject.transform.position : new Vector2(0f, -5.95f);
         public int CurrentRound => _round;
         public EncounterPlan CurrentEncounterPlan => _encounterPlan;
+        public EncounterRuntimeBudgetV130 CurrentEncounterRuntimeBudget => _encounterRuntimeBudget;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureGameExists()
@@ -209,10 +212,12 @@ namespace TankRevival
             _aliveEnemies = 0;
             _encounterPlan = EncounterPlannerV130.PlanForRound(round);
             _enemiesToSpawn = _encounterPlan.EnemyCount;
-            _maxAlive = _encounterPlan.MaxAlive;
+            _encounterRuntimeBudget = EncounterCrossSystemDoctrineV130.Resolve(_encounterPlan, EncounterCrossSystemDoctrineV130.CaptureReadOnly());
+            _maxAlive = _encounterRuntimeBudget.MaxAlive;
             _bossPending = _encounterPlan.BossRound;
             _spawnOrdinal = 0;
-            _nextSpawn = Time.time + _encounterPlan.SpawnInterval;
+            _nextEncounterDoctrineRefresh = Time.time + EncounterCrossSystemDoctrineV130.RefreshSeconds;
+            _nextSpawn = Time.time + _encounterRuntimeBudget.SpawnInterval;
             BuildArena(round);
 
             if (_bossPending)
@@ -339,12 +344,12 @@ namespace TankRevival
 
             EagleDefensePlanV130 defense = EncounterPlannerV130.EagleDefenseFor(_encounterPlan);
             ObstacleKind sideKind = defense.SteelSides ? ObstacleKind.Steel : ObstacleKind.Brick;
-            ObstacleKind crownKind = defense.SteelCrown ? ObstacleKind.Steel : ObstacleKind.Brick;
+            ObstacleKind crownKind = ObstacleKind.Brick; // permanent universal-ammo breach lane
             int wallHp = defense.WallHitPoints;
             CreateObstacle(new Vector2(-1.15f, -5.85f), sideKind, new Vector2(0.75f, 0.75f), wallHp);
             CreateObstacle(new Vector2(1.15f, -5.85f), sideKind, new Vector2(0.75f, 0.75f), wallHp);
-            CreateObstacle(new Vector2(-0.75f, -5.05f), crownKind, new Vector2(0.75f, 0.75f), wallHp);
-            CreateObstacle(new Vector2(0.75f, -5.05f), crownKind, new Vector2(0.75f, 0.75f), wallHp);
+            CreateObstacle(new Vector2(-0.75f, -5.05f), crownKind, new Vector2(0.75f, 0.75f), defense.CrownHitPoints);
+            CreateObstacle(new Vector2(0.75f, -5.05f), crownKind, new Vector2(0.75f, 0.75f), defense.CrownHitPoints);
         }
 
         private void OnEagleDamaged(Health eagle, int amount)
@@ -462,8 +467,18 @@ namespace TankRevival
             VisualFactory.RingPulse(go.transform.position, new Color(0.18f, 0.86f, 1f), 1.0f);
         }
 
+        private void RefreshEncounterDoctrineBudget()
+        {
+            if (Time.time < _nextEncounterDoctrineRefresh) return;
+            _nextEncounterDoctrineRefresh = Time.time + EncounterCrossSystemDoctrineV130.RefreshSeconds;
+            EncounterReadinessV130 readiness = EncounterCrossSystemDoctrineV130.CaptureReadOnly();
+            _encounterRuntimeBudget = EncounterCrossSystemDoctrineV130.Resolve(_encounterPlan, readiness);
+            _maxAlive = _encounterRuntimeBudget.MaxAlive;
+        }
+
         private void HandleSpawning()
         {
+            RefreshEncounterDoctrineBudget();
             if (_aliveEnemies >= _maxAlive || Time.time < _nextSpawn) return;
 
             if (_enemiesToSpawn > 0)
@@ -472,7 +487,7 @@ namespace TankRevival
                 _spawnOrdinal++;
                 _enemiesToSpawn--;
                 SpawnEnemy(kind);
-                _nextSpawn = Time.time + Mathf.Max(EncounterPlannerV130.MinSpawnInterval, _encounterPlan.SpawnInterval);
+                _nextSpawn = Time.time + Mathf.Max(EncounterPlannerV130.MinSpawnInterval, _encounterRuntimeBudget.SpawnInterval);
                 return;
             }
 
@@ -793,7 +808,7 @@ namespace TankRevival
             int activeCount = _player != null ? _player.GetAmmoCount(active) : (active == AmmoType.Basic ? -1 : _savedAmmo[(int)active]);
             string ammoCount = active == AmmoType.Basic ? "∞" : activeCount.ToString();
 
-            GUI.Box(new Rect(14f, 12f, 480f, 158f), string.Empty);
+            GUI.Box(new Rect(14f, 12f, 480f, 183f), string.Empty);
             GUI.Label(new Rect(28f, 19f, 455f, 27f), $"ROUND {_round:000}/100     SCORE {_score:N0}     ENEMY {remaining}", _hudStyle);
             GUI.Label(new Rect(28f, 47f, 455f, 27f), $"LIVES {_lives}   ARMOR {playerHp}   ORZEŁEK {eagleHp}/{EagleMaxHealth}", eagleHp <= 2 ? _warningStyle : _hudStyle);
             GUI.Label(new Rect(28f, 75f, 455f, 27f), $"AMMO {AmmoDatabase.DisplayName(active)}  [{ammoCount}]   •   Q/E switch", _hudStyle);
@@ -802,6 +817,7 @@ namespace TankRevival
                 ? $"   BOSS {EncounterWarfareDirector.Instance.BossPhase}/{EncounterWarfareDirector.Instance.BossPhaseCount} {EncounterWarfareDirector.Instance.BossPhaseLabel}"
                 : string.Empty;
             GUI.Label(new Rect(28f, 128f, 455f, 25f), $"THREAT {_encounterPlan.EnemyCount}/{_encounterPlan.MaxAlive}   EAGLE P{Mathf.RoundToInt(_encounterPlan.EaglePressure * 100f):00}   SIG {_encounterPlan.Signature:X8}{bossTelemetry}", _smallStyle);
+            GUI.Label(new Rect(28f, 153f, 455f, 25f), $"XSYS {_encounterRuntimeBudget.ActiveChannels}/6   READY {Mathf.RoundToInt(_encounterRuntimeBudget.Readiness * 100f):00}%   CONC {_encounterRuntimeBudget.ConcurrencyDelta:+#;-#;0}   RT {_encounterRuntimeBudget.Signature:X8}", _smallStyle);
 
             if (_player != null)
             {

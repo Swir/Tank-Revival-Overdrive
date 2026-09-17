@@ -32,3 +32,11 @@ v13.0 remains **IN DEVELOPMENT**. The current implementation intentionally does 
 
 ## Live encounter consumption
 - `TankGame` consumes v13.0 plan budgets, deterministic doctrine composition and Orzelek pressure fortification; HUD exposes exact plan telemetry.
+
+### Safe Orzelek escalation and cross-stack doctrine
+
+- Tier-3 fortification keeps Steel on the side shoulders but permanently reserves the two center crown blocks as destructible Brick, so Basic/Twin loadouts always retain a visible breach route while heavy ammunition can still crack the tougher flanks.
+- Added `EncounterCrossSystemDoctrineV130`, which reads only public state from Mobile Front, Operational Sustainment, Route Intelligence, Recon/EW, Mobile Signal and SIGINT. It never mutates those services.
+- Active operational readiness now produces a tightly bounded live spawn-pressure decision: at most ±1 concurrent enemy and a 0.92–1.10 spawn-interval scale, refreshed only every 0.75 s while `TankGame` remains the sole spawn authority.
+- The tactical HUD exposes active cross-system channels, composite readiness, bounded concurrency delta and runtime-budget signature.
+- Packaged v13.0 smoke now proves the universal center breach lane plus neutral/hostile/favorable cross-system budget direction and hard limits.

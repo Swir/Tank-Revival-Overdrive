@@ -109,8 +109,24 @@ namespace TankRevival
                 if (earlyDefense.Tier < 1 || lateDefense.Tier > 3 ||
                     earlyDefense.Tier > midDefense.Tier || midDefense.Tier > lateDefense.Tier ||
                     earlyDefense.WallHitPoints > midDefense.WallHitPoints || midDefense.WallHitPoints > lateDefense.WallHitPoints ||
-                    !lateDefense.SteelSides || !lateDefense.SteelCrown)
-                { Fail("Orzelek fortification policy is not bounded/monotonic"); return; }
+                    earlyDefense.CrownHitPoints > midDefense.CrownHitPoints || midDefense.CrownHitPoints > lateDefense.CrownHitPoints ||
+                    !lateDefense.SteelSides || lateDefense.SteelCrown || !lateDefense.DestructibleBreachLane ||
+                    lateDefense.CrownHitPoints < lateDefense.WallHitPoints || lateDefense.CrownHitPoints > 5)
+                { Fail("Orzelek fortification policy lost bounded destructible center breach lane"); return; }
+
+                if (!EncounterCrossSystemDoctrineV130.ConfigurationValid)
+                { Fail("cross-system doctrine configuration invalid"); return; }
+                EncounterPlan pressurePlan = plans[79];
+                EncounterRuntimeBudgetV130 neutralBudget = EncounterCrossSystemDoctrineV130.Resolve(pressurePlan, EncounterCrossSystemDoctrineV130.UniformSnapshot(0.50f, 0));
+                EncounterRuntimeBudgetV130 hostileBudget = EncounterCrossSystemDoctrineV130.Resolve(pressurePlan, EncounterCrossSystemDoctrineV130.UniformSnapshot(0.10f, 6));
+                EncounterRuntimeBudgetV130 favorableBudget = EncounterCrossSystemDoctrineV130.Resolve(pressurePlan, EncounterCrossSystemDoctrineV130.UniformSnapshot(0.90f, 6));
+                if (neutralBudget.ConcurrencyDelta != 0 || neutralBudget.MaxAlive != pressurePlan.MaxAlive ||
+                    hostileBudget.ConcurrencyDelta != 1 || favorableBudget.ConcurrencyDelta != -1 ||
+                    hostileBudget.MaxAlive > EncounterPlannerV130.MaxConcurrentEnemies || favorableBudget.MaxAlive < 4 ||
+                    hostileBudget.SpawnInterval < EncounterPlannerV130.MinSpawnInterval ||
+                    favorableBudget.SpawnInterval > EncounterPlannerV130.MaxSpawnInterval ||
+                    hostileBudget.SpawnInterval >= neutralBudget.SpawnInterval || favorableBudget.SpawnInterval <= neutralBudget.SpawnInterval)
+                { Fail("cross-system pressure/relief budget is not bounded and directional"); return; }
 
                 if (bossRounds != 10) { Fail("expected exactly ten boss rounds, got " + bossRounds); return; }
                 int doctrineCount = 0;
@@ -148,7 +164,8 @@ namespace TankRevival
                     "enemyBudget=" + minEnemies + ".." + maxEnemies + " concurrent=" + minAlive + ".." + maxAlive +
                     " minSpawnInterval=" + minInterval.ToString("0.000") + " maxEaglePressure=" + maxPressure.ToString("0.000") + "\n" +
                     "bossPhases=3..4 maxTrackedRounds=" + EncounterWarfareDirector.MaxTrackedRounds + " maxTrackedBosses=" + EncounterWarfareDirector.MaxTrackedBosses + "\n" +
-                    "spawnFold=" + spawnFold + " supplySpawns=" + supplySpawns + " fortificationTiers=" + earlyDefense.Tier + "/" + midDefense.Tier + "/" + lateDefense.Tier + "\n";
+                    "spawnFold=" + spawnFold + " supplySpawns=" + supplySpawns + " fortificationTiers=" + earlyDefense.Tier + "/" + midDefense.Tier + "/" + lateDefense.Tier + " breachLane=" + lateDefense.DestructibleBreachLane + "\n" +
+                    "crossSystem=6 channels hostileDelta=" + hostileBudget.ConcurrencyDelta + " favorableDelta=" + favorableBudget.ConcurrencyDelta + " neutralInterval=" + neutralBudget.SpawnInterval.ToString("0.000") + "\n";
                 File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), PassMarker), report);
                 Debug.Log("[TankRevival] " + report.Replace("\n", " | "));
                 Application.Quit(0);
