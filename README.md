@@ -30,7 +30,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 | Item | Status |
 |---|---|
-| Development milestone | **V13.3 IN DEVELOPMENT** on `dev-v13-2` |
+| Development milestone | **V13.3 IN DEVELOPMENT** on `dev-v13-3` |
 | Roadmap | **407 / 415 completed (98.1%)** — authoritative `ROADMAP.md` scope |
 | Primary platform | **Windows 10 / 11 x64** |
 | Development engine | **Unity 6000.3.17f1** |
