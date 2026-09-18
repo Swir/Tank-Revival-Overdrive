@@ -3,22 +3,22 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-6"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-439%2F439-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.6%20QUALIFIED-brightgreen?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-7"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.2%25-blue?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-439%2F447-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.7%20IN%20DEVELOPMENT-blue?style=for-the-badge">
 </p>
 
 <!-- SWIR-PROGRESS-SVG-PRO:v1 -->
 <p align="center"><img src="assets/readme/progress-mini.svg" alt="SWIR roadmap progress mini" width="700"></p>
-<p align="center"><sub>Roadmap progress: 439 / 439 completed (100.0%) — V13.6 QUALIFIED. Release readiness is tracked separately by Windows qualification gates.</sub></p>
+<p align="center"><sub>Roadmap progress: 439 / 447 completed (98.2%) — V13.7 IN DEVELOPMENT. Release readiness is tracked separately by Windows qualification gates.</sub></p>
 
 ## 📊 Overall progress
 
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **439** | **0** | **439** | **100.0%** |
+| **439** | **8** | **447** | **98.2%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numeric table, percentage and generated Progress SVG. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -664,3 +664,13 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Bounded contact HUD and world markers** — surface only the highest-value tracked/verified contacts with a compact sensor panel, confidence state, range and sweep readiness under a strict eight-marker presentation budget.
 - [x] **Packaged-EXE v13.6 runtime smoke** — validate 100-round sensor signatures, threshold monotonicity, weather/terrain/EW coupling, sweep cooldown/range bounds, fixed contact/marker caps, reset behavior and authority contracts, then rerun v13.5/v13.4/v13.3 plus rounds 80/90/100 soak on the same executable.
 - [x] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.6 gate to pass and only then finalize roadmap/checklist/progress SVGs.
+
+## v13.7 — Late-Round Performance & Battle Density Reforge — IN DEVELOPMENT
+- [ ] **Deterministic late-round pressure planner** — classify Normal / Dense / Critical presentation pressure from round, live enemy/unit density, active explosion pressure and the existing performance-governor tier without changing spawn, movement, targeting, damage or economy authority.
+- [ ] **Proactive mass-battle FX budgets** — feed the v13.7 pressure profile into the existing `MassBattleFxBudget` so trails, micro FX, tactical cues and explosion detail step down before late-round presentation churn becomes a frame-time cliff.
+- [ ] **Allocation-aware runtime telemetry** — sample managed-memory / GC collection deltas at a bounded cadence and expose compact diagnostics without per-frame scene scans or unbounded collections.
+- [ ] **Battle-density hysteresis and recovery** — prevent budget thrash with bounded promotion/recovery timing while preserving player graphics-floor settings and the existing `WarfarePerformanceGovernor` escalation rules.
+- [ ] **Pool-preserving density policy** — keep projectile/combat pools warm and reuse-first under rounds 80/90/100 pressure; performance adaptation may reduce optional presentation density but must not reduce enemy counts or suppress gameplay events.
+- [ ] **Performance regression contracts** — verify monotonic Normal→Dense→Critical budgets, hard token/detail caps, stable configuration and unchanged combat-authority boundaries with deterministic source/runtime probes.
+- [ ] **Packaged-EXE v13.7 runtime smoke** — run the v13.7 performance probe on one packaged Windows EXE, then rerun v13.6/v13.5/v13.4/v13.3 regressions plus rounds 80/90/100 soak on that same executable.
+- [ ] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.7 gate to pass and only then finalize roadmap/checklist/progress SVGs.
