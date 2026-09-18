@@ -65,11 +65,17 @@ for token, label in (
     ("near > mid && mid > far", "distance monotonicity"),
     ("clear > storm && clear > crater", "weather/terrain monotonicity"),
     ("highRecon > lowRecon", "Recon/EW monotonicity"),
-    ("sweep > noSweep", "active sweep benefit"),
+    ("bool sweepActive =", "loop sweep activation variable"),
+    ("float sweepConfidence =", "sweep confidence variable"),
+    ("sweepConfidence > noSweep", "active sweep benefit"),
     ("closeFloor < BattlefieldSensorFusionPlannerV136.TrackingThreshold", "close-range fairness floor"),
     ("bossFloor < BattlefieldSensorFusionPlannerV136.DetectionThreshold", "boss fairness floor"),
 ):
     need(smoke, token, label)
+
+# Prevent the CS0136 regression that previously stopped the exact Windows candidate.
+if re.search(r"\bbool\s+sweep\s*=", smoke) or re.search(r"\bfloat\s+sweep\s*=", smoke):
+    raise SystemExit("v13.6 verification FAILED: ambiguous local 'sweep' reintroduces CS0136 shadowing risk")
 
 if version != "v13.6.0-dev":
     raise SystemExit(f"v13.6 verification FAILED: VERSION is {version!r}, expected 'v13.6.0-dev'")
