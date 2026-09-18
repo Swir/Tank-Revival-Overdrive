@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace TankRevival
 {
-    /// <summary>Packaged-EXE smoke for v13.4 deterministic tactical terrain and safe-route contracts.</summary>
+    /// <summary>Packaged-EXE smoke for v13.4 deterministic tactical terrain, live overlay and safe-route contracts.</summary>
     public sealed class TacticalTerrainCISmokeProbe : MonoBehaviour
     {
         public const string PassMarker = "V13_4_TACTICAL_TERRAIN_OK.txt";
@@ -31,7 +31,8 @@ namespace TankRevival
             {
                 if (!TacticalTerrainPlannerV134.ConfigurationValid || !TacticalTerrainDirector.ConfigurationValid)
                 { Fail("v13.4 tactical terrain configuration invalid"); return; }
-                if (TacticalTerrainDirector.Instance == null)
+                TacticalTerrainDirector runtimeDirector = TacticalTerrainDirector.EnsureInstalled();
+                if (runtimeDirector == null || TacticalTerrainDirector.Instance == null)
                 { Fail("tactical terrain runtime director was not installed"); return; }
                 if (TacticalTerrainPlannerV134.PlannedRounds != 100 || TacticalTerrainPlannerV134.MaxCoverNodes != 12 || TacticalTerrainPlannerV134.CandidateSlotCount != 24)
                 { Fail("hard terrain budgets regressed"); return; }
@@ -66,27 +67,16 @@ namespace TankRevival
                     int water = 0, steel = 0, brick = 0;
                     for (int ordinal = 0; ordinal < a.CoverCount; ordinal++)
                     {
+                        int slot = TacticalTerrainPlannerV134.CandidateSlotIndex(a, ordinal);
+                        if (slot < 0 || slot >= candidateSlots.Length || candidateSlots[slot])
+                        { Fail("duplicate/invalid tactical slot round=" + round + " ordinal=" + ordinal + " slot=" + slot); return; }
+                        candidateSlots[slot] = true;
+
                         Vector2 p = TacticalTerrainPlannerV134.CandidatePosition(a, ordinal);
                         if (TacticalTerrainPlannerV134.IsReservedSafeLane(a, p))
                         { Fail("planned cover entered reserved safe lane round=" + round + " ordinal=" + ordinal); return; }
                         if (Mathf.Abs(p.x) > 10.5f || p.y < -3.4f || p.y > 4.45f)
                         { Fail("planned cover escaped bounded arena overlay round=" + round); return; }
-
-                        // Ordinal stride 5 over 24 slots is coprime, so first 12 planner slots must be unique.
-                        int nearestSlot = -1;
-                        float nearest = float.MaxValue;
-                        for (int s = 0; s < TacticalTerrainPlannerV134.CandidateSlotCount; s++)
-                        {
-                            TacticalTerrainPlanV134 zeroJitter = a;
-                            Vector2 q = TacticalTerrainPlannerV134.CandidatePosition(zeroJitter, s);
-                            float d = Vector2.SqrMagnitude(p - q);
-                            if (d < nearest) { nearest = d; nearestSlot = s; }
-                        }
-                        if (nearestSlot >= 0 && nearest < 0.000001f)
-                        {
-                            if (candidateSlots[nearestSlot]) { Fail("duplicate tactical slot round=" + round); return; }
-                            candidateSlots[nearestSlot] = true;
-                        }
 
                         ObstacleKind kind = TacticalTerrainPlannerV134.KindForOrdinal(a, ordinal);
                         int hp = TacticalTerrainPlannerV134.HitPointsFor(a, kind, ordinal);
@@ -99,7 +89,6 @@ namespace TankRevival
                     if (water != a.WaterBudget || steel != a.SteelBudget || brick != a.BrickBudget)
                     { Fail("cover kind budget mismatch round=" + round + " B/S/W=" + brick + "/" + steel + "/" + water); return; }
 
-                    // Explicit permanent Orzełek/player lane and canonical spawn-egress probes.
                     if (!TacticalTerrainPlannerV134.IsReservedSafeLane(a, new Vector2(0f, -5.0f)) ||
                         !TacticalTerrainPlannerV134.IsReservedSafeLane(a, new Vector2(0f, -3.2f)) ||
                         !TacticalTerrainPlannerV134.IsReservedSafeLane(a, new Vector2(-9.5f, 5.65f)) ||
@@ -112,7 +101,6 @@ namespace TankRevival
                 for (int i = 0; i < doctrineCoverage.Length; i++)
                     if (doctrineCoverage[i] < 8) { Fail("terrain doctrine coverage too low index=" + i + " count=" + doctrineCoverage[i]); return; }
 
-                // Existing canonical Obstacle authority remains the cover-damage contract used by v13.4.
                 if (Obstacle.StructuralDamageFor(ObstacleKind.Steel, AmmoType.Basic, 4, false) != 0 ||
                     Obstacle.StructuralDamageFor(ObstacleKind.Steel, AmmoType.EMP, 4, false) != 0 ||
                     Obstacle.StructuralDamageFor(ObstacleKind.Steel, AmmoType.Explosive, 2, false) <= 0 ||
@@ -123,13 +111,26 @@ namespace TankRevival
                 if (fallback != Vector2.right)
                 { Fail("breach-aware fallback must preserve cardinal movement when no breach is active"); return; }
 
+                // Exercise the actual runtime overlay, not only the pure planner. This catches component,
+                // safe-lane and same-frame rebuild regressions in the packaged Windows player.
+                runtimeDirector.ApplyDeterministicPlan(64, 640130, 640131);
+                int firstCount = runtimeDirector.ActiveCoverCount;
+                string overlayReason;
+                if (firstCount < 3 || firstCount > runtimeDirector.CurrentPlan.CoverCount || !runtimeDirector.ValidateActiveOverlay(out overlayReason))
+                { Fail("live tactical overlay invalid first build: count=" + firstCount + " reason=" + overlayReason); return; }
+                runtimeDirector.ApplyDeterministicPlan(65, 650130, 650131);
+                int rebuiltCount = runtimeDirector.ActiveCoverCount;
+                if (rebuiltCount < 3 || rebuiltCount > runtimeDirector.CurrentPlan.CoverCount || !runtimeDirector.ValidateActiveOverlay(out overlayReason))
+                { Fail("same-frame tactical overlay rebuild invalid: count=" + rebuiltCount + " reason=" + overlayReason); return; }
+
                 string report =
                     "v13.4 tactical terrain + cover warfare smoke: PASS\n" +
                     "Version: " + Application.version + "\n" +
                     "rounds=100 doctrines=" + TacticalTerrainPlannerV134.DoctrineCount +
                     " maxCover=" + TacticalTerrainPlannerV134.MaxCoverNodes + " candidates=" + TacticalTerrainPlannerV134.CandidateSlotCount +
                     " signatureFold=" + signatureFold + "\n" +
-                    "safeLane=" + TacticalTerrainPlannerV134.MinSafeLaneHalfWidth.ToString("0.00") + ".." + TacticalTerrainPlannerV134.MaxSafeLaneHalfWidth.ToString("0.00") +
+                    "liveOverlay=" + firstCount + " rebuiltOverlay=" + rebuiltCount +
+                    " safeLane=" + TacticalTerrainPlannerV134.MinSafeLaneHalfWidth.ToString("0.00") + ".." + TacticalTerrainPlannerV134.MaxSafeLaneHalfWidth.ToString("0.00") +
                     " breachMemory=" + ReactiveCoverBreachDirector.MaxRecentBreaches + "\n";
                 File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), PassMarker), report);
                 Debug.Log("[TankRevival] " + report.Replace("\n", " | "));
