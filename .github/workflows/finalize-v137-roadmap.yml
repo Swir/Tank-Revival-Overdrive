@@ -87,22 +87,74 @@ jobs:
           assert os.environ['CANDIDATE_ZIP_SHA256'] in checksum
           PY
 
-      - name: Finalize roadmap, evidence and SVG presentation
+      - name: Harden presentation generator and closed-state verifier
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
-          p=Path('Tools/finalize_v137_roadmap.py')
-          s=p.read_text(encoding='utf-8')
+
+          finalizer=Path('Tools/finalize_v137_roadmap.py')
+          s=finalizer.read_text(encoding='utf-8')
           s=s.replace('a244565049fad753a31a67eb1b03302b53af3a64d63539d3f8ddc07093250956','0328a6613dcc64dffb1f675282e27a798b0f3abcb561e13423b7b6de3d75c25f')
           s=s.replace('INNER_ZIP_BYTES = 60586250','INNER_ZIP_BYTES = 60548408')
-          p.write_text(s,encoding='utf-8')
+          finalizer.write_text(s,encoding='utf-8')
+
+          generator=Path('Tools/generate_progress_svgs.py')
+          g=generator.read_text(encoding='utf-8')
+          replacements={
+              'SWIR Progress SVG Pro reusable template':'SWIR Progress SVG Pro reusable TEMPLATE',
+              'Template only. Progress values are N/A until generated from verified authoritative data.':'TEMPLATE only. Progress values are N/A until generated from verified authoritative data.',
+              'Template — replace only from verified authoritative data':'TEMPLATE — replace only from verified authoritative data',
+          }
+          for old,new in replacements.items():
+              if old not in g:
+                  raise SystemExit(f'generator TEMPLATE hardening token missing: {old}')
+              g=g.replace(old,new)
+          generator.write_text(g,encoding='utf-8')
+
+          verifier=Path('Tools/verify_v137_late_round_performance.py')
+          v=verifier.read_text(encoding='utf-8')
+          start=v.index("    done = len(re.findall(r'^- \\[x\\] ', roadmap, re.M)); open_ = len(re.findall(r'^- \\[ \\] ', roadmap, re.M))")
+          end=v.index("    return 0", start)
+          closed_aware="""    done = len(re.findall(r'^- \\[x\\] ', roadmap, re.M)); open_ = len(re.findall(r'^- \\[ \\] ', roadmap, re.M))
+    state = (done, open_, done + open_)
+    if state == (439, 8, 447):
+        require('| **439** | **8** | **447** | **98.2%** |' in roadmap, 'open roadmap numeric dashboard mismatch')
+        require('V13.7%20IN%20DEVELOPMENT' in roadmap, 'open roadmap status mismatch')
+        heading = '## v13.7 — Late-Round Performance & Battle Density Reforge — IN DEVELOPMENT'
+        require(heading in roadmap, 'open v13.7 heading missing')
+        section = roadmap[roadmap.index(heading):]
+        require(section.count('- [ ]') == 8 and section.count('- [x]') == 0, 'v13.7 items must remain unchecked before Windows qualification')
+        state_label = '439/447 (98.2%) V13.7 IN DEVELOPMENT'
+    elif state == (447, 0, 447):
+        require('| **447** | **0** | **447** | **100.0%** |' in roadmap, 'qualified roadmap numeric dashboard mismatch')
+        require('V13.7%20QUALIFIED' in roadmap, 'qualified roadmap status mismatch')
+        heading = '## v13.7 — Late-Round Performance & Battle Density Reforge — QUALIFIED'
+        require(heading in roadmap, 'qualified v13.7 heading missing')
+        section = roadmap[roadmap.index(heading):]
+        require(section.count('- [x]') == 8 and section.count('- [ ]') == 0, 'qualified v13.7 section must contain exactly eight completed items')
+        state_label = '447/447 (100.0%) V13.7 QUALIFIED'
+    else:
+        raise SystemExit(f'v13.7 verifier FAILED: unsupported roadmap state {done}/{done + open_} with {open_} open')
+    require('<!-- SWIR-README-STANDARD:v2 -->' in readme and '## 🔎 Search Keywords' in readme, 'README PRO v2/Search Keywords missing')
+    require(readme.count('assets/readme/progress-card.svg') == 1 and roadmap.count('assets/readme/progress-mini.svg') == 1, 'SVG embedding contract mismatch')
+
+    print('v13.7 late-round performance source contract: PASS')
+    print('roadmap: ' + state_label)
+"""
+          verifier.write_text(v[:start] + closed_aware + v[end:], encoding='utf-8')
           PY
-          python -m py_compile Tools/finalize_v137_roadmap.py Tools/generate_progress_svgs.py Tools/swir_visual_report_guard.py
+          python -m py_compile Tools/finalize_v137_roadmap.py Tools/generate_progress_svgs.py Tools/verify_v137_late_round_performance.py Tools/swir_visual_report_guard.py
+
+      - name: Finalize roadmap, evidence and SVG presentation
+        shell: bash
+        run: |
+          set -euo pipefail
           python Tools/finalize_v137_roadmap.py
           python Tools/generate_progress_svgs.py --write --embed
           python Tools/generate_progress_svgs.py --check
+          python Tools/verify_v137_late_round_performance.py
           python Tools/swir_visual_report_guard.py --check
           python - <<'PY'
           from pathlib import Path
@@ -124,6 +176,7 @@ jobs:
           assert '60548408' in evidence
           template=Path('assets/readme/progress-template.svg').read_text(encoding='utf-8')
           assert 'TEMPLATE' in template and 'N/A' in template
+          assert 'assets/readme/progress-template.svg' not in r and 'assets/readme/progress-template.svg' not in s
           PY
           git diff --check
 
@@ -131,12 +184,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg docs/qualification/V13_7_WINDOWS_QUALIFICATION.md Tools/finalize_v137_roadmap.py; then
+          if git diff --quiet -- ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg docs/qualification/V13_7_WINDOWS_QUALIFICATION.md Tools/finalize_v137_roadmap.py Tools/generate_progress_svgs.py Tools/verify_v137_late_round_performance.py; then
             echo 'v13.7 qualified state already committed.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg docs/qualification/V13_7_WINDOWS_QUALIFICATION.md Tools/finalize_v137_roadmap.py
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg docs/qualification/V13_7_WINDOWS_QUALIFICATION.md Tools/finalize_v137_roadmap.py Tools/generate_progress_svgs.py Tools/verify_v137_late_round_performance.py
           git commit -m 'docs(v13.7): finalize qualified performance milestone'
           git push origin HEAD:dev-v13-7
