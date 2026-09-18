@@ -1,0 +1,38 @@
+name: C# Type Uniqueness Guard
+
+on:
+  push:
+    branches:
+      - main
+      - 'dev-v*'
+    paths:
+      - 'Assets/**/*.cs'
+      - 'Tools/verify_csharp_type_uniqueness.py'
+      - '.github/workflows/csharp-type-uniqueness.yml'
+  pull_request:
+    paths:
+      - 'Assets/**/*.cs'
+      - 'Tools/verify_csharp_type_uniqueness.py'
+      - '.github/workflows/csharp-type-uniqueness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contract:
+    name: Detect duplicate top-level C# types
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact event SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Compile verifier
+        run: python3 -m py_compile Tools/verify_csharp_type_uniqueness.py
+
+      - name: Verify C# top-level type uniqueness
+        run: python3 Tools/verify_csharp_type_uniqueness.py

@@ -159,12 +159,12 @@ namespace TankRevival
     }
 
     /// <summary>
-    /// v3.8 TACTICAL TERRAIN
-    /// Rebuilds each round into a deterministic tactical layout of destructible cover,
-    /// mobility terrain and mine lanes. Generated features avoid Orzelek's immediate
-    /// footprint and use existing projectile/obstacle/health authority.
+    /// v3.8 TACTICAL TERRAIN compatibility layer.
+    /// The historical runtime remains active for mobility fields and mine lanes, while v13.4 owns
+    /// the new deterministic cover overlay through TacticalTerrainDirector. The distinct type name
+    /// prevents duplicate top-level C# types without deleting existing gameplay behavior.
     /// </summary>
-    public sealed class TacticalTerrainDirector : MonoBehaviour
+    public sealed class LegacyTacticalTerrainDirectorV38 : MonoBehaviour
     {
         private TankGame _game;
         private Transform _root;
@@ -179,10 +179,10 @@ namespace TankRevival
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
-            if (FindAnyObjectByType<TacticalTerrainDirector>() != null) return;
-            GameObject go = new GameObject("TacticalTerrainDirector");
+            if (FindAnyObjectByType<LegacyTacticalTerrainDirectorV38>() != null) return;
+            GameObject go = new GameObject("LegacyTacticalTerrainDirector_v3_8");
             DontDestroyOnLoad(go);
-            go.AddComponent<TacticalTerrainDirector>();
+            go.AddComponent<LegacyTacticalTerrainDirectorV38>();
         }
 
         private void Update()
