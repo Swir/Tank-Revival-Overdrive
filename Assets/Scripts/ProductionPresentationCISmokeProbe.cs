@@ -12,6 +12,7 @@ namespace TankRevival
     public sealed class ProductionPresentationCISmokeProbe : MonoBehaviour
     {
         private const float TimeoutSeconds = 12f;
+        private const int MinimumAuthoredClipCount = 2;
         private float _startedAt;
         private bool _validated;
 
@@ -43,9 +44,16 @@ namespace TankRevival
             }
 
             _validated = true;
-            if (audio.LoadedAuthoredClipCount < 2)
+            if (audio.LoadedAuthoredClipCount < MinimumAuthoredClipCount)
             {
-                Finish(false, "authored audio missing; loaded=" + audio.LoadedAuthoredClipCount);
+                Finish(
+                    false,
+                    "authored audio missing; loaded=" + audio.LoadedAuthoredClipCount +
+                    " required=" + MinimumAuthoredClipCount +
+                    " discovered=" + audio.DiscoveredAuthoredResourceCount +
+                    " resources=" + audio.AuthoredResourceSummary +
+                    " heavy=" + audio.HeavyCannonLoaded +
+                    " boss=" + audio.BossAlarmLoaded);
                 return;
             }
 
@@ -74,7 +82,13 @@ namespace TankRevival
                 }
             }
 
-            Finish(true, "authoredAudio=" + audio.LoadedAuthoredClipCount + " enemyKinds=" + verifiedKinds + " budget=" + WarfarePerformanceGovernor.Tier);
+            Finish(
+                true,
+                "authoredAudio=" + audio.LoadedAuthoredClipCount +
+                " discovered=" + audio.DiscoveredAuthoredResourceCount +
+                " resources=" + audio.AuthoredResourceSummary +
+                " enemyKinds=" + verifiedKinds +
+                " budget=" + WarfarePerformanceGovernor.Tier);
         }
 
         private static bool HasArgument(string expected)

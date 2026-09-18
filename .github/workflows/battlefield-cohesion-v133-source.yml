@@ -7,11 +7,15 @@ on:
       - 'Assets/Scripts/BattlefieldCohesionV133.cs'
       - 'Assets/Scripts/BattlefieldCohesionCISmokeProbe.cs'
       - 'Assets/Scripts/EnemyTank.cs'
+      - 'Assets/Scripts/ProductionBattleAudioDirector.cs'
+      - 'Assets/Scripts/ProductionPresentationCISmokeProbe.cs'
+      - 'Assets/Resources/TankRevivalProduction/Audio/*.wav'
       - 'ROADMAP.md'
       - 'README.md'
       - 'assets/readme/progress-card.svg'
       - 'assets/readme/progress-mini.svg'
       - 'Tools/verify_v133_battlefield_cohesion.py'
+      - 'Tools/verify_production_audio_assets.py'
       - 'Tools/generate_progress_svgs.py'
       - '.github/workflows/battlefield-cohesion-v133-source.yml'
   workflow_dispatch:
@@ -29,9 +33,11 @@ jobs:
         with:
           ref: dev-v13-3
       - name: Compile Python verification tools
-        run: python -m py_compile Tools/verify_v133_battlefield_cohesion.py Tools/generate_progress_svgs.py
+        run: python -m py_compile Tools/verify_v133_battlefield_cohesion.py Tools/verify_production_audio_assets.py Tools/generate_progress_svgs.py
       - name: Verify v13.3 squad/authority contracts
         run: python Tools/verify_v133_battlefield_cohesion.py
+      - name: Verify production audio source contract
+        run: python Tools/verify_production_audio_assets.py
       - name: Verify SWIR Progress SVG Pro remains deterministic
         run: python Tools/generate_progress_svgs.py --check
       - name: Verify protected documentation markers
@@ -43,4 +49,4 @@ jobs:
           test "$(grep -c '^<!-- SWIR-PROGRESS-SVG-PRO:v1 -->$' README.md)" -eq 1
           grep -q '^## 🔎 Search Keywords$' README.md
           grep -q '407 / 415 completed (98.1%) — V13.3 IN DEVELOPMENT' README.md
-          echo 'v13.3 source + authority + SWIR documentation contracts passed.'
+          echo 'v13.3 source + authority + production audio + SWIR documentation contracts passed.'

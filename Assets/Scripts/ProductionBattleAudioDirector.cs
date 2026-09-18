@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace TankRevival
@@ -10,17 +12,25 @@ namespace TankRevival
     [DefaultExecutionOrder(9150)]
     public sealed class ProductionBattleAudioDirector : MonoBehaviour
     {
+        private const string ProductionAudioResourceFolder = "TankRevivalProduction/Audio";
+
         public static ProductionBattleAudioDirector Instance { get; private set; }
+
+        private readonly Dictionary<string, AudioClip> _authoredByName =
+            new Dictionary<string, AudioClip>(StringComparer.OrdinalIgnoreCase);
 
         private AudioClip _heavyCannon;
         private AudioClip _bossAlarm;
         private AudioSource[] _voices;
         private int _voiceCursor;
         private float _nextBossAlertAllowed;
+        private string _authoredResourceSummary = "uninitialized";
 
         public bool HeavyCannonLoaded => _heavyCannon != null;
         public bool BossAlarmLoaded => _bossAlarm != null;
         public int LoadedAuthoredClipCount => (_heavyCannon != null ? 1 : 0) + (_bossAlarm != null ? 1 : 0);
+        public int DiscoveredAuthoredResourceCount => _authoredByName.Count;
+        public string AuthoredResourceSummary => _authoredResourceSummary;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -40,8 +50,14 @@ namespace TankRevival
             }
 
             Instance = this;
-            _heavyCannon = Resources.Load<AudioClip>("TankRevivalProduction/Audio/HeavyCannon");
-            _bossAlarm = Resources.Load<AudioClip>("TankRevivalProduction/Audio/BossAlarm");
+            BuildAuthoredResourceIndex();
+            _heavyCannon = ResolveAuthoredClip("HeavyCannon");
+            _bossAlarm = ResolveAuthoredClip("BossAlarm");
+
+            Debug.Log(
+                "[ProductionBattleAudioDirector] authored resources discovered=" + DiscoveredAuthoredResourceCount +
+                " loaded=" + LoadedAuthoredClipCount +
+                " names=" + AuthoredResourceSummary);
 
             _voices = new AudioSource[6];
             for (int i = 0; i < _voices.Length; i++)
@@ -53,6 +69,51 @@ namespace TankRevival
                 source.volume = 1f;
                 _voices[i] = source;
             }
+        }
+
+        private void BuildAuthoredResourceIndex()
+        {
+            _authoredByName.Clear();
+            AudioClip[] clips = Resources.LoadAll<AudioClip>(ProductionAudioResourceFolder);
+            if (clips == null || clips.Length == 0)
+            {
+                _authoredResourceSummary = "none";
+                return;
+            }
+
+            Array.Sort(clips, CompareAudioClipNames);
+            string summary = string.Empty;
+            for (int i = 0; i < clips.Length; i++)
+            {
+                AudioClip clip = clips[i];
+                if (clip == null || string.IsNullOrWhiteSpace(clip.name)) continue;
+
+                _authoredByName[clip.name] = clip;
+                if (summary.Length > 0) summary += ",";
+                summary += clip.name;
+            }
+
+            _authoredResourceSummary = summary.Length == 0 ? "none" : summary;
+        }
+
+        private AudioClip ResolveAuthoredClip(string clipName)
+        {
+            AudioClip clip;
+            if (_authoredByName.TryGetValue(clipName, out clip) && clip != null)
+                return clip;
+
+            // Keep a direct Resources fallback for backwards-compatible player data layouts.
+            clip = Resources.Load<AudioClip>(ProductionAudioResourceFolder + "/" + clipName);
+            if (clip != null && !string.IsNullOrWhiteSpace(clip.name))
+                _authoredByName[clip.name] = clip;
+            return clip;
+        }
+
+        private static int CompareAudioClipNames(AudioClip left, AudioClip right)
+        {
+            string leftName = left == null ? string.Empty : left.name;
+            string rightName = right == null ? string.Empty : right.name;
+            return string.Compare(leftName, rightName, StringComparison.OrdinalIgnoreCase);
         }
 
         private void OnEnable()

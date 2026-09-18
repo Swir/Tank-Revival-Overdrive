@@ -21,6 +21,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Verify authored production audio before Unity build
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile Tools/verify_production_audio_assets.py
+          python Tools/verify_production_audio_assets.py
+
       - name: Verify Unity CI credentials
         shell: bash
         env:
