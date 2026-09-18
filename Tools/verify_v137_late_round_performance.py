@@ -47,16 +47,31 @@ def main() -> int:
     require(critical[0] >= 2 and critical[1] >= 3 and critical[2] >= 4, 'critical mode cannot erase priority presentation')
 
     done = len(re.findall(r'^- \[x\] ', roadmap, re.M)); open_ = len(re.findall(r'^- \[ \] ', roadmap, re.M))
-    require((done, open_, done + open_) == (439, 8, 447), f'roadmap must remain open at 439/447 before qualification, got {done}/{done+open_}')
-    require('| **439** | **8** | **447** | **98.2%** |' in roadmap, 'roadmap numeric dashboard mismatch')
-    require('V13.7%20IN%20DEVELOPMENT' in roadmap, 'roadmap status must remain V13.7 IN DEVELOPMENT')
-    section = roadmap[roadmap.index('## v13.7 — Late-Round Performance & Battle Density Reforge — IN DEVELOPMENT'):]
-    require(section.count('- [ ]') == 8 and section.count('- [x]') == 0, 'v13.7 items must remain unchecked before Windows qualification')
+    state = (done, open_, done + open_)
+    if state == (439, 8, 447):
+        require('| **439** | **8** | **447** | **98.2%** |' in roadmap, 'open roadmap numeric dashboard mismatch')
+        require('V13.7%20IN%20DEVELOPMENT' in roadmap, 'open roadmap status mismatch')
+        heading = '## v13.7 — Late-Round Performance & Battle Density Reforge — IN DEVELOPMENT'
+        require(heading in roadmap, 'open v13.7 heading missing')
+        section = roadmap[roadmap.index(heading):]
+        require(section.count('- [ ]') == 8 and section.count('- [x]') == 0, 'v13.7 items must remain unchecked before Windows qualification')
+        state_label = '439/447 (98.2%) V13.7 IN DEVELOPMENT'
+    elif state == (447, 0, 447):
+        require('| **447** | **0** | **447** | **100.0%** |' in roadmap, 'qualified roadmap numeric dashboard mismatch')
+        require('V13.7%20QUALIFIED' in roadmap, 'qualified roadmap status mismatch')
+        heading = '## v13.7 — Late-Round Performance & Battle Density Reforge — QUALIFIED'
+        require(heading in roadmap, 'qualified v13.7 heading missing')
+        section = roadmap[roadmap.index(heading):]
+        require(section.count('- [x]') == 8 and section.count('- [ ]') == 0, 'qualified v13.7 section must contain exactly eight completed items')
+        state_label = '447/447 (100.0%) V13.7 QUALIFIED'
+    else:
+        raise SystemExit(f'v13.7 verifier FAILED: unsupported roadmap state {done}/{done + open_} with {open_} open')
+
     require('<!-- SWIR-README-STANDARD:v2 -->' in readme and '## 🔎 Search Keywords' in readme, 'README PRO v2/Search Keywords missing')
     require(readme.count('assets/readme/progress-card.svg') == 1 and roadmap.count('assets/readme/progress-mini.svg') == 1, 'SVG embedding contract mismatch')
 
     print('v13.7 late-round performance source contract: PASS')
-    print('roadmap: 439/447 (98.2%) V13.7 IN DEVELOPMENT')
+    print('roadmap: ' + state_label)
     return 0
 
 
