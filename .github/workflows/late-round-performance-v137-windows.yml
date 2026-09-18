@@ -32,16 +32,20 @@ env:
   UNITY_VERSION: 6000.3.17f1
   CANDIDATE_ZIP: TankRevivalOverdrive-v13.7-late-round-performance-Windows-x64.zip
   PACKAGE_DIR: tro-v137-package
+  QUALIFIED_CANDIDATE_SHA: dc646fc60be572e625f5ea310058aab10d2f26da
 
 jobs:
   source-contracts:
     name: Verify v13.7 performance, authority, progress and package contracts
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      qualification_needed: ${{ steps.roadmap-state.outputs.qualification_needed }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - name: Verify exact source/package contracts
         shell: bash
@@ -69,20 +73,45 @@ jobs:
           if grep -Fq "uses: ${cache_action}" "$workflow"; then echo 'Qualification must not use Unity Library caches.' >&2; exit 1; fi
           restore_key='restore'"-keys:"
           if grep -Fq "$restore_key" "$workflow"; then echo 'Cross-candidate restore keys are forbidden.' >&2; exit 1; fi
-      - name: Verify open v13.7 roadmap truth
-        shell: python
+      - name: Verify open/qualified v13.7 roadmap truth
+        id: roadmap-state
+        shell: bash
         run: |
+          set -euo pipefail
+          python - <<'PY'
           from pathlib import Path
-          import re
+          import os, re, subprocess
           s=Path('ROADMAP.md').read_text(encoding='utf-8'); r=Path('README.md').read_text(encoding='utf-8')
           done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
-          assert (done,open_,total)==(439,8,447),(done,open_,total)
-          assert '| **439** | **8** | **447** | **98.2%** |' in s and 'V13.7%20IN%20DEVELOPMENT' in s
+          if (done,open_,total)==(439,8,447):
+              assert '| **439** | **8** | **447** | **98.2%** |' in s and 'V13.7%20IN%20DEVELOPMENT' in s
+              needed='true'
+          elif (done,open_,total)==(447,0,447):
+              assert '| **447** | **0** | **447** | **100.0%** |' in s and 'V13.7%20QUALIFIED' in s
+              candidate=os.environ['QUALIFIED_CANDIDATE_SHA']
+              subprocess.run(['git','merge-base','--is-ancestor',candidate,'HEAD'],check=True)
+              changed=subprocess.check_output(['git','diff','--name-only',candidate+'..HEAD'],text=True).splitlines()
+              allowed={
+                  'README.md','ROADMAP.md','assets/readme/progress-card.svg','assets/readme/progress-mini.svg','assets/readme/progress-template.svg',
+                  'docs/qualification/V13_7_WINDOWS_QUALIFICATION.md','Tools/finalize_v137_roadmap.py','Tools/generate_progress_svgs.py',
+                  'Tools/swir_visual_report_guard.py','Tools/verify_v137_late_round_performance.py','.github/workflows/finalize-v137-roadmap.yml',
+                  '.github/workflows/late-round-performance-v137-windows.yml','.v137-finalizer-trigger'
+              }
+              unexpected=[p for p in changed if p not in allowed]
+              assert not unexpected, 'qualified state contains post-candidate gameplay/unapproved changes: '+', '.join(unexpected)
+              needed='false'
+          else:
+              raise SystemExit(f'unsupported roadmap state: {done}/{total} with {open_} open')
           assert s.count('assets/readme/progress-mini.svg')==1 and r.count('assets/readme/progress-card.svg')==1
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:
+              out.write('qualification_needed='+needed+'\n')
+          print('qualification_needed='+needed)
+          PY
 
   build-candidate:
     name: Build and package one exact v13.7 Windows x64 candidate
     needs: source-contracts
+    if: needs.source-contracts.outputs.qualification_needed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -144,7 +173,8 @@ jobs:
 
   packaged-exe-regression:
     name: Run v13.7 performance plus v13.6/v13.5/v13.4/v13.3 and 80/90/100 regression on the same EXE
-    needs: build-candidate
+    needs: [source-contracts, build-candidate]
+    if: needs.source-contracts.outputs.qualification_needed == 'true' && needs.build-candidate.result == 'success'
     runs-on: windows-latest
     timeout-minutes: 55
     steps:
