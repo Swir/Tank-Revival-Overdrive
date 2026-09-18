@@ -133,10 +133,6 @@ namespace TankRevival.Editor
 
         private static void ValidateProductionAudioAssets()
         {
-            // A clean qualification run starts without Library. Rebuild Unity's asset view before
-            // touching individual authored WAVs so the import contract matches the last qualified
-            // v13.3 builder and does not depend on stale editor state.
-            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             var seenGuids = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (string path in RequiredProductionAudioAssets)
