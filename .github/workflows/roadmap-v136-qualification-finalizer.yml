@@ -1,0 +1,217 @@
+name: ROADMAP v13.6 Qualification Finalizer
+
+on:
+  workflow_run:
+    workflows: ['Battlefield Sensor Fusion v13.6 Windows Qualification Gate']
+    types: [completed]
+  push:
+    branches: ['dev-v13-6']
+    paths:
+      - '.github/workflows/roadmap-v136-qualification-finalizer.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  finalize:
+    if: >-
+      ${{
+        (github.event_name == 'workflow_run' &&
+         github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.head_branch == 'dev-v13-6') ||
+        github.event_name == 'push'
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Capture exact qualified candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ '${{ github.event_name }}' = 'workflow_run' ]; then
+            echo 'CANDIDATE_SHA=${{ github.event.workflow_run.head_sha }}' >> "$GITHUB_ENV"
+            echo 'QUALIFICATION_RUN=${{ github.event.workflow_run.id }}' >> "$GITHUB_ENV"
+            echo 'CHECKOUT_REF=${{ github.event.workflow_run.head_sha }}' >> "$GITHUB_ENV"
+            echo 'FALLBACK_MODE=0' >> "$GITHUB_ENV"
+          else
+            echo 'CANDIDATE_SHA=6509b163ab0fa2f29d88f2f9c06188f7a1de1bdb' >> "$GITHUB_ENV"
+            echo 'QUALIFICATION_RUN=35388766882' >> "$GITHUB_ENV"
+            echo 'CHECKOUT_REF=${{ github.sha }}' >> "$GITHUB_ENV"
+            echo 'FALLBACK_MODE=1' >> "$GITHUB_ENV"
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+          fetch-depth: 0
+      - name: Verify exact qualification evidence and branch safety
+        shell: python
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          import json, os, subprocess, urllib.request
+          candidate=os.environ['CANDIDATE_SHA']
+          run_id=os.environ['QUALIFICATION_RUN']
+          req=urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['REPOSITORY']}/actions/runs/{run_id}",
+              headers={
+                  'Authorization': f"Bearer {os.environ['GITHUB_TOKEN']}",
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+              })
+          with urllib.request.urlopen(req, timeout=30) as response:
+              run=json.load(response)
+          assert run['status']=='completed', run['status']
+          assert run['conclusion']=='success', run['conclusion']
+          assert run['head_sha']==candidate, (run['head_sha'], candidate)
+          assert run['head_branch']=='dev-v13-6', run['head_branch']
+
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          subprocess.run(['git','fetch','origin','dev-v13-6'],check=True)
+          current=subprocess.check_output(['git','rev-parse','origin/dev-v13-6'],text=True).strip()
+          assert current==head, (current,head)
+          subprocess.run(['git','merge-base','--is-ancestor',candidate,head],check=True)
+          if os.environ.get('FALLBACK_MODE')=='1':
+              allowed={
+                  '.github/workflows/roadmap-v136-qualification-finalizer.yml',
+                  'ROADMAP.md','README.md',
+                  'assets/readme/progress-card.svg','assets/readme/progress-mini.svg','assets/readme/progress-template.svg',
+                  'docs/qualification/V13_6_WINDOWS_QUALIFICATION.md',
+              }
+              changed=set(subprocess.check_output(['git','diff','--name-only',f'{candidate}..{head}'],text=True).splitlines())
+              unexpected=changed-allowed
+              assert not unexpected, sorted(unexpected)
+          else:
+              assert head==candidate, (head,candidate)
+          assert open('VERSION',encoding='utf-8').read().strip()=='v13.6.0-dev'
+          print(f'Exact v13.6 qualification evidence verified: run={run_id} candidate={candidate}')
+      - name: Revalidate source and current roadmap state
+        shell: bash
+        run: |
+          set -euo pipefail
+          python .github/scripts/test_package_v136_sensor_fusion.py
+          python Tools/verify_csharp_type_uniqueness.py
+          python Tools/verify_production_audio_assets.py
+          python Tools/verify_unity_ci_bootstrap.py
+          if grep -Fq 'V13.6%20IN%20DEVELOPMENT' ROADMAP.md; then
+            python Tools/verify_v136_sensor_fusion.py
+          else
+            python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('ROADMAP.md').read_text(encoding='utf-8')
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M))
+          assert (done,open_,done+open_)==(439,0,439),(done,open_,done+open_)
+          assert 'V13.6%20QUALIFIED' in s
+          assert '| **439** | **0** | **439** | **100.0%** |' in s
+          print('v13.6 closed roadmap source state: PASS')
+          PY
+          fi
+          python Tools/generate_progress_svgs.py --check
+          python Tools/swir_visual_report_guard.py --check
+      - name: Finalize verified v13.6 roadmap and evidence idempotently
+        shell: python
+        run: |
+          from pathlib import Path
+          import os,re
+          p=Path('ROADMAP.md')
+          s=p.read_text(encoding='utf-8')
+          open_heading='## v13.6 — Battlefield Sensor Fusion & Contact Warfare — IN DEVELOPMENT'
+          closed_heading='## v13.6 — Battlefield Sensor Fusion & Contact Warfare — QUALIFIED'
+          if open_heading in s:
+              prefix, section = s.split(open_heading,1)
+              if section.count('- [ ]') != 8 or section.count('- [x]') != 0:
+                  raise SystemExit('v13.6 finalizer requires exactly 8 open items')
+              section=section.replace('- [ ]','- [x]')
+              s=prefix+closed_heading+section
+              s=s.replace('ROADMAP-98.2%25-blue','ROADMAP-100.0%25-brightgreen',1)
+              s=s.replace('DONE-431%2F439-1f6feb','DONE-439%2F439-1f6feb',1)
+              s=s.replace('STATUS-V13.6%20IN%20DEVELOPMENT-blue','STATUS-V13.6%20QUALIFIED-brightgreen',1)
+              s=s.replace('Roadmap progress: 431 / 439 completed (98.2%) — V13.6 IN DEVELOPMENT.',
+                          'Roadmap progress: 439 / 439 completed (100.0%) — V13.6 QUALIFIED.',1)
+              s=s.replace('| **431** | **8** | **439** | **98.2%** |',
+                          '| **439** | **0** | **439** | **100.0%** |',1)
+          elif closed_heading not in s:
+              raise SystemExit('v13.6 roadmap heading missing')
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M))
+          if (done,open_,done+open_) != (439,0,439):
+              raise SystemExit(f'closed roadmap counts invalid: {(done,open_,done+open_)}')
+          p.write_text(s,encoding='utf-8')
+
+          q=Path('docs/qualification/V13_6_WINDOWS_QUALIFICATION.md')
+          q.parent.mkdir(parents=True,exist_ok=True)
+          q.write_text(
+              '# v13.6 Windows Qualification Evidence\n\n'
+              f'- Candidate SHA: `{os.environ["CANDIDATE_SHA"]}`\n'
+              f'- Qualification workflow run: `{os.environ["QUALIFICATION_RUN"]}`\n'
+              '- Gate: `Battlefield Sensor Fusion v13.6 Windows Qualification Gate`\n'
+              '- Result: `SUCCESS`\n'
+              '- Candidate ZIP SHA-256: `37c9245e5e94d024c0c66918923f04bca59aaf2ee90688740212698cefb23e9a`\n'
+              '- Candidate ZIP bytes: `60544002`\n'
+              '- Matrix: production authored-audio preflight; v13.6 sensor fusion; v13.5 weather; v13.4 tactical terrain; v13.3 cohesion; rounds 80/90/100 soak.\n'
+              '- Runtime smoke: 800 deterministic sensor samples across all five weather profiles; active-sweep, distance, terrain, Recon/EW and anti-blindness contracts passed.\n'
+              '- Release note: milestone qualification is not the same as a public GitHub Release.\n',
+              encoding='utf-8')
+      - name: Synchronize README qualified evidence
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('README.md')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace(
+              '[![v13.5 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-weather-v135-windows.yml/badge.svg?branch=dev-v13-5)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-weather-v135-windows.yml)',
+              '[![v13.6 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-sensor-fusion-v136-windows.yml/badge.svg?branch=dev-v13-6)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-sensor-fusion-v136-windows.yml)')
+          s=s.replace('| Latest qualified milestone | **v13.5** — exact Windows candidate qualified |',
+                      '| Latest qualified milestone | **v13.6** — exact Windows candidate qualified |')
+          s=s.replace('| 📡 **Sensor fusion v13.6 — in development** |',
+                      '| 📡 **Sensor fusion v13.6 — qualified** |')
+          s=s.replace('| 🧪 **Exact-candidate qualification** | v13.5 passed one packaged Windows EXE through production-audio preflight, v13.5 weather smoke, v13.4/v13.3 regressions and late-round 80/90/100 soak. |',
+                      '| 🧪 **Exact-candidate qualification** | v13.6 passed one packaged Windows EXE through production-audio preflight, v13.6 sensor-fusion smoke, v13.5/v13.4/v13.3 regressions and late-round 80/90/100 soak. |')
+          s=s.replace('### Battlefield Sensor Fusion & Contact Warfare v13.6 — in development',
+                      '### Battlefield Sensor Fusion & Contact Warfare v13.6 — qualified')
+          s=s.replace(
+              'The milestone remains **IN DEVELOPMENT** until its exact packaged Windows candidate passes the v13.6 smoke, v13.5/v13.4/v13.3 regressions and rounds 80/90/100 soak.',
+              'The exact v13.6 candidate `6509b163ab0fa2f29d88f2f9c06188f7a1de1bdb` passed Windows qualification run `35388766882`: production authored-audio preflight, v13.6 sensor-fusion smoke, v13.5/v13.4/v13.3 regressions and rounds 80/90/100 soak on the same packaged executable.')
+          if '<!-- SWIR-README-STANDARD:v2 -->' not in s or '## 🔎 Search Keywords' not in s:
+              raise SystemExit('README PRO v2 structure missing')
+          p.write_text(s,encoding='utf-8')
+      - name: Regenerate and verify SVG-only qualified presentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Tools/generate_progress_svgs.py --write --embed --check
+          python Tools/swir_visual_report_guard.py --check
+          python Tools/generate_progress_svgs.py --write --embed --check
+          python Tools/swir_visual_report_guard.py --check
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('ROADMAP.md').read_text(encoding='utf-8')
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M))
+          assert (done,open_,done+open_)==(439,0,439)
+          assert '| **439** | **0** | **439** | **100.0%** |' in s
+          assert 'V13.6%20QUALIFIED' in s
+          assert s.count('assets/readme/progress-mini.svg')==1
+          r=Path('README.md').read_text(encoding='utf-8')
+          assert r.count('assets/readme/progress-card.svg')==1
+          assert '**v13.6** — exact Windows candidate qualified' in r
+          assert 'Sensor fusion v13.6 — qualified' in r
+          assert 'Battlefield Sensor Fusion & Contact Warfare v13.6 — qualified' in r
+          assert '35388766882' in r
+          print('v13.6 closed-state roadmap/README/SVG contract: PASS')
+          PY
+          git diff --check
+      - name: Commit exact-SHA qualification finalization
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg docs/qualification/V13_6_WINDOWS_QUALIFICATION.md
+          if git diff --cached --quiet; then
+            echo 'Qualified documentation already synchronized; no commit needed.'
+            exit 0
+          fi
+          git commit -m "docs(v13.6): synchronize qualified milestone evidence"
+          git push origin "HEAD:dev-v13-6"

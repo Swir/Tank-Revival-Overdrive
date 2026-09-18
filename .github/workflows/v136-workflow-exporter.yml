@@ -1,0 +1,53 @@
+name: v13.6 Workflow Exporter
+
+on:
+  push:
+    branches: ['dev-v13-6']
+    paths:
+      - '.github/workflows/v136-workflow-exporter.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Export bundled workflow text as non-workflow files
+        shell: python
+        run: |
+          from pathlib import Path
+          import base64, hashlib, io, tarfile
+          encoded=''.join((Path('.v136bundle')/p).read_text().strip() for p in ('part0','part1','rest'))
+          raw=base64.b64decode(encoded)
+          expected='aaf83c2150abe29d091f8e3abcd5074ce7859cf3aae2bcf0b710c61494145166'
+          if hashlib.sha256(raw).hexdigest()!=expected: raise SystemExit('bundle digest mismatch')
+          names=[
+            '.github/workflows/battlefield-sensor-fusion-v136-source.yml',
+            '.github/workflows/battlefield-sensor-fusion-v136-windows.yml',
+            '.github/workflows/roadmap-v136-qualification-finalizer.yml',
+          ]
+          out=Path('.v136bundle/exported'); out.mkdir(parents=True,exist_ok=True)
+          with tarfile.open(fileobj=io.BytesIO(raw),mode='r:gz') as tf:
+            for name in names:
+              member=tf.getmember(name)
+              data=tf.extractfile(member).read()
+              target=out/(Path(name).name+'.txt')
+              target.write_bytes(data)
+              print(target, hashlib.sha256(data).hexdigest(), len(data))
+      - name: Commit exported workflow sources only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .v136bundle/exported
+          git diff --cached --check
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'chore(v13.6): export workflow sources for connector install'
+          git push origin HEAD:dev-v13-6
