@@ -4,21 +4,21 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-4"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.1%25-yellow?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-415%2F423-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.4%20IN%20DEVELOPMENT-yellow?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-423%2F423-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.4%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 <!-- SWIR-PROGRESS-SVG-PRO:v1 -->
 <p align="center"><img src="assets/readme/progress-mini.svg" alt="SWIR roadmap progress mini" width="700"></p>
-<p align="center"><sub>Roadmap progress: 415 / 423 completed (98.1%) — V13.4 IN DEVELOPMENT. Release readiness is tracked separately by Windows qualification gates.</sub></p>
+<p align="center"><sub>Roadmap progress: 423 / 423 completed (100.0%) — V13.4 QUALIFIED. Release readiness is tracked separately by Windows qualification gates.</sub></p>
 
 ## 📊 Overall progress
 
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **415** | **8** | **423** | **98.1%** |
+| **423** | **0** | **423** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numeric table, percentage and generated Progress SVG. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -635,12 +635,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Packaged-EXE v13.3 runtime smoke** — validate roster capacity, deterministic assignments, leader promotion, shock/regroup timing, bounded posture/formation intent and authority contracts, then rerun v13.2/v13.1/v13.0/v12.9/v12.8 regressions plus rounds 80/90/100 soak on the same executable.
 - [x] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.3 gate to pass and only then finalize the SWIR roadmap dashboard/checklist and progress SVGs.
 
-## v13.4 — Tactical Terrain & Cover Warfare — IN DEVELOPMENT
-- [ ] **Deterministic 100-round tactical-terrain planner** — derive bounded terrain doctrine, cover budget, safe-lane width and cover mix for rounds 1–100 with anti-repeat signatures while TankGame remains round/arena authority.
-- [ ] **Bounded tactical-cover runtime overlay** — add at most twelve planner-owned Brick/Steel/Water nodes through the canonical Obstacle component, fixed storage and collision-safe placement; no second structural-damage authority.
-- [ ] **Permanent Orzełek and spawn egress safety lanes** — reserve a deterministic player/base corridor plus enemy spawn exits so terrain pressure never creates an unavoidable lockout or seals every route.
-- [ ] **Cover-aware squad maneuver intent** — expose bounded cardinal cover/breach direction hints that existing EnemyTank/BattlefieldCohesion may consume without replacing Rigidbody2D, targeting, firing or path authority.
-- [ ] **Canonical breach reaction and counterplay** — consume ReactiveCoverBreachDirector snapshots and Obstacle integrity only; AP/HE/Plasma remain deliberate breach tools and no duplicate cover HP/damage path is introduced.
-- [ ] **Tactical terrain readability and telemetry** — publish doctrine, active cover, recent breaches, safe-lane width and deterministic signature with fixed HUD/presentation budgets.
-- [ ] **Packaged-EXE v13.4 runtime smoke** — validate all 100 terrain plans, doctrine coverage, safe-lane invariants, fixed cover budgets, deterministic cover slots, breach/authority contracts, then rerun v13.3 regressions plus rounds 80/90/100 soak on the same executable.
-- [ ] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.4 gate to pass and only then finalize roadmap/checklist/progress SVGs.
+## v13.4 — Tactical Terrain & Cover Warfare — QUALIFIED
+- [x] **Deterministic 100-round tactical-terrain planner** — derive bounded terrain doctrine, cover budget, safe-lane width and cover mix for rounds 1–100 with anti-repeat signatures while TankGame remains round/arena authority.
+- [x] **Bounded tactical-cover runtime overlay** — add at most twelve planner-owned Brick/Steel/Water nodes through the canonical Obstacle component, fixed storage and collision-safe placement; no second structural-damage authority.
+- [x] **Permanent Orzełek and spawn egress safety lanes** — reserve a deterministic player/base corridor plus enemy spawn exits so terrain pressure never creates an unavoidable lockout or seals every route.
+- [x] **Cover-aware squad maneuver intent** — expose bounded cardinal cover/breach direction hints that existing EnemyTank/BattlefieldCohesion may consume without replacing Rigidbody2D, targeting, firing or path authority.
+- [x] **Canonical breach reaction and counterplay** — consume ReactiveCoverBreachDirector snapshots and Obstacle integrity only; AP/HE/Plasma remain deliberate breach tools and no duplicate cover HP/damage path is introduced.
+- [x] **Tactical terrain readability and telemetry** — publish doctrine, active cover, recent breaches, safe-lane width and deterministic signature with fixed HUD/presentation budgets.
+- [x] **Packaged-EXE v13.4 runtime smoke** — validate all 100 terrain plans, doctrine coverage, safe-lane invariants, fixed cover budgets, deterministic cover slots, breach/authority contracts, then rerun v13.3 regressions plus rounds 80/90/100 soak on the same executable.
+- [x] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.4 gate to pass and only then finalize roadmap/checklist/progress SVGs.
