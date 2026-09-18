@@ -57,6 +57,7 @@ The campaign combines direct tank combat with directional armor, component damag
 | 🧩 **Battlefield cohesion v13.3** | Fixed-capacity four-vehicle squads add deterministic roles, leader-loss shock, regroup intent and readable command markers while existing `EnemyTank` remains movement/fire authority. |
 | 🧱 **Tactical terrain v13.4 — qualified** | Deterministic cover overlays add bounded brick, steel and water layouts, safe-route preservation and breach-aware squad movement while canonical `Obstacle` damage authority remains unchanged. |
 | 🌦️ **Battlefield weather v13.5 — qualified** | Deterministic Clear, Mist, Rain, Storm and Snow fronts change bounded traction, visibility, spread and reload pressure while AP/Plasma retain measured precision counterplay and existing movement/ballistics authorities remain canonical. |
+| 📡 **Sensor fusion v13.6 — in development** | Battlefield-wide Unknown/Detected/Tracked/Verified contact confidence fuses distance, class signature, weather, terrain and existing Recon/EW telemetry; a finite active sweep improves information only and never replaces targeting, movement or damage authority. |
 | 🎯 **Dynamic objective warfare** | Objective planning layers mission pressure onto the existing round/spawn loop instead of replacing it. |
 | 👑 **Multi-phase bosses** | Boss behavior escalates through health/component-driven phases while existing movement, projectile and survivability authorities remain canonical. |
 | 🛡️ **Directional armor & modules** | Front/side/rear armor, ricochets and engine/tracks/gun/ammo-rack degradation affect how vehicles move and fight. |
@@ -131,6 +132,7 @@ Other platforms are not advertised as supported unless a dedicated verified buil
 | **Mouse** | Aim the turret independently |
 | **Left Mouse / Space / Left Ctrl** | Fire |
 | **Q / E** | Previous / next available ammunition |
+| **C** | Active sensor sweep when v13.6 sensor fusion is available and off cooldown |
 | **1–7** | Directly select ammunition type |
 | **R** | Attempt emergency field repair when the repair system permits it |
 | **P / Escape** | Pause / resume |
@@ -165,6 +167,12 @@ The v13.4 branch adds a deterministic tactical overlay built from canonical `Obs
 ### Battlefield Weather & Visibility Warfare v13.5 — qualified
 
 The v13.5 layer deterministically assigns Clear, Mist, Rain, Storm or Snow across the 100-round campaign. Weather supplies bounded traction, visibility, spread and enemy-reload multipliers through the existing `PlayerTank`, `EnemyTank`, `Rigidbody2D` and fire-control paths; it does not create a second movement, projectile, damage or round authority. Rain, Snow and Storm couple conservatively to canonical `TacticalTerrainMap` surfaces, AP/Plasma reduce only the player spread penalty, and presentation is capped at 24 deterministic weather streaks. The exact Windows candidate passed the authored-audio preflight, v13.5 weather smoke, v13.4/v13.3 regressions and rounds 80/90/100 soak on the same executable.
+
+### Battlefield Sensor Fusion & Contact Warfare v13.6 — in development
+
+The v13.6 milestone adds a battlefield-wide informational contact layer above the existing combat authorities. Contact confidence is bounded to Unknown, Detected, Tracked or Verified and is derived from enemy class signature, range, v13.5 weather visibility, canonical `TacticalTerrainMap` concealment and the existing v12.3 Recon/EW signal-quality bridge. The runtime tracks at most 24 registered enemies and displays at most eight high-value contact markers; it does not hide enemies, choose targets, move tanks, spawn projectiles, deal damage or create a parallel economy.
+
+A finite **C-key active sensor sweep** provides deliberate counterplay with hard range, duration and cooldown limits. When the existing Recon/EW logistics operation is active, the same input can request only its already-bounded counter-jamming window. Close-range and boss detection floors prevent weather or concealment from turning the information layer into unavoidable blindness. The milestone remains **IN DEVELOPMENT** until its exact packaged Windows candidate passes the v13.6 smoke, v13.5/v13.4/v13.3 regressions and rounds 80/90/100 soak.
 
 ### Orzełek escalation
 
@@ -203,7 +211,7 @@ A qualified development branch does **not** automatically replace the public rel
 
 - **Latest public demo:** `v6.3.0-demo` (prerelease)
 - **Latest stable release:** `v2.2.0`
-- **Development milestone:** v13.5 is qualified on `dev-v13-5`; it remains a development milestone and has not been published as a new public v13.5 release.
+- **Development milestone:** v13.6 is in development on `dev-v13-6`; v13.5 remains the latest qualified development milestone and neither state is automatically a new public release.
 
 This separation keeps public downloads distinct from qualified-but-not-yet-published development milestones.
 
@@ -213,7 +221,7 @@ Tank Revival: Orzeł Overdrive is an original project with its own code, project
 
 ## 🔎 Search Keywords
 
-`tank defense game` • `Windows tank game` • `2.5D tank action` • `top down tank game` • `Unity 6 game` • `C# Unity game` • `100 round campaign` • `adaptive enemy AI` • `tank command AI` • `squad command AI` • `destructible cover game` • `tactical terrain game` • `battlefield weather game` • `boss tank battles` • `tank armor simulation` • `component damage system` • `special ammunition game` • `Orzelek defense` • `Unity GitHub Actions` • `headless Unity CI`
+`tank defense game` • `Windows tank game` • `2.5D tank action` • `top down tank game` • `Unity 6 game` • `C# Unity game` • `100 round campaign` • `adaptive enemy AI` • `tank command AI` • `squad command AI` • `destructible cover game` • `tactical terrain game` • `battlefield weather game` • `sensor fusion tank game` • `contact warfare game` • `boss tank battles` • `tank armor simulation` • `component damage system` • `special ammunition game` • `Orzelek defense` • `Unity GitHub Actions` • `headless Unity CI`
 
 ---
 
