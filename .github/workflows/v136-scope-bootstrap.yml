@@ -1,0 +1,87 @@
+name: v13.6 Roadmap Scope Bootstrap
+
+on:
+  push:
+    branches: ['dev-v13-6']
+    paths:
+      - '.github/workflows/v136-scope-bootstrap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scope-first:
+    name: Add v13.6 scope before implementation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Patch authoritative roadmap and regenerate SVGs
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          roadmap = Path('ROADMAP.md')
+          text = roadmap.read_text(encoding='utf-8')
+          if '## v13.6 — Battlefield Sensor Fusion & Contact Warfare — IN DEVELOPMENT' in text:
+              raise SystemExit('v13.6 scope already present; refusing duplicate bootstrap')
+          required = [
+              '<!-- SWIR-ROADMAP-STANDARD:v1 -->',
+              '## v13.5 — Battlefield Weather & Visibility Warfare — QUALIFIED',
+              '| **431** | **0** | **431** | **100.0%** |',
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'expected qualified v13.5 baseline missing: {token}')
+
+          text = text.replace('badge.svg?branch=dev-v13-5', 'badge.svg?branch=dev-v13-6', 1)
+          text = text.replace('ROADMAP-100.0%25-brightgreen', 'ROADMAP-98.2%25-blue', 1)
+          text = text.replace('DONE-431%2F431-1f6feb', 'DONE-431%2F439-1f6feb', 1)
+          text = text.replace('STATUS-V13.5%20QUALIFIED-brightgreen', 'STATUS-V13.6%20IN%20DEVELOPMENT-blue', 1)
+          text = text.replace('Roadmap progress: 431 / 431 completed (100.0%) — V13.5 QUALIFIED.',
+                              'Roadmap progress: 431 / 439 completed (98.2%) — V13.6 IN DEVELOPMENT.', 1)
+          text = text.replace('| **431** | **0** | **431** | **100.0%** |',
+                              '| **431** | **8** | **439** | **98.2%** |', 1)
+
+          section = '''\n\n## v13.6 — Battlefield Sensor Fusion & Contact Warfare — IN DEVELOPMENT\n- [ ] **Deterministic battlefield contact model** — derive bounded Unknown / Detected / Tracked / Verified contact confidence from distance, enemy signature, v13.5 weather visibility, TacticalTerrainMap concealment and existing Recon/EW signal quality across rounds 1–100 without creating a second targeting authority.\n- [ ] **Fixed-cap live contact tracker** — track at most 24 existing RuntimeBattleRegistry enemies with fixed storage, deterministic refresh/decay cadence and clean round/run reset; no scene scans, unbounded collections or hidden enemy spawning.\n- [ ] **Player active sensor sweep counterplay** — add a finite Q-key battlefield scan with hard cooldown/duration/range limits, readable pulse feedback and a bounded bridge into the existing ReconElectronicWarfareDirector counter-jam window instead of a parallel EW system.\n- [ ] **Fair contact memory and concealment policy** — make poor visibility/terrain reduce information confidence rather than despawn or visually hide enemies, preserve short bounded contact memory and guarantee boss/close-range detection floors so sensor warfare cannot create unavoidable blindness.\n- [ ] **Weather / terrain / EW sensor fusion** — combine v13.5 BattlefieldWeatherDirector, canonical TacticalTerrainMap and the existing v12.3 Recon/EW public telemetry through read-only inputs with monotonic, clamped confidence modifiers and no Health, Projectile, movement or economy side effects.\n- [ ] **Bounded contact HUD and world markers** — surface only the highest-value tracked/verified contacts with a compact sensor panel, confidence state, range and sweep readiness under a strict eight-marker presentation budget.\n- [ ] **Packaged-EXE v13.6 runtime smoke** — validate 100-round sensor signatures, threshold monotonicity, weather/terrain/EW coupling, sweep cooldown/range bounds, fixed contact/marker caps, reset behavior and authority contracts, then rerun v13.5/v13.4/v13.3 plus rounds 80/90/100 soak on the same executable.\n- [ ] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.6 gate to pass and only then finalize roadmap/checklist/progress SVGs.\n'''
+          text = text.rstrip() + section
+          roadmap.write_text(text, encoding='utf-8')
+
+          done = len(re.findall(r'^- \[x\] ', text, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', text, re.M))
+          if (done, open_, done + open_) != (431, 8, 439):
+              raise SystemExit(f'roadmap count mismatch after scope bootstrap: {(done, open_, done + open_)}')
+      - name: Regenerate SVG-only progress presentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Tools/generate_progress_svgs.py --write --embed --check
+          python Tools/swir_visual_report_guard.py --check
+          python Tools/generate_progress_svgs.py --write --embed --check
+          python Tools/swir_visual_report_guard.py --check
+          git diff --check
+          grep -q '^<!-- SWIR-ROADMAP-STANDARD:v1 -->$' ROADMAP.md
+          grep -q '^<!-- SWIR-README-STANDARD:v2 -->$' README.md
+          grep -q '^## 🔎 Search Keywords$' README.md
+          test "$(grep -c 'assets/readme/progress-card.svg' README.md)" -eq 1
+          test "$(grep -c 'assets/readme/progress-mini.svg' ROADMAP.md)" -eq 1
+          ! grep -Eq '[█▓▒░]{3,}' README.md ROADMAP.md
+      - name: Commit scope-first roadmap state
+        shell: bash
+        run: |
+          set -euo pipefail
+          target_branch="${GITHUB_REF_NAME}"
+          test "$target_branch" = 'dev-v13-6'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
+          if git diff --cached --quiet; then
+            echo 'No scope changes to commit.'
+            exit 0
+          fi
+          git commit -m 'docs(v13.6): open sensor-fusion milestone scope'
+          git push origin "HEAD:${target_branch}"
