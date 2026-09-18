@@ -41,9 +41,9 @@ jobs:
           import re, xml.etree.ElementTree as ET
           r=Path('ROADMAP.md').read_text(encoding='utf-8')
           m=Path('README.md').read_text(encoding='utf-8')
-          assert r.count('<!-- SWIR-ROADMAP-STANDARD:v1 -->')==1
-          assert r.count('<!-- SWIR-PROGRESS-SVG-PRO:v1 -->')==1
-          assert m.count('<!-- SWIR-PROGRESS-SVG-PRO:v1 -->')==1
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',r,re.M))==1
+          assert len(re.findall(r'^<!-- SWIR-PROGRESS-SVG-PRO:v1 -->$',r,re.M))==1
+          assert len(re.findall(r'^<!-- SWIR-PROGRESS-SVG-PRO:v1 -->$',m,re.M))==1
           assert 'DONE-415%2F423' in r and 'ROADMAP-98.1%25-yellow' in r
           assert 'STATUS-V13.4%20IN%20DEVELOPMENT-yellow' in r
           assert '| **415** | **8** | **423** | **98.1%** |' in r
