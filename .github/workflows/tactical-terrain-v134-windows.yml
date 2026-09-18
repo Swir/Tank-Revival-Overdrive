@@ -83,15 +83,20 @@ jobs:
           from pathlib import Path
           import re
           s=Path('ROADMAP.md').read_text(encoding='utf-8')
+          r=Path('README.md').read_text(encoding='utf-8')
           assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',s,re.M))==1
           for t in ['<!-- ROADMAP-PROGRESS:START -->','<!-- ROADMAP-PROGRESS:END -->','## 📊 Overall progress','| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |','<!-- SWIR-PROGRESS-SVG-PRO:v1 -->']: assert t in s,t
           done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
           assert (done,open_,total)==(415,8,423),(done,open_,total)
           assert 'ROADMAP-98.1%25-yellow' in s and 'DONE-415%2F423' in s and 'STATUS-V13.4%20IN%20DEVELOPMENT-yellow' in s
-          assert '███████████████████░ 98.1%' in s and '| **415** | **8** | **423** | **98.1%** |' in s
+          assert '| **415** | **8** | **423** | **98.1%** |' in s
+          assert not re.search(r'(?m)^[█░]{8,}\s+[0-9.]+%$',s)
+          assert not re.search(r'(?m)^[█░]{8,}\s+[0-9.]+%$',r)
+          assert s.count('assets/readme/progress-mini.svg')==1 and r.count('assets/readme/progress-card.svg')==1
+          assert 'progress-template.svg' not in s and 'progress-template.svg' not in r
           section=s[s.index('## v13.4 — Tactical Terrain & Cover Warfare — IN DEVELOPMENT'):]
           assert section.count('- [ ]')==8 and section.count('- [x]')==0
-          print('v13.4 open roadmap state: PASS')
+          print('v13.4 open SVG-only roadmap state: PASS')
 
   build-candidate:
     name: Build and package one exact v13.4 Windows x64 candidate
