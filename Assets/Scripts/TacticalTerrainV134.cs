@@ -127,7 +127,10 @@ namespace TankRevival
 
         public static ObstacleKind KindForOrdinal(TacticalTerrainPlanV134 plan, int ordinal)
         {
-            int rank = PositiveMod(ordinal * 7 + plan.SlotOffset, Mathf.Max(1, plan.CoverCount));
+            // A cyclic permutation gives every ordinal exactly one rank for every possible
+            // CoverCount (7..12). The previous *7 stride collapsed quotas whenever the
+            // cover count shared a divisor with 7, e.g. all seven round-5 nodes got one rank.
+            int rank = PositiveMod(Mathf.Max(0, ordinal) + plan.SlotOffset, Mathf.Max(1, plan.CoverCount));
             if (rank < plan.WaterBudget) return ObstacleKind.Water;
             if (rank < plan.WaterBudget + plan.SteelBudget) return ObstacleKind.Steel;
             return ObstacleKind.Brick;
