@@ -1,0 +1,122 @@
+name: v13.6 README and Roadmap Sync
+
+on:
+  push:
+    branches: ['dev-v13-6']
+    paths:
+      - '.github/workflows/v136-readme-sync.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Sync v13.6 docs without changing completion
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Patch v13.6 README and control truth
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          readme = Path('README.md')
+          r = readme.read_text(encoding='utf-8')
+          if '<!-- SWIR-README-STANDARD:v2 -->' not in r:
+              raise SystemExit('README v2 marker missing')
+          if '## 🔎 Search Keywords' not in r:
+              raise SystemExit('Search Keywords missing')
+          if '**431 / 439 completed (98.2%)**' not in r:
+              raise SystemExit('unexpected v13.6 README scope state')
+
+          weather_row = '| 🌦️ **Battlefield weather v13.5 — qualified** | Deterministic Clear, Mist, Rain, Storm and Snow fronts change bounded traction, visibility, spread and reload pressure while AP/Plasma retain measured precision counterplay and existing movement/ballistics authorities remain canonical. |'
+          sensor_row = '| 📡 **Sensor fusion v13.6 — in development** | Battlefield-wide Unknown/Detected/Tracked/Verified contact confidence fuses distance, class signature, weather, terrain and existing Recon/EW telemetry; a finite active sweep improves information only and never replaces targeting, movement or damage authority. |'
+          if sensor_row not in r:
+              if weather_row not in r:
+                  raise SystemExit('v13.5 highlight anchor missing')
+              r = r.replace(weather_row, weather_row + '\n' + sensor_row, 1)
+
+          ammo_control = '| **Q / E** | Previous / next available ammunition |'
+          sensor_control = '| **C** | Active sensor sweep when v13.6 sensor fusion is available and off cooldown |'
+          if sensor_control not in r:
+              if ammo_control not in r:
+                  raise SystemExit('Q/E ammo control anchor missing')
+              r = r.replace(ammo_control, ammo_control + '\n' + sensor_control, 1)
+
+          weather_heading = '### Battlefield Weather & Visibility Warfare v13.5 — qualified'
+          next_heading = '### Orzełek escalation'
+          sensor_heading = '### Battlefield Sensor Fusion & Contact Warfare v13.6 — in development'
+          sensor_section = '''### Battlefield Sensor Fusion & Contact Warfare v13.6 — in development\n\nThe v13.6 milestone adds a battlefield-wide informational contact layer above the existing combat authorities. Contact confidence is bounded to Unknown, Detected, Tracked or Verified and is derived from enemy class signature, range, v13.5 weather visibility, canonical `TacticalTerrainMap` concealment and the existing v12.3 Recon/EW signal-quality bridge. The runtime tracks at most 24 registered enemies and displays at most eight high-value contact markers; it does not hide enemies, choose targets, move tanks, spawn projectiles, deal damage or create a parallel economy.\n\nA finite **C-key active sensor sweep** provides deliberate counterplay with hard range, duration and cooldown limits. When the existing Recon/EW logistics operation is active, the same input can request only its already-bounded counter-jamming window. Close-range and boss detection floors prevent weather or concealment from turning the information layer into unavoidable blindness. The milestone remains **IN DEVELOPMENT** until its exact packaged Windows candidate passes the v13.6 smoke, v13.5/v13.4/v13.3 regressions and rounds 80/90/100 soak.\n\n'''
+          if sensor_heading not in r:
+              if weather_heading not in r or next_heading not in r:
+                  raise SystemExit('README combat-system anchors missing')
+              r = r.replace(next_heading, sensor_section + next_heading, 1)
+
+          old_release = '- **Development milestone:** v13.5 is qualified on `dev-v13-5`; it remains a development milestone and has not been published as a new public v13.5 release.'
+          new_release = '- **Development milestone:** v13.6 is in development on `dev-v13-6`; v13.5 remains the latest qualified development milestone and neither state is automatically a new public release.'
+          if old_release in r:
+              r = r.replace(old_release, new_release, 1)
+
+          keyword_anchor = '`battlefield weather game`'
+          if '`sensor fusion tank game`' not in r:
+              if keyword_anchor in r:
+                  r = r.replace(keyword_anchor, keyword_anchor + ' • `sensor fusion tank game` • `contact warfare game`', 1)
+              else:
+                  idx = r.index('## 🔎 Search Keywords')
+                  line_start = r.find('\n', idx) + 1
+                  while line_start < len(r) and not r[line_start:].lstrip().startswith('`'):
+                      line_start = r.find('\n', line_start) + 1
+                  line_end = r.find('\n', line_start)
+                  if line_start <= 0 or line_end <= line_start:
+                      raise SystemExit('Search Keywords line not found')
+                  r = r[:line_end] + ' • `sensor fusion tank game` • `contact warfare game`' + r[line_end:]
+
+          readme.write_text(r, encoding='utf-8')
+
+          roadmap = Path('ROADMAP.md')
+          s = roadmap.read_text(encoding='utf-8')
+          if '## v13.6 — Battlefield Sensor Fusion & Contact Warfare — IN DEVELOPMENT' not in s:
+              raise SystemExit('v13.6 roadmap section missing')
+          if 'Q-key battlefield scan' in s:
+              s = s.replace('Q-key battlefield scan', 'C-key battlefield scan', 1)
+          if 'Q-key battlefield scan' in s:
+              raise SystemExit('conflicting Q-key sensor control survived roadmap patch')
+          roadmap.write_text(s, encoding='utf-8')
+
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M))
+          if (done,open_,done+open_) != (431,8,439):
+              raise SystemExit(f'doc sync must not alter completion: {(done,open_,done+open_)}')
+      - name: Regenerate and re-read SVG-only presentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Tools/generate_progress_svgs.py --write --embed --check
+          python Tools/swir_visual_report_guard.py --check
+          python Tools/generate_progress_svgs.py --write --embed --check
+          python Tools/swir_visual_report_guard.py --check
+          git diff --check
+          test "$(grep -c 'assets/readme/progress-card.svg' README.md)" -eq 1
+          test "$(grep -c 'assets/readme/progress-mini.svg' ROADMAP.md)" -eq 1
+          grep -Fq '| **C** | Active sensor sweep' README.md
+          grep -Fq 'C-key battlefield scan' ROADMAP.md
+          ! grep -Eq '[█▓▒░]{3,}' README.md ROADMAP.md
+      - name: Commit synced docs and remove one-time workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/v136-readme-sync.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md ROADMAP.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg .github/workflows/v136-readme-sync.yml
+          git commit -m 'docs(v13.6): sync sensor-fusion milestone presentation'
+          for attempt in 1 2 3; do
+            if git push origin HEAD:dev-v13-6; then exit 0; fi
+            git fetch origin dev-v13-6
+            git rebase origin/dev-v13-6
+          done
+          exit 1
