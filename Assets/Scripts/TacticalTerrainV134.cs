@@ -107,9 +107,14 @@ namespace TankRevival
             return current;
         }
 
+        public static int CandidateSlotIndex(TacticalTerrainPlanV134 plan, int ordinal)
+        {
+            return PositiveMod(plan.SlotOffset + Mathf.Max(0, ordinal) * 5, CandidateSlotCount);
+        }
+
         public static Vector2 CandidatePosition(TacticalTerrainPlanV134 plan, int ordinal)
         {
-            int slot = PositiveMod(plan.SlotOffset + Mathf.Max(0, ordinal) * 5, CandidateSlotCount);
+            int slot = CandidateSlotIndex(plan, ordinal);
             Vector2 basePosition = CandidateSlots[slot];
             int h = unchecked(plan.Signature * 31 + ordinal * 131 + slot * 17);
             float jitterX = (PositiveMod(h, 7) - 3) * 0.055f;
@@ -188,11 +193,13 @@ namespace TankRevival
         private TankGame _game;
         private TacticalTerrainPlanV134 _plan;
         private int _activeCount;
+        private int _destroyedCount;
         private int _round = -1;
         private string _hudText = "TRN STANDBY";
 
         public TacticalTerrainPlanV134 CurrentPlan => _plan;
         public int ActiveCoverCount => _activeCount;
+        public int DestroyedCoverCount => _destroyedCount;
         public string HudText => _hudText;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -222,10 +229,62 @@ namespace TankRevival
         public void BeginRound(TankGame game, int round, EncounterPlan encounter, ObjectivePlanV131 objective)
         {
             _game = game;
+            ApplyDeterministicPlan(round, encounter.Signature, objective.Signature);
+        }
+
+        public void ApplyDeterministicPlan(int round, int encounterSignature, int objectiveSignature)
+        {
             int boundedRound = Mathf.Clamp(round, 1, TacticalTerrainPlannerV134.PlannedRounds);
-            _plan = TacticalTerrainPlannerV134.PlanForRound(boundedRound, encounter.Signature, objective.Signature);
+            _plan = TacticalTerrainPlannerV134.PlanForRound(boundedRound, encounterSignature, objectiveSignature);
             _round = boundedRound;
             RebuildOverlay();
+        }
+
+        public bool ValidateActiveOverlay(out string reason)
+        {
+            if (_round < 1 || _roundRoot == null)
+            {
+                reason = "no active tactical terrain round";
+                return false;
+            }
+            if (_activeCount < 1 || _activeCount > _plan.CoverCount || _activeCount > TacticalTerrainPlannerV134.MaxCoverNodes)
+            {
+                reason = "active cover count outside plan bounds: " + _activeCount + "/" + _plan.CoverCount;
+                return false;
+            }
+            for (int i = 0; i < _activeCount; i++)
+            {
+                Obstacle obstacle = _activeCover[i];
+                if (obstacle == null)
+                {
+                    reason = "null cover entry inside compact active range index=" + i;
+                    return false;
+                }
+                Vector2 position = obstacle.transform.position;
+                if (TacticalTerrainPlannerV134.IsReservedSafeLane(_plan, position))
+                {
+                    reason = "live cover entered reserved safe lane index=" + i;
+                    return false;
+                }
+                BoxCollider2D collider = obstacle.GetComponent<BoxCollider2D>();
+                if (collider == null)
+                {
+                    reason = "canonical cover missing BoxCollider2D index=" + i;
+                    return false;
+                }
+                if (obstacle.Kind == ObstacleKind.Water && !collider.isTrigger)
+                {
+                    reason = "water cover must be trigger index=" + i;
+                    return false;
+                }
+                if (obstacle.Kind != ObstacleKind.Water && collider.isTrigger)
+                {
+                    reason = "solid cover unexpectedly trigger index=" + i;
+                    return false;
+                }
+            }
+            reason = "OK";
+            return true;
         }
 
         public static Vector2 AdjustDirection(EnemyTank actor, Vector2 self, Vector2 target, Vector2 current)
@@ -247,9 +306,15 @@ namespace TankRevival
 
         private void RebuildOverlay()
         {
-            if (_roundRoot != null) Destroy(_roundRoot);
+            if (_roundRoot != null)
+            {
+                // Destroy is end-of-frame; deactivate first so old colliders cannot poison same-frame placement.
+                _roundRoot.SetActive(false);
+                Destroy(_roundRoot);
+            }
             for (int i = 0; i < _activeCover.Length; i++) _activeCover[i] = null;
             _activeCount = 0;
+            _destroyedCount = 0;
 
             _roundRoot = new GameObject("TacticalTerrain_v13_4_R" + _plan.Round.ToString("000"));
             _roundRoot.transform.SetParent(transform, false);
@@ -324,23 +389,37 @@ namespace TankRevival
         {
             if (_round < 1) return;
             bool dirty = false;
-            for (int i = 0; i < _activeCover.Length; i++)
+            for (int i = 0; i < _activeCount; i++)
             {
-                if (_activeCover[i] != null) continue;
-                // Count destroyed/breached planner-owned nodes without compacting or allocating.
-                if (i < _activeCount) dirty = true;
+                if (_activeCover[i] == null) { dirty = true; break; }
             }
-            if (dirty) RefreshTelemetry();
+            if (!dirty) return;
+            _destroyedCount += CompactActiveCover();
+            RefreshTelemetry();
+        }
+
+        private int CompactActiveCover()
+        {
+            int oldCount = _activeCount;
+            int write = 0;
+            for (int read = 0; read < oldCount; read++)
+            {
+                Obstacle cover = _activeCover[read];
+                if (cover == null) continue;
+                _activeCover[write++] = cover;
+            }
+            for (int i = write; i < oldCount; i++) _activeCover[i] = null;
+            _activeCount = write;
+            return oldCount - write;
         }
 
         private void RefreshTelemetry()
         {
-            int live = 0;
-            for (int i = 0; i < _activeCover.Length; i++) if (_activeCover[i] != null) live++;
-            _activeCount = Mathf.Min(_activeCount, TacticalTerrainPlannerV134.MaxCoverNodes);
+            _activeCount = Mathf.Clamp(_activeCount, 0, TacticalTerrainPlannerV134.MaxCoverNodes);
             int breaches = ReactiveCoverBreachDirector.RecentCount;
-            _hudText = "TRN " + _plan.Doctrine + " C" + live + "/" + _plan.CoverCount +
-                " BR" + breaches + " L" + _plan.SafeLaneHalfWidth.ToString("0.0") + " SIG " + _plan.Signature.ToString("X8");
+            _hudText = "TRN " + _plan.Doctrine + " C" + _activeCount + "/" + _plan.CoverCount +
+                " D" + _destroyedCount + " BR" + breaches + " L" + _plan.SafeLaneHalfWidth.ToString("0.0") +
+                " SIG " + _plan.Signature.ToString("X8");
         }
     }
 }
