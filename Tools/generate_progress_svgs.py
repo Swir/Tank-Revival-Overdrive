@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Generate and verify SWIR Progress SVG Pro assets from canonical ROADMAP.md data.
 
-The script intentionally treats ROADMAP.md as the sole progress authority. It validates
-SWIR Roadmap Standard v1 before writing visual assets, keeps release readiness separate
-from milestone completion, and can idempotently embed textual fallbacks in README/ROADMAP.
+ROADMAP.md is the sole progress authority. The generator validates the protected
+SWIR Roadmap Standard v1 dashboard before writing visual assets, keeps release
+readiness separate from milestone completion, and idempotently embeds textual
+fallbacks in README/ROADMAP. Milestone branch labels are derived from the
+verified roadmap status instead of being hard-coded to a previous milestone.
 """
 from __future__ import annotations
 
@@ -29,6 +31,7 @@ PROJECT = "Tank Revival: Orzeł Overdrive"
 SCOPE = "ROADMAP deliverables"
 TRACK_CARD = 656.0
 TRACK_MINI = 360.0
+
 
 @dataclass(frozen=True)
 class Progress:
@@ -58,6 +61,14 @@ class Progress:
 
 def fail(message: str):
     raise RuntimeError(message)
+
+
+def branch_for_status(status: str) -> str:
+    """Map a verified status such as V13.3 IN DEVELOPMENT to dev-v13-3."""
+    match = re.search(r"\bV(\d+)\.(\d+)\b", status, re.I)
+    if not match:
+        fail(f"cannot derive development branch from roadmap status: {status!r}")
+    return f"dev-v{int(match.group(1))}-{int(match.group(2))}"
 
 
 def parse_progress(text: str) -> Progress:
@@ -214,7 +225,8 @@ def embed_docs(p: Progress) -> bool:
     roadmap = roadmap.replace(anchor, "\n\n" + mini_block + "\n## 📊 Overall progress", 1)
     original = ROADMAP.read_text(encoding="utf-8")
     if roadmap != original:
-        ROADMAP.write_text(roadmap, encoding="utf-8"); changed = True
+        ROADMAP.write_text(roadmap, encoding="utf-8")
+        changed = True
 
     readme = README.read_text(encoding="utf-8")
     if README_MARKER not in readme:
@@ -235,18 +247,31 @@ def embed_docs(p: Progress) -> bool:
     badge_status = urllib.parse.quote(p.status.title(), safe="")
     roadmap_badge = f"[![Roadmap](https://img.shields.io/badge/Roadmap-{p.percent:.1f}%25%20{badge_status}-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)"
     readme = re.sub(r"(?m)^\[!\[Roadmap\]\([^\n]+\]\(ROADMAP\.md\)$", roadmap_badge, readme, count=1)
-    readme = re.sub(r"\| Development milestone \| \*\*.*?\*\* on `dev-v[^`]+` \|", f"| Development milestone | **{p.status}** on `dev-v13-2` |", readme, count=1)
-    readme = re.sub(r"\| Roadmap \| \*\*\d+ / \d+[^\n]*\|", f"| Roadmap | **{p.completed} / {p.total} completed ({p.percent:.1f}%)** — authoritative `ROADMAP.md` scope |", readme, count=1)
+    branch = branch_for_status(p.status)
+    readme = re.sub(
+        r"\| Development milestone \| \*\*.*?\*\* on `dev-v[^`]+` \|",
+        f"| Development milestone | **{p.status}** on `{branch}` |",
+        readme,
+        count=1,
+    )
+    readme = re.sub(
+        r"\| Roadmap \| \*\*\d+ / \d+[^\n]*\|",
+        f"| Roadmap | **{p.completed} / {p.total} completed ({p.percent:.1f}%)** — authoritative `ROADMAP.md` scope |",
+        readme,
+        count=1,
+    )
     readme = re.sub(
         r"(?m)^The authoritative roadmap is \[`ROADMAP\.md`\]\(ROADMAP\.md\)\..*$",
         f"The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **{p.completed} / {p.total} ({p.percent:.1f}%) — {p.status}**. Release readiness is tracked separately by exact-candidate Windows qualification gates.",
-        readme, count=1,
+        readme,
+        count=1,
     )
     if "## 🔎 Search Keywords" not in readme:
         fail("README PRO v2 Search Keywords section is missing")
     before = README.read_text(encoding="utf-8")
     if readme != before:
-        README.write_text(readme, encoding="utf-8"); changed = True
+        README.write_text(readme, encoding="utf-8")
+        changed = True
     return changed
 
 
@@ -261,7 +286,8 @@ def write_assets(p: Progress) -> bool:
         validate_svg(path.name, content, TRACK_CARD if path == CARD else TRACK_MINI if path == MINI else None)
         old = path.read_text(encoding="utf-8") if path.exists() else None
         if old != content:
-            path.write_text(content, encoding="utf-8"); changed = True
+            path.write_text(content, encoding="utf-8")
+            changed = True
     return changed
 
 
@@ -274,7 +300,8 @@ def check_all() -> None:
         if actual != expected:
             fail(f"generated asset is stale/non-deterministic: {path}")
         validate_svg(path.name, actual, TRACK_CARD if path == CARD else TRACK_MINI if path == MINI else None)
-    roadmap = ROADMAP.read_text(encoding="utf-8"); readme = README.read_text(encoding="utf-8")
+    roadmap = ROADMAP.read_text(encoding="utf-8")
+    readme = README.read_text(encoding="utf-8")
     if roadmap.count(MARKER) != 1 or readme.count(MARKER) != 1:
         fail("progress marker must occur exactly once in both ROADMAP and README")
     if 'assets/readme/progress-mini.svg' not in roadmap or p.fallback not in roadmap:
@@ -283,7 +310,10 @@ def check_all() -> None:
         fail("README card embed or textual fallback is stale")
     if README_MARKER not in readme or "## 🔎 Search Keywords" not in readme:
         fail("README PRO v2 marker/Search Keywords must be preserved")
-    print(f"SWIR progress SVG check: PASS — {p.completed}/{p.total} ({p.percent:.1f}%) {p.status}")
+    expected_branch = branch_for_status(p.status)
+    if f"**{p.status}** on `{expected_branch}`" not in readme:
+        fail("README milestone branch disagrees with roadmap status")
+    print(f"SWIR progress SVG check: PASS — {p.completed}/{p.total} ({p.percent:.1f}%) {p.status} on {expected_branch}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -295,16 +325,20 @@ def main(argv: list[str] | None = None) -> int:
     if not (args.write or args.embed or args.check):
         parser.error("choose at least one of --write, --embed, --check")
     try:
-        p = parse_progress(ROADMAP.read_text(encoding="utf-8")); changed = False
+        p = parse_progress(ROADMAP.read_text(encoding="utf-8"))
+        changed = False
         if args.embed:
-            changed |= embed_docs(p); p = parse_progress(ROADMAP.read_text(encoding="utf-8"))
+            changed |= embed_docs(p)
+            p = parse_progress(ROADMAP.read_text(encoding="utf-8"))
         if args.write:
             changed |= write_assets(p)
         if args.check:
             check_all()
-        print("SWIR progress SVG rollout:", "updated" if changed else "no-op"); return 0
+        print("SWIR progress SVG rollout:", "updated" if changed else "no-op")
+        return 0
     except (OSError, RuntimeError, ValueError) as exc:
-        print(f"SWIR progress SVG FAILED: {exc}", file=sys.stderr); return 2
+        print(f"SWIR progress SVG FAILED: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
