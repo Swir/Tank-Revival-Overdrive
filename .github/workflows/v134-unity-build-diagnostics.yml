@@ -1,0 +1,58 @@
+name: v13.4 Unity Build Diagnostics
+
+on:
+  push:
+    branches: ['dev-v13-4']
+    paths:
+      - '.github/workflows/v134-unity-build-diagnostics.yml'
+      - 'Assets/Editor/CIBuild.cs'
+      - 'Assets/Scripts/TacticalTerrainV134.cs'
+      - 'Assets/Scripts/TacticalTerrainCISmokeProbe.cs'
+      - 'Assets/Scripts/TankGame.cs'
+      - 'Assets/Scripts/EnemyTank.cs'
+      - 'Assets/Scripts/Obstacle.cs'
+      - 'Assets/Scripts/ReactiveCoverBreachDirector.cs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce clean Unity diagnostic state
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf Library Temp obj build Logs
+          test ! -e Library
+          test ! -e Temp
+      - name: Build exact source with Unity diagnostics
+        id: unity_build
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.17f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+          collectUnityLogs: true
+          collectUnityLogsOnSuccess: false
+          streamUnityLogs: true
+      - name: Upload Unity diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v134-unity-build-diagnostics-${{ github.sha }}
+          path: |
+            Logs/UnityDiagnostics/
+            build/
+          if-no-files-found: warn
+          retention-days: 14
