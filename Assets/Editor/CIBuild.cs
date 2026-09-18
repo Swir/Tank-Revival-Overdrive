@@ -1,16 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
-namespace TankRevivalOverdrive.EditorTools
+namespace TankRevival.Editor
 {
     public static class CIBuild
     {
-        private const string BootstrapScenePath = "Assets/Scenes/Bootstrap.unity";
+        private const string ScenePath = "Assets/Scenes/Bootstrap.unity";
+        private const string BuildFolder = "build/StandaloneWindows64";
+        private const string ExePath = BuildFolder + "/TankRevivalOverdrive.exe";
 
         private static readonly string[] RequiredProductionAudioAssets =
         {
@@ -25,59 +26,109 @@ namespace TankRevivalOverdrive.EditorTools
                 { "Assets/Resources/TankRevivalProduction/Audio/BossAlarm.wav", "a9423fa26ea64656a77b6a6552d46332" }
             };
 
-        public static void BuildWindows64()
+        public static void BuildWindows()
         {
-            string[] args = Environment.GetCommandLineArgs();
-            string buildPath = GetArg(args, "-buildPath");
-            if (string.IsNullOrWhiteSpace(buildPath))
-                buildPath = Path.Combine("Builds", "Windows", "TankRevivalOverdrive.exe");
+            BuildInternal(false);
+        }
 
-            buildPath = NormalizeExe(buildPath);
+        public static void BuildDemoCandidate()
+        {
+            BuildInternal(true);
+        }
 
-            string dir = Path.GetDirectoryName(buildPath);
-            if (!string.IsNullOrEmpty(dir))
-                Directory.CreateDirectory(dir);
+        private static void BuildInternal(bool demoCandidate)
+        {
+            Debug.Log("[Tank Revival CI] Preparing " + (demoCandidate ? "DEMO CANDIDATE" : "development") + " Windows build...");
+            if (Directory.Exists(BuildFolder)) Directory.Delete(BuildFolder, true);
+            Directory.CreateDirectory(BuildFolder);
 
-            ValidateBootstrapScene();
+            string version = ResolveVersion();
+            if (demoCandidate && version.IndexOf("dev", StringComparison.OrdinalIgnoreCase) >= 0)
+                throw new Exception("Demo candidate VERSION must not contain '-dev': " + version);
+
+            Debug.Log("[Tank Revival CI] Project version=" + version);
+            ValidateStaticBootstrapScene();
             ValidateProductionAudioAssets();
 
-            PlayerSettings.companyName = "SWIR";
+            PlayerSettings.companyName = "SWIR Games";
             PlayerSettings.productName = "Tank Revival Overdrive";
-            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.Mono2x);
+            PlayerSettings.bundleVersion = version;
+            PlayerSettings.defaultScreenWidth = 1280;
+            PlayerSettings.defaultScreenHeight = 720;
+            PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
+            PlayerSettings.resizableWindow = true;
+            PlayerSettings.runInBackground = false;
+
+#pragma warning disable CS0618
+            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.Mono2x);
+#pragma warning restore CS0618
 
             var options = new BuildPlayerOptions
             {
-                scenes = new[] { BootstrapScenePath },
-                locationPathName = buildPath,
+                scenes = new[] { ScenePath },
+                locationPathName = ExePath,
                 target = BuildTarget.StandaloneWindows64,
-                options = BuildOptions.None
+                options = demoCandidate ? BuildOptions.CompressWithLz4HC : BuildOptions.CompressWithLz4HC | BuildOptions.Development
             };
 
-            Console.WriteLine($"[CI] Building {options.target} -> {buildPath}");
             BuildReport report = BuildPipeline.BuildPlayer(options);
-            if (report.summary.result != BuildResult.Succeeded)
-                throw new Exception($"Build failed: {report.summary.result}, errors={report.summary.totalErrors}");
+            BuildSummary summary = report.summary;
+            Debug.Log($"[Tank Revival CI] Build result={summary.result}, size={summary.totalSize}, time={summary.totalTime}");
+            if (summary.result != BuildResult.Succeeded)
+                throw new Exception("Tank Revival Windows build failed: " + summary.result);
 
-            Console.WriteLine($"[CI] Build OK: {report.summary.totalSize} bytes");
+            string channel = demoCandidate ? "PUBLIC DEMO 2 RELEASE CANDIDATE" : "DEVELOPMENT";
+            string info =
+                "TANK REVIVAL: ORZEL OVERDRIVE\n" +
+                "Channel: " + channel + "\n" +
+                "Build: " + version + "\n" +
+                "Unity: " + Application.unityVersion + "\n" +
+                "Target: Windows x64\n" +
+                "Controls: WASD/Arrows move, Mouse aim, LMB/Space/LeftCtrl fire, Q/E ammo, 1-7 ammo, R smoke, C ECM, V decoy, G SIGINT, H recon, P/Esc pause\n" +
+                "Campaign: 100 rounds, Orzelek defense, objectives, convoys, bosses, EW command network and Mobile HQ operations\n";
+            File.WriteAllText(Path.Combine(BuildFolder, "BUILD_INFO.txt"), info);
+
+            if (demoCandidate)
+            {
+                string sha = Environment.GetEnvironmentVariable("GITHUB_SHA") ?? "local-build";
+                string manifest =
+                    "Tank Revival: Orzel Overdrive\n" +
+                    "Demo candidate: " + version + "\n" +
+                    "Commit: " + sha + "\n" +
+                    "Target: Windows x64\n" +
+                    "Executable: TankRevivalOverdrive.exe\n" +
+                    "Runtime data: TankRevivalOverdrive_Data\n" +
+                    "Campaign qualification: rounds 36/50/80/90/100\n";
+                File.WriteAllText(Path.Combine(BuildFolder, "DEMO_MANIFEST.txt"), manifest);
+
+                string readme =
+                    "TANK REVIVAL: ORZEL OVERDRIVE — DEMO 2 RELEASE CANDIDATE\n\n" +
+                    "1. Rozpakuj caly ZIP do osobnego folderu.\n" +
+                    "2. Uruchom TankRevivalOverdrive.exe.\n" +
+                    "3. Nie przenos samego EXE bez folderu TankRevivalOverdrive_Data.\n\n" +
+                    "Sterowanie podstawowe: WASD/strzalki ruch, mysz celowanie, LPM/Spacja/Lewy Ctrl ogien, Q/E lub 1-7 amunicja, ESC/P pauza.\n" +
+                    "Kontry taktyczne: R dym, C ECM, V wabik, G SIGINT, H dron rozpoznawczy.\n" +
+                    "Cel: obron Orzelka przez 100 rund, niszcz siec dowodzenia i przetrwaj operacje Mobile HQ.\n";
+                File.WriteAllText(Path.Combine(BuildFolder, "README_DEMO.txt"), readme);
+            }
+
+            Debug.Log("[Tank Revival CI] Windows executable created at: " + ExePath);
         }
 
-        private static void ValidateBootstrapScene()
+        private static void ValidateStaticBootstrapScene()
         {
-            if (!File.Exists(BootstrapScenePath))
-                throw new FileNotFoundException("Versioned bootstrap scene is missing.", BootstrapScenePath);
+            if (!File.Exists(ScenePath))
+                throw new Exception("Versioned bootstrap scene is missing: " + ScenePath);
 
-            string contents = File.ReadAllText(BootstrapScenePath);
-            if (!contents.Contains("%YAML"))
-                throw new InvalidOperationException("Bootstrap scene is not a serialized Unity scene.");
+            string guid = AssetDatabase.AssetPathToGUID(ScenePath);
+            if (string.IsNullOrWhiteSpace(guid))
+                throw new Exception("Bootstrap scene has no stable Unity asset GUID: " + ScenePath);
 
-            string[] gameObjectLines = contents
-                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .Where(line => line.TrimStart().StartsWith("--- !u!1 ", StringComparison.Ordinal))
-                .ToArray();
-            if (gameObjectLines.Length != 0)
-                throw new InvalidOperationException("Bootstrap scene must stay empty; TankGame owns runtime bootstrap initialization.");
+            SceneAsset sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
+            if (sceneAsset == null)
+                throw new Exception("Bootstrap scene could not be imported as a SceneAsset: " + ScenePath);
 
-            Console.WriteLine($"[CI] Static bootstrap ready: {BootstrapScenePath}");
+            Debug.Log("[Tank Revival CI] Using immutable bootstrap scene " + ScenePath + " guid=" + guid);
         }
 
         private static void ValidateProductionAudioAssets()
@@ -112,33 +163,21 @@ namespace TankRevivalOverdrive.EditorTools
                     !string.Equals(guid, expectedGuid, StringComparison.Ordinal))
                     throw new InvalidOperationException($"Production audio GUID changed: {path} ({guid} != {expectedGuid})");
 
-                Console.WriteLine(
-                    $"[CI] Production audio ready: path={path} guid={guid} clip={clip.name} samples={clip.samples} channels={clip.channels} frequency={clip.frequency}");
+                Debug.Log(
+                    $"[Tank Revival CI] Production audio ready: path={path} guid={guid} clip={clip.name} samples={clip.samples} channels={clip.channels} frequency={clip.frequency}");
             }
 
             if (seenGuids.Count != RequiredProductionAudioAssets.Length)
                 throw new InvalidOperationException("Production audio asset inventory is incomplete after import.");
         }
 
-        private static string NormalizeExe(string path)
+        private static string ResolveVersion()
         {
-            path = path.Replace('\\', '/');
-            if (path.EndsWith("/TankRevivalOverdrive", StringComparison.OrdinalIgnoreCase) ||
-                path.EndsWith("/TankRevivalOverdrive.exe", StringComparison.OrdinalIgnoreCase))
-                return path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? path : path + ".exe";
-
-            if (string.IsNullOrEmpty(Path.GetExtension(path)))
-                return Path.Combine(path, "TankRevivalOverdrive.exe");
-
-            return path;
-        }
-
-        private static string GetArg(string[] args, string key)
-        {
-            for (int i = 0; i < args.Length - 1; i++)
-                if (string.Equals(args[i], key, StringComparison.OrdinalIgnoreCase))
-                    return args[i + 1];
-            return null;
+            const string versionFile = "VERSION";
+            if (!File.Exists(versionFile)) return "0.0.0-dev";
+            string raw = File.ReadAllText(versionFile).Trim();
+            if (raw.StartsWith("v", StringComparison.OrdinalIgnoreCase)) raw = raw.Substring(1);
+            return string.IsNullOrWhiteSpace(raw) ? "0.0.0-dev" : raw;
         }
     }
 }
