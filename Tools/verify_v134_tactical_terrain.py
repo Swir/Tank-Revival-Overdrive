@@ -30,9 +30,34 @@ require('root.AddComponent<Obstacle>()' in terrain and 'obstacle.Initialize(kind
 require('Obstacle.StructuralDamageFor' not in terrain, 'terrain runtime must not duplicate Obstacle structural-damage calculation')
 for forbidden in ('Health.Damage(', 'new Projectile', 'ProjectilePool.', 'SpawnEnemy(', 'RepairEagle(', 'OnBaseDestroyed('):
     require(forbidden not in terrain, 'forbidden authority path in TacticalTerrainV134.cs: ' + forbidden)
+
+# Lifecycle hardening: same-frame rebuilds must not leave old colliders active and destroyed cover must
+# compact out of the fixed-capacity live set rather than poisoning telemetry/validation forever.
+require('public static int CandidateSlotIndex' in terrain, 'candidate slot identity helper missing')
+require('public void ApplyDeterministicPlan' in terrain, 'deterministic runtime-plan entry point missing')
+require('public bool ValidateActiveOverlay(out string reason)' in terrain, 'live overlay validator missing')
+require('_roundRoot.SetActive(false);' in terrain and 'Destroy(_roundRoot);' in terrain,
+        'same-frame rebuild must deactivate old terrain root before deferred Destroy')
+require('private int CompactActiveCover()' in terrain and '_destroyedCount += CompactActiveCover();' in terrain,
+        'destroyed-cover compaction/accounting missing')
+require('public int ActiveCoverCount' in terrain and 'public int DestroyedCoverCount' in terrain,
+        'live terrain telemetry counters missing')
+require('obstacle.Kind == ObstacleKind.Water && !collider.isTrigger' in terrain,
+        'runtime validator does not guard water trigger semantics')
+require('obstacle.Kind != ObstacleKind.Water && collider.isTrigger' in terrain,
+        'runtime validator does not guard solid collider semantics')
+
 require('V13_4_TACTICAL_TERRAIN_OK.txt' in smoke and '-tr-v134-smoke' in smoke, 'packaged smoke markers missing')
 require('for (int round = 1; round <= 100; round++)' in smoke, '100-round packaged smoke coverage missing')
 require('Obstacle.StructuralDamageFor' in smoke, 'smoke does not guard canonical Obstacle counterplay')
+require('CandidateSlotIndex(a, ordinal)' in smoke and 'duplicate/invalid tactical slot' in smoke,
+        'packaged smoke does not guard deterministic unique terrain slots')
+require('runtimeDirector.ApplyDeterministicPlan(64' in smoke and 'runtimeDirector.ApplyDeterministicPlan(65' in smoke,
+        'packaged smoke does not exercise live overlay and same-frame rebuild')
+require(smoke.count('runtimeDirector.ValidateActiveOverlay(out overlayReason)') >= 2,
+        'packaged smoke must validate both initial and rebuilt live overlays')
+require('same-frame tactical overlay rebuild invalid' in smoke,
+        'packaged smoke lacks lifecycle regression marker')
 
 # Runtime integration is intentionally narrow: TankGame starts the terrain overlay after BuildArena,
 # EnemyTank consumes one bounded direction hint inside its existing ChooseDirection path.
@@ -47,6 +72,8 @@ require('BattlefieldCohesionDirector.AdjustDirection' in enemy and
         'v13.4 must layer after v13.3 cohesion intent')
 require('ObstacleImpactResult ResolveProjectileImpact' in obstacle and 'ReactiveCoverBreachDirector.ReportBreach' in obstacle,
         'canonical Obstacle authority/breach publication regressed')
+require('public ObstacleKind Kind { get; private set; }' in obstacle,
+        'canonical obstacle type introspection contract missing')
 
 # Roadmap + Progress SVG Pro truth. Count protected markers as standalone lines so prose references
 # do not masquerade as duplicated protected dashboard markers.
@@ -61,4 +88,4 @@ require('20-segment ROADMAP bar missing' not in generator and 'expected_segments
 require(len(re.findall(r'^<!-- SWIR-README-STANDARD:v2 -->$', readme, re.M)) == 1 and '## 🔎 Search Keywords' in readme, 'README PRO v2/Search Keywords regressed')
 require('assets/readme/progress-card.svg' in readme, 'README progress card embed missing')
 
-print('v13.4 tactical terrain source/authority contract: PASS')
+print('v13.4 tactical terrain source/authority/lifecycle contract: PASS')
