@@ -91,15 +91,19 @@ jobs:
           grep -Fq '| **C** | Active sensor sweep' README.md
           grep -Fq 'C-key battlefield scan' ROADMAP.md
           ! grep -Eq '[█▓▒░]{3,}' README.md ROADMAP.md
-      - name: Commit verified v13.6 milestone
+      - name: Commit verified v13.6 milestone without workflow mutations
         shell: bash
         run: |
           set -euo pipefail
+          find . -type d -name __pycache__ -prune -exec rm -rf {} +
           rm -rf .v136bundle
-          rm -f .github/workflows/v136-implementation-installer.yml .github/workflows/v136-scope-bootstrap.yml .github/workflows/v136-readme-sync.yml
+          test -z "$(git diff --name-only -- .github/workflows)" || { echo 'Installer must not mutate workflow files.' >&2; git diff -- .github/workflows; exit 1; }
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
+          git add -A -- . ':(exclude).github/workflows/**'
+          git diff --cached --check
+          if git diff --cached --quiet; then echo 'No non-workflow implementation changes to commit.'; exit 0; fi
+          if git diff --cached --name-only | grep -E '(^|/)__pycache__/|\.pyc$'; then echo 'Python bytecode must not be committed.' >&2; exit 1; fi
           git commit -m 'feat(v13.6): add battlefield sensor fusion and contact warfare'
           for attempt in 1 2 3; do
             if git push origin HEAD:dev-v13-6; then exit 0; fi
