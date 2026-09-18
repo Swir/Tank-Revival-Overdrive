@@ -12,6 +12,7 @@ obstacle = (ROOT / 'Assets/Scripts/Obstacle.cs').read_text(encoding='utf-8')
 roadmap = (ROOT / 'ROADMAP.md').read_text(encoding='utf-8')
 readme = (ROOT / 'README.md').read_text(encoding='utf-8')
 template = (ROOT / 'assets/readme/progress-template.svg').read_text(encoding='utf-8')
+evidence_path = ROOT / 'docs/qualification/V13_4_WINDOWS_QUALIFICATION.md'
 
 
 def require(cond, msg):
@@ -31,8 +32,6 @@ require('Obstacle.StructuralDamageFor' not in terrain, 'terrain runtime must not
 for forbidden in ('Health.Damage(', 'new Projectile', 'ProjectilePool.', 'SpawnEnemy(', 'RepairEagle(', 'OnBaseDestroyed('):
     require(forbidden not in terrain, 'forbidden authority path in TacticalTerrainV134.cs: ' + forbidden)
 
-# Lifecycle hardening: same-frame rebuilds must not leave old colliders active and destroyed cover must
-# compact out of the fixed-capacity live set rather than poisoning telemetry/validation forever.
 require('public static int CandidateSlotIndex' in terrain, 'candidate slot identity helper missing')
 require('public void ApplyDeterministicPlan' in terrain, 'deterministic runtime-plan entry point missing')
 require('public bool ValidateActiveOverlay(out string reason)' in terrain, 'live overlay validator missing')
@@ -46,9 +45,6 @@ require('obstacle.Kind == ObstacleKind.Water && !collider.isTrigger' in terrain,
         'runtime validator does not guard water trigger semantics')
 require('obstacle.Kind != ObstacleKind.Water && collider.isTrigger' in terrain,
         'runtime validator does not guard solid collider semantics')
-
-# Cover-kind quotas must be a true permutation for every supported CoverCount (7..12).
-# A fixed multiplier such as ordinal*7 aliases ranks when it shares a divisor with CoverCount.
 require('PositiveMod(Mathf.Max(0, ordinal) + plan.SlotOffset, Mathf.Max(1, plan.CoverCount))' in terrain,
         'cover-kind rank must use the quota-preserving cyclic permutation')
 require('PositiveMod(ordinal * 7 + plan.SlotOffset' not in terrain,
@@ -75,8 +71,6 @@ require('!firstOverlayValid' in smoke and '!rebuiltOverlayValid' in smoke,
 require('same-frame tactical overlay rebuild invalid' in smoke,
         'packaged smoke lacks lifecycle regression marker')
 
-# Runtime integration is intentionally narrow: TankGame starts the terrain overlay after BuildArena,
-# EnemyTank consumes one bounded direction hint inside its existing ChooseDirection path.
 require('TacticalTerrainDirector.EnsureInstalled().BeginRound(this, round, _encounterPlan, _objectivePlan);' in tank,
         'TankGame round integration missing')
 require(tank.index('BuildArena(round);') < tank.index('TacticalTerrainDirector.EnsureInstalled().BeginRound(this, round, _encounterPlan, _objectivePlan);'),
@@ -91,22 +85,46 @@ require('ObstacleImpactResult ResolveProjectileImpact' in obstacle and 'Reactive
 require('public ObstacleKind Kind { get; private set; }' in obstacle,
         'canonical obstacle type introspection contract missing')
 
-# Roadmap + Progress SVG Pro truth. Character/ASCII progress meters are retired: checklist + numeric
-# dashboard are authoritative, with exactly one generated mini/card presentation and a non-embedded template.
 require(len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$', roadmap, re.M)) == 1, 'roadmap standard marker missing/duplicated')
-require('DONE-415%2F423' in roadmap and 'ROADMAP-98.1%25-yellow' in roadmap, 'v13.4 roadmap numbers stale')
-require('STATUS-V13.4%20IN%20DEVELOPMENT-yellow' in roadmap, 'v13.4 roadmap status stale')
-require('| **415** | **8** | **423** | **98.1%** |' in roadmap, 'v13.4 numeric table stale')
-require(not re.search(r'(?m)^[█░]{8,}\s+[0-9.]+%$', roadmap), 'legacy character progress meter returned to ROADMAP')
-require(not re.search(r'(?m)^[█░]{8,}\s+[0-9.]+%$', readme), 'legacy character progress meter returned to README')
+require(not re.search(r'(?m)^[█▓▒░]{6,}(?:\s+[0-9.]+%)?$', roadmap), 'legacy character progress meter returned to ROADMAP')
+require(not re.search(r'(?m)^[█▓▒░]{6,}(?:\s+[0-9.]+%)?$', readme), 'legacy character progress meter returned to README')
 require(roadmap.count('assets/readme/progress-mini.svg') == 1, 'ROADMAP must embed exactly one progress-mini.svg')
 require(readme.count('assets/readme/progress-card.svg') == 1, 'README must embed exactly one progress-card.svg')
 require('progress-template.svg' not in roadmap and 'progress-template.svg' not in readme, 'template must not be embedded as project progress')
 require('Template' in template and 'N/A' in template, 'progress template must remain visibly marked as TEMPLATE/N/A')
-section = roadmap[roadmap.index('## v13.4 — Tactical Terrain & Cover Warfare — IN DEVELOPMENT'):]
-require(section.count('- [ ]') == 8 and section.count('- [x]') == 0, 'v13.4 scope must remain open before Windows qualification')
 require(len(re.findall(r'^<!-- SWIR-README-STANDARD:v2 -->$', readme, re.M)) == 1 and '## 🔎 Search Keywords' in readme, 'README PRO v2/Search Keywords regressed')
-require('415 / 423 completed (98.1%) — V13.4 IN DEVELOPMENT' in roadmap, 'ROADMAP numeric fallback stale')
-require('415 / 423 completed (98.1%) — V13.4 IN DEVELOPMENT' in readme, 'README numeric fallback stale')
 
-print('v13.4 tactical terrain source/authority/lifecycle/quota/compile-safety/SVG-only contract: PASS')
+open_state = all(token in roadmap for token in (
+    'DONE-415%2F423', 'ROADMAP-98.1%25-yellow', 'STATUS-V13.4%20IN%20DEVELOPMENT-yellow',
+    '| **415** | **8** | **423** | **98.1%** |',
+    '415 / 423 completed (98.1%) — V13.4 IN DEVELOPMENT'))
+qualified_state = all(token in roadmap for token in (
+    'DONE-423%2F423', 'ROADMAP-100.0%25-brightgreen', 'STATUS-V13.4%20QUALIFIED-brightgreen',
+    '| **423** | **0** | **423** | **100.0%** |',
+    '423 / 423 completed (100.0%) — V13.4 QUALIFIED'))
+require(open_state != qualified_state, 'roadmap must be exactly one recognized v13.4 state')
+
+if open_state:
+    anchor = '## v13.4 — Tactical Terrain & Cover Warfare — IN DEVELOPMENT'
+    require(anchor in roadmap, 'open v13.4 heading missing')
+    section = roadmap[roadmap.index(anchor):]
+    require(section.count('- [ ]') == 8 and section.count('- [x]') == 0, 'open v13.4 scope must contain eight pending items')
+    require('415 / 423 completed (98.1%) — V13.4 IN DEVELOPMENT' in readme, 'README open-state fallback stale')
+else:
+    anchor = '## v13.4 — Tactical Terrain & Cover Warfare — QUALIFIED'
+    require(anchor in roadmap, 'qualified v13.4 heading missing')
+    section = roadmap[roadmap.index(anchor):]
+    require(section.count('- [x]') == 8 and section.count('- [ ]') == 0, 'qualified v13.4 scope must contain eight completed items')
+    require('423 / 423 completed (100.0%) — V13.4 QUALIFIED' in readme, 'README qualified fallback stale')
+    require(evidence_path.is_file(), 'qualified state requires exact-candidate evidence file')
+    evidence = evidence_path.read_text(encoding='utf-8')
+    for token in (
+        'ef891049f2c40bf797b4b6e7f38b12c1c25ec407',
+        '35336689226',
+        'd42a52ca0a6a6b26458c9362b9bcf75d1a223dd6fdd3a9989326e51d58c43d68',
+        'sha256:90b986d315dc12fc26279fc6d751c2568b92b58ebee02700279b9fb0f05bdbfd',
+        'success',
+    ):
+        require(token in evidence, 'qualification evidence missing: ' + token)
+
+print('v13.4 tactical terrain source/authority/lifecycle/quota/compile-safety/SVG-only state contract: PASS')

@@ -1,0 +1,85 @@
+name: ROADMAP v13.4 Exact-Candidate Qualification Finalizer
+
+on:
+  push:
+    branches: ['dev-v13-4']
+    paths:
+      - '.github/workflows/v134-qualification-finalizer.yml'
+      - 'Tools/finalize_v134_roadmap.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+env:
+  QUALIFIED_CANDIDATE_SHA: ef891049f2c40bf797b4b6e7f38b12c1c25ec407
+  QUALIFICATION_RUN_ID: '35336689226'
+  CANDIDATE_ZIP_SHA256: d42a52ca0a6a6b26458c9362b9bcf75d1a223dd6fdd3a9989326e51d58c43d68
+  ARTIFACT_SHA256: sha256:90b986d315dc12fc26279fc6d751c2568b92b58ebee02700279b9fb0f05bdbfd
+
+concurrency:
+  group: v134-roadmap-finalizer
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v13-4
+          fetch-depth: 0
+      - name: Verify pinned exact-candidate qualification evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$QUALIFIED_CANDIDATE_SHA" HEAD
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${QUALIFICATION_RUN_ID}" > /tmp/run.json
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${QUALIFICATION_RUN_ID}/artifacts" > /tmp/artifacts.json
+          python - <<'PY'
+          import json, os
+          run=json.load(open('/tmp/run.json',encoding='utf-8'))
+          assert run['head_sha']==os.environ['QUALIFIED_CANDIDATE_SHA'], run['head_sha']
+          assert run['name']=='Tactical Terrain v13.4 Windows Qualification Gate', run['name']
+          assert run['status']=='completed' and run['conclusion']=='success', (run['status'],run['conclusion'])
+          artifacts=json.load(open('/tmp/artifacts.json',encoding='utf-8'))['artifacts']
+          candidate=[a for a in artifacts if a['name']=='TankRevivalOverdrive-v13.4-tactical-terrain-Windows-x64']
+          assert len(candidate)==1
+          assert candidate[0].get('digest')==os.environ['ARTIFACT_SHA256'], candidate[0].get('digest')
+          print('Pinned exact-candidate v13.4 qualification evidence: PASS')
+          PY
+      - name: Finalize verified v13.4 roadmap, README and evidence
+        run: >-
+          python Tools/finalize_v134_roadmap.py
+          --candidate-sha "$QUALIFIED_CANDIDATE_SHA"
+          --run-id "$QUALIFICATION_RUN_ID"
+          --candidate-zip-sha256 "$CANDIDATE_ZIP_SHA256"
+          --artifact-sha256 "$ARTIFACT_SHA256"
+      - name: Generate exact qualified SVG assets
+        run: |
+          python Tools/swir_visual_report_guard.py --fix
+          python Tools/generate_progress_svgs.py --write --embed --check
+          python Tools/swir_visual_report_guard.py --check
+      - name: Verify qualified state and diff hygiene
+        run: |
+          python Tools/verify_v134_tactical_terrain.py
+          git diff --check
+          grep -Fq '423 / 423 completed (100.0%) — V13.4 QUALIFIED' ROADMAP.md
+          grep -Fq '423 / 423 completed (100.0%) — V13.4 QUALIFIED' README.md
+      - name: Commit exact-SHA qualification result
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg docs/qualification/V13_4_WINDOWS_QUALIFICATION.md
+          if git diff --cached --quiet; then
+            echo 'v13.4 qualification docs are already final; no commit needed.'
+            exit 0
+          fi
+          git commit -m 'docs(v13.4): qualify tactical terrain milestone'
+          git push origin HEAD:dev-v13-4
