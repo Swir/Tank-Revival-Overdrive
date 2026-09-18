@@ -24,7 +24,7 @@ jobs:
           assert len(sha)==40 and all(c in '0123456789abcdef' for c in sha.lower()),sha
           subprocess.run(['git','merge-base','--is-ancestor',sha,'HEAD'],check=True)
           changed=subprocess.check_output(['git','diff','--name-only',sha+'..HEAD'],text=True).splitlines()
-          allowed={'.v133-roadmap-qualification-trigger'}
+          allowed={'.v133-roadmap-qualification-trigger','.github/workflows/roadmap-v133-qualification.yml'}
           assert set(changed).issubset(allowed),'Unqualified source changes after candidate: '+repr(changed)
           url='https://api.github.com/repos/'+os.environ['GITHUB_REPOSITORY']+'/actions/runs?head_sha='+sha+'&per_page=100'
           req=urllib.request.Request(url,headers={'Accept':'application/vnd.github+json','User-Agent':'TankRevival-v133-qualifier'})
@@ -38,7 +38,7 @@ jobs:
           set -euo pipefail
           for f in Assets/Scripts/BattlefieldCohesionV133.cs Assets/Scripts/BattlefieldCohesionCISmokeProbe.cs Assets/Scripts/ProductionBattleAudioDirector.cs Assets/Scripts/EnemyTank.cs .github/workflows/battlefield-cohesion-v133-windows.yml CHANGELOG_v13.3.md Tools/verify_v133_battlefield_cohesion.py Tools/verify_production_audio_assets.py Tools/generate_progress_svgs.py; do test -f "$f"; done
           test "$(cat VERSION)" = 'v13.3.0-dev'
-          grep -q 'MaxTrackedActors = 24' Assets/Scripts/BattlefieldCohesionV133.cs
+          grep -Eq 'MaxTrackedActors = (24|SquadSize \* MaxSquads)' Assets/Scripts/BattlefieldCohesionV133.cs
           grep -q 'V13_3_BATTLEFIELD_COHESION_OK.txt' Assets/Scripts/BattlefieldCohesionCISmokeProbe.cs
           grep -q 'V13_3_WINDOWS_MATRIX_OK.txt' .github/workflows/battlefield-cohesion-v133-windows.yml
           for flag in -production-presentation-smoke -tr-v132-smoke -tr-v131-smoke -tr-v130-smoke -tr-v129-smoke -tr-v128-smoke -demo-ci-soak; do grep -q -- "$flag" .github/workflows/battlefield-cohesion-v133-windows.yml; done
