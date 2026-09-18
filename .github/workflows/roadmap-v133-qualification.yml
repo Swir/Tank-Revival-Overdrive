@@ -15,24 +15,38 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Verify exact qualified v13.3 candidate
         shell: python
         run: |
           from pathlib import Path
-          import json,os,subprocess,urllib.request
-          sha=Path('.v133-roadmap-qualification-trigger').read_text(encoding='utf-8').strip()
-          assert len(sha)==40 and all(c in '0123456789abcdef' for c in sha.lower()),sha
-          subprocess.run(['git','merge-base','--is-ancestor',sha,'HEAD'],check=True)
-          changed=subprocess.check_output(['git','diff','--name-only',sha+'..HEAD'],text=True).splitlines()
-          allowed={'.v133-roadmap-qualification-trigger','.github/workflows/roadmap-v133-qualification.yml'}
-          assert set(changed).issubset(allowed),'Unqualified source changes after candidate: '+repr(changed)
-          url='https://api.github.com/repos/'+os.environ['GITHUB_REPOSITORY']+'/actions/runs?head_sha='+sha+'&per_page=100'
-          req=urllib.request.Request(url,headers={'Accept':'application/vnd.github+json','User-Agent':'TankRevival-v133-qualifier'})
-          with urllib.request.urlopen(req) as response: data=json.load(response)
-          matches=[r for r in data.get('workflow_runs',[]) if r.get('name')=='Battlefield Cohesion v13.3 Windows Qualification Gate' and r.get('path')=='.github/workflows/battlefield-cohesion-v133-windows.yml' and r.get('head_sha')==sha and r.get('conclusion')=='success']
-          assert matches,'No successful exact v13.3 Windows qualification gate for '+sha
-          print('Qualified SHA:',sha,'run:',matches[0]['html_url'])
-      - name: Verify implementation and open roadmap state
+          import json, os, subprocess, urllib.request
+          sha = Path('.v133-roadmap-qualification-trigger').read_text(encoding='utf-8').strip()
+          assert len(sha) == 40 and all(c in '0123456789abcdef' for c in sha.lower()), sha
+          subprocess.run(['git','merge-base','--is-ancestor',sha,'HEAD'], check=True)
+          changed = subprocess.check_output(['git','diff','--name-only',sha+'..HEAD'], text=True).splitlines()
+          allowed = {
+              '.v133-roadmap-qualification-trigger',
+              '.github/workflows/roadmap-v133-qualification.yml',
+              '.github/workflows/roadmap-v133-scope.yml',
+              '.github/workflows/progress-svg-pro.yml',
+              'Tools/generate_progress_svgs.py',
+              'Tools/register_v133_scope.py',
+              'Tools/verify_v133_battlefield_cohesion.py',
+              'README.md','ROADMAP.md',
+              'assets/readme/progress-card.svg','assets/readme/progress-mini.svg','assets/readme/progress-template.svg',
+          }
+          unexpected = [p for p in changed if p not in allowed]
+          assert not unexpected, 'Unqualified gameplay/source changes after candidate: '+repr(unexpected)
+          url = 'https://api.github.com/repos/'+os.environ['GITHUB_REPOSITORY']+'/actions/runs?head_sha='+sha+'&per_page=100'
+          req = urllib.request.Request(url, headers={'Accept':'application/vnd.github+json','User-Agent':'TankRevival-v133-qualifier'})
+          with urllib.request.urlopen(req) as response:
+              data = json.load(response)
+          matches = [r for r in data.get('workflow_runs',[]) if r.get('name')=='Battlefield Cohesion v13.3 Windows Qualification Gate' and r.get('path')=='.github/workflows/battlefield-cohesion-v133-windows.yml' and r.get('head_sha')==sha and r.get('conclusion')=='success']
+          assert matches, 'No successful exact v13.3 Windows qualification gate for '+sha
+          print('Qualified SHA:', sha, 'run:', matches[0]['html_url'])
+
+      - name: Verify implementation and roadmap contracts
         shell: bash
         run: |
           set -euo pipefail
@@ -45,55 +59,83 @@ jobs:
           python Tools/verify_production_audio_assets.py
           python Tools/generate_progress_svgs.py --check
           test "$(grep -c '^<!-- SWIR-ROADMAP-STANDARD:v1 -->$' ROADMAP.md)" -eq 1
-          grep -q 'DONE-407%2F415' ROADMAP.md
-          grep -q 'STATUS-V13.3%20IN%20DEVELOPMENT-yellow' ROADMAP.md
+
       - name: Finalize checklist and protected SWIR dashboard
         shell: python
         run: |
           from pathlib import Path
           import re
-          p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
-          marker='<!-- SWIR-ROADMAP-STANDARD:v1 -->'; assert len(re.findall(r'^'+re.escape(marker)+r'$',s,re.M))==1
-          heading='## v13.3 — Battlefield Cohesion & Squad Command Warfare — IN DEVELOPMENT'
-          start=s.index(heading); section=s[start:]
-          assert section.count('- [ ]')==8 and section.count('- [x]')==0
-          section=section.replace('— IN DEVELOPMENT','— QUALIFIED',1).replace('- [ ]','- [x]'); s=s[:start]+section
-          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
-          assert (done,open_,total)==(415,0,415),(done,open_,total)
-          pct=round(done*100/total,1); bar='█'*20
-          s=re.sub(r'ROADMAP-[0-9.]+%25-[A-Za-z0-9]+',f'ROADMAP-{pct:.1f}%25-brightgreen',s,count=1)
-          s=re.sub(r'DONE-[0-9]+%2F[0-9]+',f'DONE-{done}%2F{total}',s,count=1)
-          s=re.sub(r'STATUS-V13\.3%20IN%20DEVELOPMENT-yellow',r'STATUS-V13.3%20QUALIFIED-brightgreen',s,count=1)
-          s=re.sub(r'(?m)^([█░]{20}) [0-9.]+%$',f'{bar} {pct:.1f}%',s,count=1)
-          s=re.sub(r'\| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9.]+%\*\* \|',f'| **{done}** | **{open_}** | **{total}** | **{pct:.1f}%** |',s,count=1)
-          p.write_text(s,encoding='utf-8')
-      - name: Regenerate Progress SVG Pro and README from qualified ROADMAP
+          p = Path('ROADMAP.md')
+          s = p.read_text(encoding='utf-8')
+          marker = '<!-- SWIR-ROADMAP-STANDARD:v1 -->'
+          assert len(re.findall(r'^'+re.escape(marker)+r'$', s, re.M)) == 1
+          qualified_heading = '## v13.3 — Battlefield Cohesion & Squad Command Warfare — QUALIFIED'
+          open_heading = '## v13.3 — Battlefield Cohesion & Squad Command Warfare — IN DEVELOPMENT'
+          if qualified_heading in s:
+              section = s[s.index(qualified_heading):]
+              assert section.count('- [x]') == 8 and section.count('- [ ]') == 0
+              print('v13.3 roadmap already qualified; preserving checklist state')
+          else:
+              start = s.index(open_heading)
+              section = s[start:]
+              assert section.count('- [ ]') == 8 and section.count('- [x]') == 0
+              section = section.replace('— IN DEVELOPMENT','— QUALIFIED',1).replace('- [ ]','- [x]')
+              s = s[:start] + section
+          done = len(re.findall(r'^- \[x\] ', s, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', s, re.M))
+          total = done + open_
+          assert (done, open_, total) == (415, 0, 415), (done, open_, total)
+          pct = round(done * 100 / total, 1)
+          s = re.sub(r'ROADMAP-[0-9.]+%25-[A-Za-z0-9]+', f'ROADMAP-{pct:.1f}%25-brightgreen', s, count=1)
+          s = re.sub(r'DONE-[0-9]+%2F[0-9]+', f'DONE-{done}%2F{total}', s, count=1)
+          s = re.sub(r'STATUS-V13\.3%20IN%20DEVELOPMENT-yellow', 'STATUS-V13.3%20QUALIFIED-brightgreen', s, count=1)
+          s = re.sub(r'\| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9.]+%\*\* \|', f'| **{done}** | **{open_}** | **{total}** | **{pct:.1f}%** |', s, count=1)
+          legacy = re.compile(r'(?m)^[ \t]*[█▓▒░▉▊▋▌▍▎▏■□]{8,}(?:[ \t]+[0-9]+(?:\.[0-9]+)?%)?[ \t]*$')
+          s = legacy.sub('', s)
+          s = s.replace('20-segment bar', 'generated progress SVG')
+          p.write_text(s, encoding='utf-8')
+
+      - name: Regenerate SVG-only progress and synchronize README
         shell: bash
         run: |
           set -euo pipefail
-          python Tools/generate_progress_svgs.py --write --embed --check
-          python Tools/generate_progress_svgs.py --write --embed --check
+          python Tools/generate_progress_svgs.py --embed
+          python Tools/generate_progress_svgs.py --check
+          python Tools/generate_progress_svgs.py --embed
+          python Tools/generate_progress_svgs.py --check
           git diff --check
-      - name: Re-read and verify qualified state
+
+      - name: Re-read and verify qualified SVG-only state
         shell: python
         run: |
           from pathlib import Path
-          import re
-          s=Path('ROADMAP.md').read_text(encoding='utf-8'); r=Path('README.md').read_text(encoding='utf-8')
-          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',s,re.M))==1
-          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
-          assert (done,open_,total)==(415,0,415)
+          import re, xml.etree.ElementTree as ET
+          s = Path('ROADMAP.md').read_text(encoding='utf-8')
+          r = Path('README.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$', s, re.M)) == 1
+          done = len(re.findall(r'^- \[x\] ', s, re.M)); open_ = len(re.findall(r'^- \[ \] ', s, re.M)); total = done + open_
+          assert (done, open_, total) == (415, 0, 415)
           assert 'ROADMAP-100.0%25-brightgreen' in s and 'DONE-415%2F415' in s and 'STATUS-V13.3%20QUALIFIED-brightgreen' in s
-          assert '████████████████████ 100.0%' in s and '| **415** | **0** | **415** | **100.0%** |' in s
-          section=s[s.index('## v13.3 — Battlefield Cohesion & Squad Command Warfare — QUALIFIED'):]
-          assert section.count('- [x]')==8 and section.count('- [ ]')==0
-          assert s.count('<!-- SWIR-PROGRESS-SVG-PRO:v1 -->')==1 and r.count('<!-- SWIR-PROGRESS-SVG-PRO:v1 -->')==1
+          assert '| **415** | **0** | **415** | **100.0%** |' in s
+          section = s[s.index('## v13.3 — Battlefield Cohesion & Squad Command Warfare — QUALIFIED'):]
+          assert section.count('- [x]') == 8 and section.count('- [ ]') == 0
+          legacy = re.compile(r'(?m)^[ \t]*[█▓▒░▉▊▋▌▍▎▏■□]{8,}(?:[ \t]+[0-9]+(?:\.[0-9]+)?%)?[ \t]*$')
+          assert not legacy.search(s) and not legacy.search(r)
+          assert s.count('assets/readme/progress-mini.svg') == 1
+          assert r.count('assets/readme/progress-card.svg') == 1
           assert '415 / 415 completed (100.0%)' in s and '415 / 415 completed (100.0%)' in r
-          print('SWIR v13.3 qualified state: PASS')
+          for asset in ('progress-card.svg','progress-mini.svg','progress-template.svg'):
+              ET.parse(Path('assets/readme') / asset)
+          print('SWIR v13.3 qualified SVG-only state: PASS')
+
       - name: Commit qualified roadmap and deterministic progress assets
         shell: bash
         run: |
           set -euo pipefail
+          if git diff --quiet -- ROADMAP.md README.md assets/readme; then
+            echo 'Qualified roadmap and SVG-only presentation already current; no commit needed.'
+            exit 0
+          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
