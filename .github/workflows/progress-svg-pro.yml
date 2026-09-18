@@ -83,4 +83,13 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add README.md ROADMAP.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
           git commit -m 'docs(progress): enforce SVG-only SWIR Progress presentation'
-          git push origin HEAD:dev-v13-4
+          for attempt in 1 2 3; do
+            if git push origin HEAD:dev-v13-4; then
+              exit 0
+            fi
+            echo "Push raced with another writer; refreshing dev-v13-4 (attempt $attempt/3)."
+            git fetch origin dev-v13-4
+            git rebase origin/dev-v13-4
+          done
+          echo "Unable to publish deterministic progress assets after 3 race-safe attempts."
+          exit 1
