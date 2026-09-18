@@ -8,8 +8,8 @@ README = Path('README.md')
 EVIDENCE = Path('docs/qualification/V13_7_WINDOWS_QUALIFICATION.md')
 CANDIDATE_SHA = 'dc646fc60be572e625f5ea310058aab10d2f26da'
 QUAL_RUN_ID = '35393272731'
-INNER_ZIP_SHA256 = 'a244565049fad753a31a67eb1b03302b53af3a64d63539d3f8ddc07093250956'
-INNER_ZIP_BYTES = 60586250
+INNER_ZIP_SHA256 = '0328a6613dcc64dffb1f675282e27a798b0f3abcb561e13423b7b6de3d75c25f'
+INNER_ZIP_BYTES = 60548408
 ARTIFACT_ID = '10566756672'
 ARTIFACT_DIGEST = 'sha256:e4b063898c0e516fda4064d183080a4219861c593e572153b327bd857f8b05c4'
 
@@ -64,7 +64,7 @@ def finalize_readme(text: str) -> str:
     text = replace_once(text, 'The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **439 / 447 (98.2%) — V13.7 IN DEVELOPMENT**.', 'The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **447 / 447 (100.0%) — V13.7 QUALIFIED**.', 'README roadmap summary')
 
     v135 = 'The qualified v13.5 candidate is `9dca37bb93d10fda44bcfb17b82a8ea0f92f065e`; Windows qualification run `35371602843` completed successfully. The same packaged EXE passed production authored-audio preflight, v13.5 Battlefield Weather smoke, v13.4 tactical-terrain regression, v13.3 battlefield-cohesion regression and rounds 80/90/100 soak.'
-    v137 = v135 + '\n\nThe qualified v13.6 candidate is `6509b163ab0fa2f29d88f2f9c06188f7a1de1bdb`; Windows qualification run `35388766882` completed successfully. The same packaged EXE passed production authored-audio preflight, v13.6 sensor-fusion smoke, v13.5/v13.4/v13.3 regressions and rounds 80/90/100 soak.\n\nThe qualified v13.7 candidate is `dc646fc60be572e625f5ea310058aab10d2f26da`; Windows qualification run `35393272731` completed successfully. The same packaged EXE passed production authored-audio preflight, v13.7 late-round-performance smoke, v13.6/v13.5/v13.4/v13.3 regressions and rounds 80/90/100 soak. Its deterministic candidate ZIP SHA-256 is `a244565049fad753a31a67eb1b03302b53af3a64d63539d3f8ddc07093250956`.'
+    v137 = v135 + '\n\nThe qualified v13.6 candidate is `6509b163ab0fa2f29d88f2f9c06188f7a1de1bdb`; Windows qualification run `35388766882` completed successfully. The same packaged EXE passed production authored-audio preflight, v13.6 sensor-fusion smoke, v13.5/v13.4/v13.3 regressions and rounds 80/90/100 soak.\n\nThe qualified v13.7 candidate is `dc646fc60be572e625f5ea310058aab10d2f26da`; Windows qualification run `35393272731` completed successfully. The same packaged EXE passed production authored-audio preflight, v13.7 late-round-performance smoke, v13.6/v13.5/v13.4/v13.3 regressions and rounds 80/90/100 soak. Its deterministic candidate ZIP SHA-256 is `0328a6613dcc64dffb1f675282e27a798b0f3abcb561e13423b7b6de3d75c25f`.'
     text = replace_once(text, v135, v137, 'README qualification evidence')
     text = replace_once(text, '- **Development milestone:** v13.7 is in development on `dev-v13-7`; v13.6 remains the latest qualified development milestone and neither state is automatically a new public release.', '- **Development milestone:** v13.7 is qualified on `dev-v13-7`; this qualification does not automatically create or replace a public release.', 'README release status')
     return text

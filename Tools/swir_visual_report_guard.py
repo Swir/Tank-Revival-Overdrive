@@ -87,7 +87,7 @@ def verify_svg(path: Path, *, template: bool = False) -> None:
     if "<title" not in text or "<desc" not in text:
         fail(f"{path} must provide accessible title and description")
     if template:
-        if "Template" not in text or "N/A" not in text:
+        if "TEMPLATE" not in text or "N/A" not in text:
             fail("progress-template.svg must be visibly TEMPLATE/N/A")
     else:
         if "Measured scope:" not in text and "ROADMAP deliverables" not in text:
