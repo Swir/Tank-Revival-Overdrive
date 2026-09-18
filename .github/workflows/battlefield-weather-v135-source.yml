@@ -1,0 +1,72 @@
+name: Battlefield Weather v13.5 Source Qualification
+
+on:
+  push:
+    branches:
+      - dev-v13-5
+    paths:
+      - '.weather-v135-trigger'
+      - 'Assets/Scripts/BattlefieldWeatherV135.cs'
+      - 'Assets/Scripts/BattlefieldWeatherCISmokeProbe.cs'
+      - 'Assets/Scripts/PlayerTank.cs'
+      - 'Assets/Scripts/EnemyTank.cs'
+      - 'Tools/verify_v135_battlefield_weather.py'
+      - 'Tools/verify_csharp_type_uniqueness.py'
+      - 'ROADMAP.md'
+      - 'README.md'
+      - 'VERSION'
+      - 'assets/readme/progress-card.svg'
+      - 'assets/readme/progress-mini.svg'
+      - 'assets/readme/progress-template.svg'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contracts:
+    name: Verify v13.5 weather, authority and SVG contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact candidate SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Compile and run deterministic source guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            Tools/verify_v135_battlefield_weather.py \
+            Tools/verify_csharp_type_uniqueness.py \
+            Tools/generate_progress_svgs.py \
+            Tools/swir_visual_report_guard.py
+          python Tools/verify_v135_battlefield_weather.py
+          python Tools/verify_csharp_type_uniqueness.py
+          python Tools/generate_progress_svgs.py --check
+          python Tools/swir_visual_report_guard.py --check
+
+      - name: Guard weather authority boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -q 'Health.Damage(' Assets/Scripts/BattlefieldWeatherV135.cs
+          ! grep -q 'SpawnProjectile(' Assets/Scripts/BattlefieldWeatherV135.cs
+          ! grep -q 'FindObjectsByType<EnemyTank>' Assets/Scripts/BattlefieldWeatherV135.cs
+          grep -q 'BattlefieldWeatherDirector.MobilityScale(Team.Player' Assets/Scripts/PlayerTank.cs
+          grep -q 'BattlefieldWeatherDirector.PlayerSpreadScale(ammo)' Assets/Scripts/PlayerTank.cs
+          grep -q 'BattlefieldWeatherDirector.MobilityScale(Team.Enemy' Assets/Scripts/EnemyTank.cs
+          grep -q 'BattlefieldWeatherDirector.EnemySpreadScale(Kind)' Assets/Scripts/EnemyTank.cs
+          grep -q 'BattlefieldWeatherDirector.EnemyReloadScale(Kind)' Assets/Scripts/EnemyTank.cs
+
+      - name: Re-read roadmap truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '## v13.5 — Battlefield Weather & Visibility Warfare — IN DEVELOPMENT' ROADMAP.md
+          test "$(grep -c '^- \[ \] ' ROADMAP.md)" -eq 8
+          grep -q '| \*\*423\*\* | \*\*8\*\* | \*\*431\*\* | \*\*98.1%\*\* |' ROADMAP.md
+          grep -q 'V13.5%20IN%20DEVELOPMENT' ROADMAP.md

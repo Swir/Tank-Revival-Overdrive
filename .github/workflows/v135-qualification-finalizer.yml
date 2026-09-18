@@ -1,0 +1,100 @@
+name: ROADMAP v13.5 Exact-Candidate Qualification Finalizer
+
+on:
+  push:
+    branches: ['dev-v13-5']
+    paths:
+      - '.github/workflows/v135-qualification-finalizer.yml'
+      - 'Tools/finalize_v135_roadmap.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+env:
+  QUALIFIED_CANDIDATE_SHA: 9dca37bb93d10fda44bcfb17b82a8ea0f92f065e
+  QUALIFICATION_RUN_ID: '35371602843'
+  CANDIDATE_ZIP_SHA256: f16a93d26355acf9ed518f387727f3e8f7ef3439b72d8575cb9cd65df8bf160d
+  ARTIFACT_SHA256: sha256:018da6949b58a33cdf534e40957d4cfc4a5d855158549fcd08f8449767320f8a
+
+concurrency:
+  group: v135-roadmap-finalizer
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-v13-5
+          fetch-depth: 0
+      - name: Verify pinned exact-candidate qualification evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$QUALIFIED_CANDIDATE_SHA" HEAD
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${QUALIFICATION_RUN_ID}" > /tmp/run.json
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${QUALIFICATION_RUN_ID}/jobs?per_page=100" > /tmp/jobs.json
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${QUALIFICATION_RUN_ID}/artifacts" > /tmp/artifacts.json
+          python - <<'PY'
+          import json, os
+          run=json.load(open('/tmp/run.json',encoding='utf-8'))
+          assert run['head_sha']==os.environ['QUALIFIED_CANDIDATE_SHA'], run['head_sha']
+          assert run['name']=='Battlefield Weather v13.5 Windows Qualification Gate', run['name']
+          assert run['status']=='completed' and run['conclusion']=='success', (run['status'],run['conclusion'])
+          jobs=json.load(open('/tmp/jobs.json',encoding='utf-8'))['jobs']
+          expected={
+            'Verify v13.5 weather, authority, progress and package contracts',
+            'Build and package one exact v13.5 Windows x64 candidate',
+            'Run v13.5 weather plus v13.4/v13.3 and 80/90/100 regression on the same EXE',
+          }
+          seen={j['name'] for j in jobs if j.get('conclusion')=='success'}
+          missing=expected-seen
+          assert not missing, f'missing successful qualification jobs: {sorted(missing)}'
+          artifacts=json.load(open('/tmp/artifacts.json',encoding='utf-8'))['artifacts']
+          candidate=[a for a in artifacts if a['name']=='TankRevivalOverdrive-v13.5-battlefield-weather-Windows-x64']
+          assert len(candidate)==1
+          assert candidate[0].get('digest')==os.environ['ARTIFACT_SHA256'], candidate[0].get('digest')
+          print('Pinned exact-candidate v13.5 qualification evidence: PASS')
+          PY
+      - name: Finalize verified v13.5 roadmap, README and evidence
+        run: >-
+          python Tools/finalize_v135_roadmap.py
+          --candidate-sha "$QUALIFIED_CANDIDATE_SHA"
+          --run-id "$QUALIFICATION_RUN_ID"
+          --candidate-zip-sha256 "$CANDIDATE_ZIP_SHA256"
+          --artifact-sha256 "$ARTIFACT_SHA256"
+      - name: Generate exact qualified SVG assets
+        run: |
+          python Tools/swir_visual_report_guard.py --fix
+          python Tools/generate_progress_svgs.py --write --embed --check
+          python Tools/swir_visual_report_guard.py --check
+      - name: Verify qualified state and diff hygiene
+        run: |
+          python -m py_compile Tools/finalize_v135_roadmap.py Tools/generate_progress_svgs.py Tools/swir_visual_report_guard.py
+          git diff --check
+          grep -Fq '431 / 431 completed (100.0%) — V13.5 QUALIFIED' ROADMAP.md
+          grep -Fq '431 / 431 completed (100.0%) — V13.5 QUALIFIED' README.md
+          grep -Fq '## v13.5 — Battlefield Weather & Visibility Warfare — QUALIFIED' ROADMAP.md
+          grep -Fq 'Candidate commit: `9dca37bb93d10fda44bcfb17b82a8ea0f92f065e`' docs/qualification/V13_5_WINDOWS_QUALIFICATION.md
+          grep -Fq 'Qualification run: `35371602843` — `success`' docs/qualification/V13_5_WINDOWS_QUALIFICATION.md
+          test "$(grep -c '^- \[x\] ' ROADMAP.md)" -eq 431
+          test "$(grep -c '^- \[ \] ' ROADMAP.md)" -eq 0
+      - name: Commit exact-SHA qualification result
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg docs/qualification/V13_5_WINDOWS_QUALIFICATION.md
+          if git diff --cached --quiet; then
+            echo 'v13.5 qualification docs are already final; no commit needed.'
+            exit 0
+          fi
+          git commit -m 'docs(v13.5): qualify battlefield weather milestone'
+          git push origin HEAD:dev-v13-5

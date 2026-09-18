@@ -133,7 +133,8 @@ namespace TankRevival
         {
             if (_game == null || !_game.IsPlaying || _body == null) return;
             float moduleMobility = _armor != null ? _armor.MobilityMultiplier : 1f;
-            _body.MovePosition(_body.position + _move * (EffectiveMoveSpeed * moduleMobility * Time.fixedDeltaTime));
+            float weatherMobility = BattlefieldWeatherDirector.MobilityScale(Team.Player, transform.position);
+            _body.MovePosition(_body.position + _move * (EffectiveMoveSpeed * moduleMobility * weatherMobility * Time.fixedDeltaTime));
         }
 
         private void OnDisable()
@@ -193,7 +194,8 @@ namespace TankRevival
             float speed = 10.5f * AmmoDatabase.SpeedMultiplier(ammo) * (1f + _commanderCannonLevel * 0.025f);
             Color color = AmmoDatabase.Color(ammo);
             Vector2 direction = _gunDirection.sqrMagnitude > 0.001f ? _gunDirection.normalized : _facing;
-            float spread = FireControlBallisticsDirector.SpreadDegrees(ammo, _move.sqrMagnitude > 0.01f ? 1f : 0f, _armor);
+            float spread = FireControlBallisticsDirector.SpreadDegrees(ammo, _move.sqrMagnitude > 0.01f ? 1f : 0f, _armor)
+                * BattlefieldWeatherDirector.PlayerSpreadScale(ammo);
             direction = FireControlBallisticsDirector.ApplySpread(direction, spread);
             Vector2 muzzle = (Vector2)transform.position + direction * 0.82f;
             Vector2 side = new Vector2(-direction.y, direction.x);
