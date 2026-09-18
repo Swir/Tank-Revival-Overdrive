@@ -4,12 +4,14 @@ on:
   push:
     branches: ['dev-v13-3']
     paths:
+      - 'Assets/Editor/CIBuild.cs'
       - 'Assets/Scripts/BattlefieldCohesionV133.cs'
       - 'Assets/Scripts/BattlefieldCohesionCISmokeProbe.cs'
       - 'Assets/Scripts/EnemyTank.cs'
       - 'Assets/Scripts/ProductionBattleAudioDirector.cs'
       - 'Assets/Scripts/ProductionPresentationCISmokeProbe.cs'
       - 'Assets/Resources/TankRevivalProduction/Audio/*.wav'
+      - 'Assets/Resources/TankRevivalProduction/Audio/*.wav.meta'
       - 'ROADMAP.md'
       - 'README.md'
       - 'assets/readme/progress-card.svg'
@@ -18,6 +20,7 @@ on:
       - 'Tools/verify_production_audio_assets.py'
       - 'Tools/generate_progress_svgs.py'
       - '.github/workflows/battlefield-cohesion-v133-source.yml'
+      - '.github/workflows/battlefield-cohesion-v133-windows.yml'
   workflow_dispatch:
 
 permissions:
@@ -30,10 +33,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: dev-v13-3
-      - name: Compile Python verification tools
-        run: python -m py_compile Tools/verify_v133_battlefield_cohesion.py Tools/verify_production_audio_assets.py Tools/generate_progress_svgs.py
+      - name: Verify exact source candidate and compile verification tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "${GITHUB_REF_NAME}" = 'dev-v13-3'
+          python -m py_compile Tools/verify_v133_battlefield_cohesion.py Tools/verify_production_audio_assets.py Tools/generate_progress_svgs.py
       - name: Verify v13.3 squad/authority contracts
         run: python Tools/verify_v133_battlefield_cohesion.py
       - name: Verify production audio source contract
