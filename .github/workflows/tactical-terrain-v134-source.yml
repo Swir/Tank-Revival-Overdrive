@@ -29,17 +29,24 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Verify exact v13.4 source and authority contracts
+      - name: Verify exact branch and version
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           test "${GITHUB_REF_NAME}" = 'dev-v13-4'
           test "$(cat VERSION)" = 'v13.4.0-dev'
+      - name: Compile deterministic verification tools
+        shell: bash
+        run: |
+          set -euo pipefail
           python -m py_compile Tools/verify_v134_tactical_terrain.py Tools/generate_progress_svgs.py
-          python Tools/verify_v134_tactical_terrain.py
-          python Tools/generate_progress_svgs.py --check
-          git diff --check
+      - name: Verify tactical terrain source and authority contracts
+        run: python Tools/verify_v134_tactical_terrain.py
+      - name: Verify deterministic Progress SVG assets
+        run: python Tools/generate_progress_svgs.py --check
+      - name: Verify repository diff hygiene
+        run: git diff --check
       - name: Verify protected SWIR documentation contracts
         shell: python
         run: |
