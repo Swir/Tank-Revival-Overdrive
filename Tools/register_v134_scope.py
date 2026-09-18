@@ -42,7 +42,6 @@ def patch_generator() -> bool:
     elif "20-segment ROADMAP bar missing" in text:
         die("generator legacy-bar block changed unexpectedly")
 
-    # Strengthen check mode so a future generator cannot silently reintroduce the retired meter.
     needle = '''    if README_MARKER not in readme or "## 🔎 Search Keywords" not in readme:\n        fail("README PRO v2 marker/Search Keywords must be preserved")\n'''
     strengthened = needle + '''    if re.search(r"(?m)^[█░]{8,}\\s+[0-9.]+%$", roadmap):\n        fail("legacy character progress meter returned to ROADMAP")\n'''
     if needle in text and "legacy character progress meter returned to ROADMAP" not in text:
@@ -59,8 +58,8 @@ def patch_generator() -> bool:
 def patch_roadmap() -> bool:
     text = ROADMAP.read_text(encoding="utf-8")
     original = text
-    if text.count("<!-- SWIR-ROADMAP-STANDARD:v1 -->") != 1:
-        die("SWIR Roadmap Standard v1 marker missing/duplicated")
+    if len(re.findall(r"^<!-- SWIR-ROADMAP-STANDARD:v1 -->$", text, re.M)) != 1:
+        die("SWIR Roadmap Standard v1 marker missing/duplicated as a protected standalone marker")
 
     done, remaining, total = checklist_counts(text)
     if HEADING not in text:
@@ -87,7 +86,6 @@ def patch_roadmap() -> bool:
         count=1,
     )
 
-    # Current SWIR Progress standard explicitly retires duplicated character meters.
     text, removed = re.subn(r"\n```text\n[█░]{20} [0-9.]+%\n```\n", "\n", text, count=1)
     if removed == 0 and re.search(r"(?m)^[█░]{8,}\s+[0-9.]+%$", text):
         die("legacy meter exists but expected dashboard wrapper was not found")
