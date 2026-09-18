@@ -48,8 +48,9 @@ require('BattlefieldCohesionDirector.AdjustDirection' in enemy and
 require('ObstacleImpactResult ResolveProjectileImpact' in obstacle and 'ReactiveCoverBreachDirector.ReportBreach' in obstacle,
         'canonical Obstacle authority/breach publication regressed')
 
-# Roadmap + Progress SVG Pro truth.
-require(roadmap.count('<!-- SWIR-ROADMAP-STANDARD:v1 -->') == 1, 'roadmap standard marker missing/duplicated')
+# Roadmap + Progress SVG Pro truth. Count protected markers as standalone lines so prose references
+# do not masquerade as duplicated protected dashboard markers.
+require(len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$', roadmap, re.M)) == 1, 'roadmap standard marker missing/duplicated')
 require('DONE-415%2F423' in roadmap and 'ROADMAP-98.1%25-yellow' in roadmap, 'v13.4 roadmap numbers stale')
 require('STATUS-V13.4%20IN%20DEVELOPMENT-yellow' in roadmap, 'v13.4 roadmap status stale')
 require('| **415** | **8** | **423** | **98.1%** |' in roadmap, 'v13.4 numeric table stale')
@@ -57,7 +58,7 @@ section = roadmap[roadmap.index('## v13.4 — Tactical Terrain & Cover Warfare �
 require(section.count('- [ ]') == 8 and section.count('- [x]') == 0, 'v13.4 scope must remain open before Windows qualification')
 require(not re.search(r'(?m)^[█░]{8,}\s+[0-9.]+%$', roadmap), 'retired character meter returned to ROADMAP')
 require('20-segment ROADMAP bar missing' not in generator and 'expected_segments' not in generator, 'generator still requires retired meter')
-require('<!-- SWIR-README-STANDARD:v2 -->' in readme and '## 🔎 Search Keywords' in readme, 'README PRO v2/Search Keywords regressed')
+require(len(re.findall(r'^<!-- SWIR-README-STANDARD:v2 -->$', readme, re.M)) == 1 and '## 🔎 Search Keywords' in readme, 'README PRO v2/Search Keywords regressed')
 require('assets/readme/progress-card.svg' in readme, 'README progress card embed missing')
 
 print('v13.4 tactical terrain source/authority contract: PASS')
