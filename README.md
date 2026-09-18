@@ -12,7 +12,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)](https://github.com/Swir/Tank-Revival-Overdrive/releases)
 [![Unity](https://img.shields.io/badge/Unity-6000.3.17f1-02050A?style=for-the-badge&logo=unity&logoColor=62E5FF)](https://unity.com/)
-[![Roadmap](https://img.shields.io/badge/Roadmap-100.0%25%20V13.5%20Qualified-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
+[![Roadmap](https://img.shields.io/badge/Roadmap-98.2%25%20V13.6%20In%20Development-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
 [![v13.5 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-weather-v135-windows.yml/badge.svg?branch=dev-v13-5)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-weather-v135-windows.yml)
 
 [**Highlights**](#-highlights) · [**Download**](#-quick-start--download) · [**Controls**](#-controls) · [**Roadmap**](#-roadmap--quality-gates) · [**Releases**](#-releases)
@@ -22,7 +22,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 <!-- SWIR-PROGRESS-SVG-PRO:v1 -->
 <p align="center"><img src="assets/readme/progress-card.svg" alt="SWIR project roadmap progress" width="760"></p>
-<p align="center"><sub>Roadmap progress: 431 / 431 completed (100.0%) — V13.5 QUALIFIED. Release readiness is tracked separately by Windows qualification gates.</sub></p>
+<p align="center"><sub>Roadmap progress: 431 / 439 completed (98.2%) — V13.6 IN DEVELOPMENT. Release readiness is tracked separately by Windows qualification gates.</sub></p>
 
 ---
 
@@ -30,8 +30,8 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 | Item | Status |
 |---|---|
-| Development milestone | **V13.5 QUALIFIED** on `dev-v13-5` |
-| Roadmap | **431 / 431 completed (100.0%)** — authoritative `ROADMAP.md` scope |
+| Development milestone | **V13.6 IN DEVELOPMENT** on `dev-v13-6` |
+| Roadmap | **431 / 439 completed (98.2%)** — authoritative `ROADMAP.md` scope |
 | Primary platform | **Windows 10 / 11 x64** |
 | Development engine | **Unity 6000.3.17f1** |
 | Latest qualified milestone | **v13.5** — exact Windows candidate qualified |
@@ -189,7 +189,7 @@ The project intentionally avoids parallel damage, movement and economy authoriti
 
 ## 🗺️ Roadmap & Quality Gates
 
-The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **431 / 431 (100.0%) — V13.5 QUALIFIED**. Release readiness is tracked separately by exact-candidate Windows qualification gates.
+The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **431 / 439 (98.2%) — V13.6 IN DEVELOPMENT**. Release readiness is tracked separately by exact-candidate Windows qualification gates.
 
 Recent qualified milestone layers include v13.0 encounter/boss warfare, v13.1 objective warfare, v13.2 adaptive enemy command and v13.3 battlefield cohesion. The v13.3 exact-candidate gate required source/authority contracts, a clean Unity Windows x64 build, deterministic packaging and one exact packaged EXE running production-audio preflight, v13.3 cohesion smoke, v13.2/v13.1/v13.0/v12.9/v12.8 regressions and late-round soak covering rounds 80 / 90 / 100.
 

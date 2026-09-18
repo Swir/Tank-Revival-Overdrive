@@ -3,22 +3,22 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-5"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-431%2F431-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.5%20QUALIFIED-brightgreen?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-6"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.2%25-blue?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-431%2F439-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.6%20IN%20DEVELOPMENT-blue?style=for-the-badge">
 </p>
 
 <!-- SWIR-PROGRESS-SVG-PRO:v1 -->
 <p align="center"><img src="assets/readme/progress-mini.svg" alt="SWIR roadmap progress mini" width="700"></p>
-<p align="center"><sub>Roadmap progress: 431 / 431 completed (100.0%) — V13.5 QUALIFIED. Release readiness is tracked separately by Windows qualification gates.</sub></p>
+<p align="center"><sub>Roadmap progress: 431 / 439 completed (98.2%) — V13.6 IN DEVELOPMENT. Release readiness is tracked separately by Windows qualification gates.</sub></p>
 
 ## 📊 Overall progress
 
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **431** | **0** | **431** | **100.0%** |
+| **431** | **8** | **439** | **98.2%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numeric table, percentage and generated Progress SVG. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -654,3 +654,13 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Fairness floors and anti-snowball weather policy** — enforce hard lower/upper bounds for traction, spread and reload effects so no weather state can immobilize the player, create unavoidable fire-control failure or silently alter Health/damage authority.
 - [x] **Packaged-EXE v13.5 runtime smoke** — validate all 100 plans, profile coverage, anti-repeat determinism, mobility/gunnery bounds, ammo counterplay and runtime installation, then rerun v13.4/v13.3 regressions plus rounds 80/90/100 soak on the same executable.
 - [x] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.5 gate to pass and only then finalize roadmap/checklist/progress SVGs.
+
+## v13.6 — Battlefield Sensor Fusion & Contact Warfare — IN DEVELOPMENT
+- [ ] **Deterministic battlefield contact model** — derive bounded Unknown / Detected / Tracked / Verified contact confidence from distance, enemy signature, v13.5 weather visibility, TacticalTerrainMap concealment and existing Recon/EW signal quality across rounds 1–100 without creating a second targeting authority.
+- [ ] **Fixed-cap live contact tracker** — track at most 24 existing RuntimeBattleRegistry enemies with fixed storage, deterministic refresh/decay cadence and clean round/run reset; no scene scans, unbounded collections or hidden enemy spawning.
+- [ ] **Player active sensor sweep counterplay** — add a finite Q-key battlefield scan with hard cooldown/duration/range limits, readable pulse feedback and a bounded bridge into the existing ReconElectronicWarfareDirector counter-jam window instead of a parallel EW system.
+- [ ] **Fair contact memory and concealment policy** — make poor visibility/terrain reduce information confidence rather than despawn or visually hide enemies, preserve short bounded contact memory and guarantee boss/close-range detection floors so sensor warfare cannot create unavoidable blindness.
+- [ ] **Weather / terrain / EW sensor fusion** — combine v13.5 BattlefieldWeatherDirector, canonical TacticalTerrainMap and the existing v12.3 Recon/EW public telemetry through read-only inputs with monotonic, clamped confidence modifiers and no Health, Projectile, movement or economy side effects.
+- [ ] **Bounded contact HUD and world markers** — surface only the highest-value tracked/verified contacts with a compact sensor panel, confidence state, range and sweep readiness under a strict eight-marker presentation budget.
+- [ ] **Packaged-EXE v13.6 runtime smoke** — validate 100-round sensor signatures, threshold monotonicity, weather/terrain/EW coupling, sweep cooldown/range bounds, fixed contact/marker caps, reset behavior and authority contracts, then rerun v13.5/v13.4/v13.3 plus rounds 80/90/100 soak on the same executable.
+- [ ] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.6 gate to pass and only then finalize roadmap/checklist/progress SVGs.
