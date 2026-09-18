@@ -115,12 +115,15 @@ namespace TankRevival
                 // safe-lane and same-frame rebuild regressions in the packaged Windows player.
                 runtimeDirector.ApplyDeterministicPlan(64, 640130, 640131);
                 int firstCount = runtimeDirector.ActiveCoverCount;
-                string overlayReason;
-                if (firstCount < 3 || firstCount > runtimeDirector.CurrentPlan.CoverCount || !runtimeDirector.ValidateActiveOverlay(out overlayReason))
+                string overlayReason = string.Empty;
+                bool firstOverlayValid = runtimeDirector.ValidateActiveOverlay(out overlayReason);
+                if (firstCount < 3 || firstCount > runtimeDirector.CurrentPlan.CoverCount || !firstOverlayValid)
                 { Fail("live tactical overlay invalid first build: count=" + firstCount + " reason=" + overlayReason); return; }
                 runtimeDirector.ApplyDeterministicPlan(65, 650130, 650131);
                 int rebuiltCount = runtimeDirector.ActiveCoverCount;
-                if (rebuiltCount < 3 || rebuiltCount > runtimeDirector.CurrentPlan.CoverCount || !runtimeDirector.ValidateActiveOverlay(out overlayReason))
+                overlayReason = string.Empty;
+                bool rebuiltOverlayValid = runtimeDirector.ValidateActiveOverlay(out overlayReason);
+                if (rebuiltCount < 3 || rebuiltCount > runtimeDirector.CurrentPlan.CoverCount || !rebuiltOverlayValid)
                 { Fail("same-frame tactical overlay rebuild invalid: count=" + rebuiltCount + " reason=" + overlayReason); return; }
 
                 string report =
