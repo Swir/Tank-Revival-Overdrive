@@ -64,12 +64,12 @@ namespace TankRevival
                         TacticalTerrainKind terrain = (TacticalTerrainKind)((round + k) % 5);
                         float recon = 0.20f + ((round + k) % 7) * 0.11f;
                         bool reconActive = ((round + k) & 1) == 0;
-                        bool sweep = (round % 11 == 0) && distance <= BattlefieldSensorFusionPlannerV136.SweepRadius;
+                        bool sweepActive = (round % 11 == 0) && distance <= BattlefieldSensorFusionPlannerV136.SweepRadius;
 
                         SensorContactSampleV136 a = BattlefieldSensorFusionPlannerV136.Sample(
-                            round, kind, k, distance, weather.VisibilityScale, terrain, recon, reconActive, sweep);
+                            round, kind, k, distance, weather.VisibilityScale, terrain, recon, reconActive, sweepActive);
                         SensorContactSampleV136 b = BattlefieldSensorFusionPlannerV136.Sample(
-                            round, kind, k, distance, weather.VisibilityScale, terrain, recon, reconActive, sweep);
+                            round, kind, k, distance, weather.VisibilityScale, terrain, recon, reconActive, sweepActive);
 
                         if (a.Signature != b.Signature || Mathf.Abs(a.Confidence - b.Confidence) > 0.00001f || a.State != b.State)
                         { Fail("sensor sample is not deterministic"); return; }
@@ -126,13 +126,13 @@ namespace TankRevival
 
                 float noSweep = BattlefieldSensorFusionPlannerV136.Confidence(
                     EnemyKind.Fast, 8f, 0.70f, TacticalTerrainKind.Rubble, 0.3f, true, false);
-                float sweep = BattlefieldSensorFusionPlannerV136.Confidence(
+                float sweepConfidence = BattlefieldSensorFusionPlannerV136.Confidence(
                     EnemyKind.Fast, 8f, 0.70f, TacticalTerrainKind.Rubble, 0.3f, true, true);
                 float outOfRangeSweep = BattlefieldSensorFusionPlannerV136.Confidence(
                     EnemyKind.Fast, BattlefieldSensorFusionPlannerV136.SweepRadius + 0.5f, 0.70f, TacticalTerrainKind.Rubble, 0.3f, true, true);
                 float outOfRangeBase = BattlefieldSensorFusionPlannerV136.Confidence(
                     EnemyKind.Fast, BattlefieldSensorFusionPlannerV136.SweepRadius + 0.5f, 0.70f, TacticalTerrainKind.Rubble, 0.3f, true, false);
-                if (!(sweep > noSweep) || Mathf.Abs(outOfRangeSweep - outOfRangeBase) > 0.00001f)
+                if (!(sweepConfidence > noSweep) || Mathf.Abs(outOfRangeSweep - outOfRangeBase) > 0.00001f)
                 { Fail("active sweep range/boost contract invalid"); return; }
 
                 float closeFloor = BattlefieldSensorFusionPlannerV136.Confidence(
@@ -160,7 +160,7 @@ namespace TankRevival
                     "distanceNear=" + near.ToString("0.000") + " mid=" + mid.ToString("0.000") + " far=" + far.ToString("0.000") + "\n" +
                     "weatherClear=" + clear.ToString("0.000") + " storm=" + storm.ToString("0.000") +
                     " reconLow=" + lowRecon.ToString("0.000") + " reconHigh=" + highRecon.ToString("0.000") + "\n" +
-                    "sweepBase=" + noSweep.ToString("0.000") + " sweepBoosted=" + sweep.ToString("0.000") +
+                    "sweepBase=" + noSweep.ToString("0.000") + " sweepBoosted=" + sweepConfidence.ToString("0.000") +
                     " closeFloor=" + closeFloor.ToString("0.000") + " bossFloor=" + bossFloor.ToString("0.000") + "\n";
                 File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), PassMarker), report);
                 Debug.Log("[TankRevival] " + report.Replace("\n", " | "));
