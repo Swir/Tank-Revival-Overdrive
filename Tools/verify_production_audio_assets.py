@@ -13,14 +13,14 @@ AUDIO_DIR = ROOT / "Assets/Resources/TankRevivalProduction/Audio"
 EXPECTED = {
     "HeavyCannon.wav": {
         "resource": "HeavyCannon",
-        "min_pcm_bytes": 512,
-        "min_duration_ms": 5.0,
+        "min_pcm_bytes": 1024,
+        "min_duration_ms": 100.0,
         "guid": "4e496dac21264c68a0c77e2597b08a72",
     },
     "BossAlarm.wav": {
         "resource": "BossAlarm",
-        "min_pcm_bytes": 512,
-        "min_duration_ms": 5.0,
+        "min_pcm_bytes": 1024,
+        "min_duration_ms": 100.0,
         "guid": "a9423fa26ea64656a77b6a6552d46332",
     },
 }
@@ -129,10 +129,11 @@ def main() -> int:
     assert len(seen_guids) == len(EXPECTED), "production audio GUID inventory is incomplete"
 
     runtime = (ROOT / "Assets/Scripts/ProductionBattleAudioDirector.cs").read_text(encoding="utf-8")
-    assert 'Resources.LoadAll<AudioClip>("TankRevivalProduction/Audio")' in runtime
+    assert 'private const string ProductionAudioResourceFolder = "TankRevivalProduction/Audio";' in runtime
+    assert "Resources.LoadAll<AudioClip>(ProductionAudioResourceFolder)" in runtime
     assert "LoadedAuthoredClipCount" in runtime
     assert "DiscoveredAuthoredResourceCount" in runtime
-    assert '"BossAlarm"' in runtime and '"HeavyCannon"' in runtime
+    assert 'ResolveAuthoredClip("BossAlarm")' in runtime and 'ResolveAuthoredClip("HeavyCannon")' in runtime
 
     smoke = (ROOT / "Assets/Scripts/ProductionPresentationCISmokeProbe.cs").read_text(encoding="utf-8")
     assert "director.LoadedAuthoredClipCount < 2" in smoke
