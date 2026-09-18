@@ -3,22 +3,22 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-4"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-423%2F423-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.4%20QUALIFIED-brightgreen?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-5"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.1%25-yellow?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-423%2F431-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.5%20IN%20DEVELOPMENT-yellow?style=for-the-badge">
 </p>
 
 <!-- SWIR-PROGRESS-SVG-PRO:v1 -->
 <p align="center"><img src="assets/readme/progress-mini.svg" alt="SWIR roadmap progress mini" width="700"></p>
-<p align="center"><sub>Roadmap progress: 423 / 423 completed (100.0%) — V13.4 QUALIFIED. Release readiness is tracked separately by Windows qualification gates.</sub></p>
+<p align="center"><sub>Roadmap progress: 423 / 431 completed (98.1%) — V13.5 IN DEVELOPMENT. Release readiness is tracked separately by Windows qualification gates.</sub></p>
 
 ## 📊 Overall progress
 
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **423** | **0** | **423** | **100.0%** |
+| **423** | **8** | **431** | **98.1%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numeric table, percentage and generated Progress SVG. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -644,3 +644,13 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Tactical terrain readability and telemetry** — publish doctrine, active cover, recent breaches, safe-lane width and deterministic signature with fixed HUD/presentation budgets.
 - [x] **Packaged-EXE v13.4 runtime smoke** — validate all 100 terrain plans, doctrine coverage, safe-lane invariants, fixed cover budgets, deterministic cover slots, breach/authority contracts, then rerun v13.3 regressions plus rounds 80/90/100 soak on the same executable.
 - [x] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.4 gate to pass and only then finalize roadmap/checklist/progress SVGs.
+
+## v13.5 — Battlefield Weather & Visibility Warfare — IN DEVELOPMENT
+- [ ] **Deterministic 100-round weather planner** — derive one bounded Clear / Mist / Rain / Storm / Snow combat-weather profile for every campaign round with deterministic signatures, sector-aware intensity and an adjacent-repeat guard; TankGame remains round authority.
+- [ ] **Canonical mobility integration with terrain coupling** — apply tightly bounded traction modifiers inside the existing PlayerTank / EnemyTank Rigidbody2D movement paths and couple Rain/Snow penalties to canonical TacticalTerrainMap state without adding a second movement or physics authority.
+- [ ] **Visibility-aware gunnery and reload pressure** — feed bounded player/enemy spread and enemy reload scales into existing fire-control paths so low-visibility fronts materially change engagement tempo while Projectile, ArmorSystem and FireControlBallisticsDirector remain authoritative.
+- [ ] **Ammo-aware player counterplay** — let precision/AP and Plasma ammunition retain a measured stabilization advantage in severe visibility conditions without free damage, hidden aim assist or bypassing the existing ammo economy.
+- [ ] **Budgeted weather presentation layer** — add restrained full-screen tint, deterministic precipitation/whiteout cues and compact weather telemetry with hard visual budgets and no unbounded particle or scene-object growth.
+- [ ] **Fairness floors and anti-snowball weather policy** — enforce hard lower/upper bounds for traction, spread and reload effects so no weather state can immobilize the player, create unavoidable fire-control failure or silently alter Health/damage authority.
+- [ ] **Packaged-EXE v13.5 runtime smoke** — validate all 100 plans, profile coverage, anti-repeat determinism, mobility/gunnery bounds, ammo counterplay and runtime installation, then rerun v13.4/v13.3 regressions plus rounds 80/90/100 soak on the same executable.
+- [ ] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.5 gate to pass and only then finalize roadmap/checklist/progress SVGs.
