@@ -154,6 +154,7 @@ namespace TankRevival
             desired = ComponentCasualtyTactics.AdjustDirection(CurrentCasualtyTactic,
                 transform.position, _game.PlayerPosition, desired, GetInstanceID());
             desired = BattlefieldCohesionDirector.AdjustDirection(this, transform.position, desired);
+            desired = TacticalTerrainDirector.AdjustDirection(this, transform.position, _game.PlayerPosition, desired);
             if (desired.sqrMagnitude < .001f) return;
             _facing = desired;
             ApplyFacingRotation();
