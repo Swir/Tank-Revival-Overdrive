@@ -133,7 +133,6 @@ namespace TankRevival.Editor
 
         private static void ValidateProductionAudioAssets()
         {
-            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             var seenGuids = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (string path in RequiredProductionAudioAssets)
