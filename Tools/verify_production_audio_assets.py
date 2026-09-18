@@ -140,6 +140,10 @@ def main() -> int:
     assert "resources={director.AuthoredResourceSummary}" in smoke
 
     ci_build = (ROOT / "Assets/Editor/CIBuild.cs").read_text(encoding="utf-8")
+    assert "namespace TankRevival.Editor" in ci_build
+    assert "public static void BuildWindows()" in ci_build
+    assert 'private const string BuildFolder = "build/StandaloneWindows64";' in ci_build
+    assert "ValidateStaticBootstrapScene();" in ci_build
     assert "ValidateProductionAudioAssets();" in ci_build
     assert "AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport)" in ci_build
     assert "AssetDatabase.LoadAssetAtPath<AudioClip>(path)" in ci_build
@@ -147,9 +151,14 @@ def main() -> int:
         assert filename in ci_build, f"CIBuild missing required audio asset {filename}"
         assert str(contract["guid"]) in ci_build, f"CIBuild missing pinned guid for {filename}"
 
+    windows_workflow = (ROOT / ".github/workflows/battlefield-cohesion-v133-windows.yml").read_text(encoding="utf-8")
+    assert "buildMethod: TankRevival.Editor.CIBuild.BuildWindows" in windows_workflow, (
+        "v13.3 qualification must invoke the stable CIBuild.BuildWindows entry point"
+    )
+
     print(
         "[production-audio-source] PASS inventory=2 tracked_meta=2 unique_guids=2 "
-        "resources=HeavyCannon,BossAlarm smoke_min=2 content_guard=pcm+duration"
+        "resources=HeavyCannon,BossAlarm smoke_min=2 content_guard=pcm+duration stable_ci_builder=1"
     )
     return 0
 
