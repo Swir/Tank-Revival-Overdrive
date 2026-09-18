@@ -13,18 +13,20 @@ AUDIO_DIR = ROOT / "Assets/Resources/TankRevivalProduction/Audio"
 EXPECTED = {
     "HeavyCannon.wav": {
         "resource": "HeavyCannon",
-        "min_bytes": 20_000,
+        "min_pcm_bytes": 512,
+        "min_duration_ms": 5.0,
         "guid": "4e496dac21264c68a0c77e2597b08a72",
     },
     "BossAlarm.wav": {
         "resource": "BossAlarm",
-        "min_bytes": 20_000,
+        "min_pcm_bytes": 512,
+        "min_duration_ms": 5.0,
         "guid": "a9423fa26ea64656a77b6a6552d46332",
     },
 }
 
 
-def parse_wav(path: Path) -> dict[str, int | str]:
+def parse_wav(path: Path) -> dict[str, int | float | str]:
     data = path.read_bytes()
     assert len(data) >= 44, f"{path}: WAV is too small"
     assert data[:4] == b"RIFF" and data[8:12] == b"WAVE", f"{path}: missing RIFF/WAVE header"
@@ -46,14 +48,22 @@ def parse_wav(path: Path) -> dict[str, int | str]:
 
     assert fmt is not None and len(fmt) >= 16, f"{path}: missing fmt chunk"
     assert pcm_size > 0, f"{path}: missing PCM data"
-    audio_format, channels, sample_rate, _, _, bits = struct.unpack_from("<HHIIHH", fmt)
+    audio_format, channels, sample_rate, _, block_align, bits = struct.unpack_from("<HHIIHH", fmt)
     assert audio_format in (1, 3), f"{path}: unsupported WAV format {audio_format}"
     assert 1 <= channels <= 2, f"{path}: expected mono/stereo authored source"
     assert 8_000 <= sample_rate <= 192_000, f"{path}: invalid sample rate {sample_rate}"
     assert bits in (8, 16, 24, 32), f"{path}: invalid bit depth {bits}"
+    expected_align = channels * bits // 8
+    assert block_align == expected_align, f"{path}: invalid block align {block_align} != {expected_align}"
+    assert pcm_size % block_align == 0, f"{path}: PCM data is not frame aligned"
+
+    frames = pcm_size // block_align
+    duration_ms = frames * 1000.0 / sample_rate
     return {
         "bytes": len(data),
         "pcm_bytes": pcm_size,
+        "frames": frames,
+        "duration_ms": duration_ms,
         "channels": channels,
         "sample_rate": sample_rate,
         "bits": bits,
@@ -92,8 +102,15 @@ def main() -> int:
     seen_guids: set[str] = set()
     for filename, contract in EXPECTED.items():
         path = AUDIO_DIR / filename
-        assert path.stat().st_size >= contract["min_bytes"], f"{path}: authored WAV unexpectedly small"
         info = parse_wav(path)
+        assert int(info["pcm_bytes"]) >= int(contract["min_pcm_bytes"]), (
+            f"{path}: authored PCM payload unexpectedly small "
+            f"({info['pcm_bytes']} < {contract['min_pcm_bytes']})"
+        )
+        assert float(info["duration_ms"]) >= float(contract["min_duration_ms"]), (
+            f"{path}: authored clip unexpectedly short "
+            f"({info['duration_ms']:.2f} ms < {contract['min_duration_ms']:.2f} ms)"
+        )
         guid = verify_meta(path, str(contract["guid"]), seen_guids)
         print(
             "[production-audio-source]"
@@ -101,6 +118,8 @@ def main() -> int:
             f" guid={guid}"
             f" bytes={info['bytes']}"
             f" pcm={info['pcm_bytes']}"
+            f" frames={info['frames']}"
+            f" duration_ms={info['duration_ms']:.2f}"
             f" channels={info['channels']}"
             f" rate={info['sample_rate']}"
             f" bits={info['bits']}"
@@ -128,7 +147,10 @@ def main() -> int:
         assert filename in ci_build, f"CIBuild missing required audio asset {filename}"
         assert str(contract["guid"]) in ci_build, f"CIBuild missing pinned guid for {filename}"
 
-    print("[production-audio-source] PASS inventory=2 tracked_meta=2 unique_guids=2 resources=HeavyCannon,BossAlarm smoke_min=2")
+    print(
+        "[production-audio-source] PASS inventory=2 tracked_meta=2 unique_guids=2 "
+        "resources=HeavyCannon,BossAlarm smoke_min=2 content_guard=pcm+duration"
+    )
     return 0
 
 
