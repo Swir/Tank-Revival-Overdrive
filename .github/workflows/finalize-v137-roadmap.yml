@@ -1,0 +1,128 @@
+name: ROADMAP v13.7 Qualification Finalizer
+
+on:
+  push:
+    branches: ['dev-v13-7']
+    paths:
+      - '.v137-finalizer-trigger'
+      - 'Tools/finalize_v137_roadmap.py'
+      - '.github/workflows/finalize-v137-roadmap.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: finalize-v137-roadmap-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  QUAL_RUN_ID: '35393272731'
+  CANDIDATE_SHA: 'dc646fc60be572e625f5ea310058aab10d2f26da'
+  CANDIDATE_ARTIFACT_ID: '10566756672'
+  CANDIDATE_ARTIFACT_DIGEST: 'sha256:e4b063898c0e516fda4064d183080a4219861c593e572153b327bd857f8b05c4'
+  CANDIDATE_ZIP_SHA256: 'a244565049fad753a31a67eb1b03302b53af3a64d63539d3f8ddc07093250956'
+
+jobs:
+  finalize-qualified-scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify exact successful Windows gate and candidate artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          run_json="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${api}/actions/runs/${QUAL_RUN_ID}")"
+          test "$(jq -r '.conclusion' <<<"$run_json")" = success
+          test "$(jq -r '.head_sha' <<<"$run_json")" = "${CANDIDATE_SHA}"
+          test "$(jq -r '.head_branch' <<<"$run_json")" = dev-v13-7
+          test "$(jq -r '.name' <<<"$run_json")" = 'Late-Round Performance v13.7 Windows Qualification Gate'
+          artifact_json="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${api}/actions/artifacts/${CANDIDATE_ARTIFACT_ID}")"
+          test "$(jq -r '.workflow_run.id' <<<"$artifact_json")" = "${QUAL_RUN_ID}"
+          test "$(jq -r '.workflow_run.head_sha' <<<"$artifact_json")" = "${CANDIDATE_SHA}"
+          test "$(jq -r '.name' <<<"$artifact_json")" = 'TankRevivalOverdrive-v13.7-late-round-performance-Windows-x64'
+          test "$(jq -r '.digest' <<<"$artifact_json")" = "${CANDIDATE_ARTIFACT_DIGEST}"
+          test "$(jq -r '.expired' <<<"$artifact_json")" = false
+
+      - name: Verify candidate provenance payload and post-candidate whitelist
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "${CANDIDATE_SHA}" HEAD
+          mapfile -t changed < <(git diff --name-only "${CANDIDATE_SHA}"..HEAD)
+          for path in "${changed[@]}"; do
+            case "$path" in
+              Tools/finalize_v137_roadmap.py|.github/workflows/finalize-v137-roadmap.yml|.v137-finalizer-trigger) ;;
+              *) echo "Non-whitelisted post-candidate change: $path" >&2; exit 1 ;;
+            esac
+          done
+          curl -fsSL -L -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${CANDIDATE_ARTIFACT_ID}/zip" -o /tmp/v137-artifact.zip
+          mkdir -p /tmp/v137-artifact && unzip -q /tmp/v137-artifact.zip -d /tmp/v137-artifact
+          test "$(sha256sum /tmp/v137-artifact/TankRevivalOverdrive-v13.7-late-round-performance-Windows-x64.zip | awk '{print $1}')" = "${CANDIDATE_ZIP_SHA256}"
+          python - <<'PY'
+          from pathlib import Path
+          import json, os
+          root=Path('/tmp/v137-artifact')
+          p=json.loads((root/'V137_LATE_ROUND_PERFORMANCE_PROVENANCE.json').read_text(encoding='utf-8'))
+          assert p['candidate_sha']==os.environ['CANDIDATE_SHA']==p['commit_sha']
+          assert p['sha256']==os.environ['CANDIDATE_ZIP_SHA256']
+          assert p['version']=='v13.7.0-dev'
+          assert p['unity_version']=='6000.3.17f1'
+          assert p['schema']=='tank-revival-v13.7-late-round-performance/v1'
+          checksum=(root/'V137_LATE_ROUND_PERFORMANCE_SHA256.txt').read_text(encoding='utf-8')
+          assert os.environ['CANDIDATE_ZIP_SHA256'] in checksum
+          PY
+
+      - name: Finalize roadmap, evidence and SVG presentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile Tools/finalize_v137_roadmap.py Tools/generate_progress_svgs.py Tools/swir_visual_report_guard.py
+          python Tools/finalize_v137_roadmap.py
+          python Tools/generate_progress_svgs.py --write --embed
+          python Tools/generate_progress_svgs.py --check
+          python Tools/swir_visual_report_guard.py --check
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('ROADMAP.md').read_text(encoding='utf-8'); r=Path('README.md').read_text(encoding='utf-8')
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M))
+          assert (done,open_,done+open_)==(447,0,447),(done,open_,done+open_)
+          assert '| **447** | **0** | **447** | **100.0%** |' in s
+          assert 'V13.7%20QUALIFIED' in s
+          assert s.count('assets/readme/progress-mini.svg')==1
+          assert r.count('assets/readme/progress-card.svg')==1
+          assert '<!-- SWIR-README-STANDARD:v2 -->' in r and '## 🔎 Search Keywords' in r
+          assert 'V13.7 QUALIFIED' in r and '447 / 447 completed (100.0%)' in r
+          section=s[s.index('## v13.7 — Late-Round Performance & Battle Density Reforge — QUALIFIED'):]
+          assert section.count('- [x]')==8 and section.count('- [ ]')==0
+          assert Path('docs/qualification/V13_7_WINDOWS_QUALIFICATION.md').is_file()
+          template=Path('assets/readme/progress-template.svg').read_text(encoding='utf-8')
+          assert 'TEMPLATE' in template and 'N/A' in template
+          PY
+          git diff --check
+
+      - name: Commit exact qualified state
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg docs/qualification/V13_7_WINDOWS_QUALIFICATION.md; then
+            echo 'v13.7 qualified state already committed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg docs/qualification/V13_7_WINDOWS_QUALIFICATION.md
+          git commit -m 'docs(v13.7): finalize qualified performance milestone'
+          git push origin HEAD:dev-v13-7
