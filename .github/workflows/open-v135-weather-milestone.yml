@@ -1,0 +1,52 @@
+name: Open v13.5 Weather Milestone
+
+on:
+  push:
+    branches:
+      - dev-v13-5
+    paths:
+      - 'Tools/open_v135_weather_milestone.py'
+      - '.github/workflows/open-v135-weather-milestone.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: open-v135-weather-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  register-roadmap-scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Register v13.5 scope before gameplay implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile Tools/open_v135_weather_milestone.py Tools/generate_progress_svgs.py Tools/swir_visual_report_guard.py
+          python Tools/open_v135_weather_milestone.py
+          python Tools/generate_progress_svgs.py --embed --write --check
+          python Tools/swir_visual_report_guard.py --fix --check
+          python Tools/generate_progress_svgs.py --check
+
+      - name: Commit authoritative roadmap and generated SVG snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg; then
+            echo 'No roadmap/progress changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
+          git commit -m 'docs(v13.5): open weather and visibility warfare milestone'
+          git push origin HEAD:dev-v13-5
