@@ -54,13 +54,23 @@ jobs:
           import re, xml.etree.ElementTree as ET
           roadmap=Path('ROADMAP.md').read_text(encoding='utf-8')
           readme=Path('README.md').read_text(encoding='utf-8')
+          template=Path('assets/readme/progress-template.svg').read_text(encoding='utf-8')
           assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',roadmap,re.M))==1
           assert len(re.findall(r'^<!-- SWIR-README-STANDARD:v2 -->$',readme,re.M))==1
           for token in ['<!-- ROADMAP-PROGRESS:START -->','<!-- ROADMAP-PROGRESS:END -->','## 📊 Overall progress','| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |','<!-- SWIR-PROGRESS-SVG-PRO:v1 -->']:
               assert token in roadmap,token
-          assert '███████████████████░ 98.1%' in roadmap
           assert '| **415** | **8** | **423** | **98.1%** |' in roadmap
+          assert 'DONE-415%2F423' in roadmap and 'ROADMAP-98.1%25-yellow' in roadmap
+          assert 'STATUS-V13.4%20IN%20DEVELOPMENT-yellow' in roadmap
+          assert not re.search(r'(?m)^[█░]{8,}\s+[0-9.]+%$',roadmap)
+          assert not re.search(r'(?m)^[█░]{8,}\s+[0-9.]+%$',readme)
+          assert roadmap.count('assets/readme/progress-mini.svg')==1
+          assert readme.count('assets/readme/progress-card.svg')==1
+          assert 'progress-template.svg' not in roadmap and 'progress-template.svg' not in readme
+          assert '415 / 423 completed (98.1%) — V13.4 IN DEVELOPMENT' in roadmap
+          assert '415 / 423 completed (98.1%) — V13.4 IN DEVELOPMENT' in readme
           assert '## 🔎 Search Keywords' in readme
+          assert 'Template' in template and 'N/A' in template
           for p in ['assets/readme/progress-card.svg','assets/readme/progress-mini.svg','assets/readme/progress-template.svg']:
               ET.parse(p)
-          print('v13.4 protected SWIR docs + SVG XML: PASS')
+          print('v13.4 protected SWIR docs + SVG-only XML contract: PASS')
