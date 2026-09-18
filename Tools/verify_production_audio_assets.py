@@ -136,9 +136,11 @@ def main() -> int:
     assert 'ResolveAuthoredClip("BossAlarm")' in runtime and 'ResolveAuthoredClip("HeavyCannon")' in runtime
 
     smoke = (ROOT / "Assets/Scripts/ProductionPresentationCISmokeProbe.cs").read_text(encoding="utf-8")
-    assert "director.LoadedAuthoredClipCount < 2" in smoke
-    assert "director.DiscoveredAuthoredResourceCount < 2" in smoke
-    assert "resources={director.AuthoredResourceSummary}" in smoke
+    assert "private const int MinimumAuthoredClipCount = 2;" in smoke
+    assert "audio.LoadedAuthoredClipCount < MinimumAuthoredClipCount" in smoke
+    assert "audio.DiscoveredAuthoredResourceCount" in smoke
+    assert "audio.AuthoredResourceSummary" in smoke
+    assert "audio.HeavyCannonLoaded" in smoke and "audio.BossAlarmLoaded" in smoke
 
     ci_build = (ROOT / "Assets/Editor/CIBuild.cs").read_text(encoding="utf-8")
     assert "namespace TankRevival.Editor" in ci_build
