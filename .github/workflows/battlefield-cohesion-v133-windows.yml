@@ -63,9 +63,11 @@ jobs:
         run: |
           set -euo pipefail
           for f in Assets/Scripts/BattlefieldCohesionV133.cs Assets/Scripts/BattlefieldCohesionCISmokeProbe.cs Assets/Scripts/EnemyTank.cs Assets/Scripts/ProductionBattleAudioDirector.cs CHANGELOG_v13.3.md; do test -f "$f"; done
-          grep -q 'MaxTrackedActors = 24' Assets/Scripts/BattlefieldCohesionV133.cs
-          grep -q 'MaxSquads = 6' Assets/Scripts/BattlefieldCohesionV133.cs
-          grep -q 'SquadSize = 4' Assets/Scripts/BattlefieldCohesionV133.cs
+          # The semantic verifier above is authoritative. These lightweight guards intentionally
+          # match the source expression instead of duplicating a derived numeric constant.
+          grep -Fq 'MaxTrackedActors = SquadSize * MaxSquads' Assets/Scripts/BattlefieldCohesionV133.cs
+          grep -Fq 'MaxSquads = 6' Assets/Scripts/BattlefieldCohesionV133.cs
+          grep -Fq 'SquadSize = 4' Assets/Scripts/BattlefieldCohesionV133.cs
           for role in Leader Wingman Breacher Support; do grep -q "$role" Assets/Scripts/BattlefieldCohesionV133.cs; done
           for state in Forming Cohesive Shocked Regrouping; do grep -q "$state" Assets/Scripts/BattlefieldCohesionV133.cs; done
           grep -q -- '-tr-v133-smoke' Assets/Scripts/BattlefieldCohesionCISmokeProbe.cs

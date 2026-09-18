@@ -176,7 +176,7 @@ namespace TankRevival
             }
 
             voice.panStereo = pan;
-            voice.pitch = Random.Range(minPitch, maxPitch);
+            voice.pitch = UnityEngine.Random.Range(minPitch, maxPitch);
             voice.PlayOneShot(clip, Mathf.Clamp01(volume * attenuation));
         }
     }
