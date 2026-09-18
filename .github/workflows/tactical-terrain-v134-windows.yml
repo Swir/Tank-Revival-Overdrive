@@ -6,6 +6,7 @@ on:
     paths:
       - '.v134-windows-gate-trigger'
       - 'Assets/Scripts/TacticalTerrainV134.cs'
+      - 'Assets/Scripts/TacticalTerrainDirector.cs'
       - 'Assets/Scripts/TacticalTerrainCISmokeProbe.cs'
       - 'Assets/Scripts/TankGame.cs'
       - 'Assets/Scripts/EnemyTank.cs'
@@ -18,6 +19,7 @@ on:
       - '.github/scripts/test_package_v134_tactical_terrain.py'
       - '.github/workflows/tactical-terrain-v134-windows.yml'
       - 'Tools/verify_v134_tactical_terrain.py'
+      - 'Tools/verify_csharp_type_uniqueness.py'
       - 'Tools/verify_production_audio_assets.py'
       - 'Tools/verify_unity_ci_bootstrap.py'
       - 'Tools/generate_progress_svgs.py'
@@ -40,6 +42,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - name: Verify exact branch and deterministic source contracts
         shell: bash
         run: |
@@ -47,9 +52,10 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           test "${GITHUB_REF_NAME}" = 'dev-v13-4'
           test "$(cat VERSION)" = 'v13.4.0-dev'
-          python -m py_compile .github/scripts/package_v134_tactical_terrain.py .github/scripts/test_package_v134_tactical_terrain.py Tools/verify_v134_tactical_terrain.py Tools/verify_production_audio_assets.py Tools/verify_unity_ci_bootstrap.py Tools/generate_progress_svgs.py
+          python -m py_compile .github/scripts/package_v134_tactical_terrain.py .github/scripts/test_package_v134_tactical_terrain.py Tools/verify_v134_tactical_terrain.py Tools/verify_csharp_type_uniqueness.py Tools/verify_production_audio_assets.py Tools/verify_unity_ci_bootstrap.py Tools/generate_progress_svgs.py
           python .github/scripts/test_package_v134_tactical_terrain.py
           python Tools/verify_v134_tactical_terrain.py
+          python Tools/verify_csharp_type_uniqueness.py
           python Tools/verify_production_audio_assets.py
           python Tools/verify_unity_ci_bootstrap.py
           python Tools/generate_progress_svgs.py --check
@@ -68,10 +74,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in Assets/Scripts/TacticalTerrainV134.cs Assets/Scripts/TacticalTerrainCISmokeProbe.cs Assets/Scripts/TankGame.cs Assets/Scripts/EnemyTank.cs Assets/Scripts/Obstacle.cs Assets/Scripts/ReactiveCoverBreachDirector.cs CHANGELOG_v13.4.md; do test -f "$f"; done
+          for f in Assets/Scripts/TacticalTerrainV134.cs Assets/Scripts/TacticalTerrainDirector.cs Assets/Scripts/TacticalTerrainCISmokeProbe.cs Assets/Scripts/TankGame.cs Assets/Scripts/EnemyTank.cs Assets/Scripts/Obstacle.cs Assets/Scripts/ReactiveCoverBreachDirector.cs CHANGELOG_v13.4.md; do test -f "$f"; done
           grep -Fq 'public const int PlannedRounds = 100;' Assets/Scripts/TacticalTerrainV134.cs
           grep -Fq 'public const int MaxCoverNodes = 12;' Assets/Scripts/TacticalTerrainV134.cs
           grep -Fq 'public const int CandidateSlotCount = 24;' Assets/Scripts/TacticalTerrainV134.cs
+          grep -Fq 'class LegacyTacticalTerrainDirectorV38' Assets/Scripts/TacticalTerrainDirector.cs
           grep -q -- '-tr-v134-smoke' Assets/Scripts/TacticalTerrainCISmokeProbe.cs
           grep -q 'V13_4_TACTICAL_TERRAIN_OK.txt' Assets/Scripts/TacticalTerrainCISmokeProbe.cs
           grep -q 'TacticalTerrainDirector' Assets/Scripts/TankGame.cs
@@ -105,6 +112,9 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - name: Verify Unity CI credentials
         shell: bash
         env:
