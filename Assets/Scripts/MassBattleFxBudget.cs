@@ -4,8 +4,8 @@ namespace TankRevival
 {
     /// <summary>
     /// Shared transient-FX budget for mass battles. Gameplay events are never suppressed; only
-    /// optional presentation density (projectile afterglow, explosion spark/smoke counts and
-    /// v11.7 tactical maneuver cues) scales with the performance governor and live FX pressure.
+    /// optional presentation density scales with the existing governor plus the proactive v13.7
+    /// late-round pressure profile. No enemy, projectile, damage or spawn event is removed here.
     /// </summary>
     public static class MassBattleFxBudget
     {
@@ -33,10 +33,10 @@ namespace TankRevival
         {
             get
             {
-                int baseCount = WarfarePerformanceGovernor.Tier == WarfarePerformanceGovernor.BudgetTier.Survival ? 8 :
-                                WarfarePerformanceGovernor.Tier == WarfarePerformanceGovernor.BudgetTier.Balanced ? 13 : 20;
-                if (_activeExplosions >= 8) baseCount = Mathf.Max(6, baseCount - 5);
-                return baseCount;
+                LateRoundPerformanceProfileV137 profile = LateRoundPerformanceDirector.CurrentProfile;
+                int cap = profile.ExplosionSparkCap;
+                if (_activeExplosions >= 8) cap = Mathf.Max(6, cap - 2);
+                return cap;
             }
         }
 
@@ -44,10 +44,10 @@ namespace TankRevival
         {
             get
             {
-                int baseCount = WarfarePerformanceGovernor.Tier == WarfarePerformanceGovernor.BudgetTier.Survival ? 3 :
-                                WarfarePerformanceGovernor.Tier == WarfarePerformanceGovernor.BudgetTier.Balanced ? 5 : 8;
-                if (_activeExplosions >= 8) baseCount = Mathf.Max(2, baseCount - 2);
-                return baseCount;
+                LateRoundPerformanceProfileV137 profile = LateRoundPerformanceDirector.CurrentProfile;
+                int cap = profile.ExplosionSmokeCap;
+                if (_activeExplosions >= 8) cap = Mathf.Max(2, cap - 1);
+                return cap;
             }
         }
 
@@ -91,10 +91,6 @@ namespace TankRevival
             return false;
         }
 
-        /// <summary>
-        /// Presentation-only budget used by v11.7 world-space maneuver cues. Priority cues are
-        /// Commander, Counter-Fire displacement or active reorganization cues; gameplay is never gated.
-        /// </summary>
         public static bool TryConsumeTacticalCue(bool priority)
         {
             BeginFrame();
@@ -131,24 +127,10 @@ namespace TankRevival
             if (_frame == frame) return;
             _frame = frame;
 
-            switch (WarfarePerformanceGovernor.Tier)
-            {
-                case WarfarePerformanceGovernor.BudgetTier.Survival:
-                    _trailTokens = 2;
-                    _microTokens = 3;
-                    _tacticalTokens = 4;
-                    break;
-                case WarfarePerformanceGovernor.BudgetTier.Balanced:
-                    _trailTokens = 5;
-                    _microTokens = 7;
-                    _tacticalTokens = 8;
-                    break;
-                default:
-                    _trailTokens = 10;
-                    _microTokens = 14;
-                    _tacticalTokens = 14;
-                    break;
-            }
+            LateRoundPerformanceProfileV137 profile = LateRoundPerformanceDirector.CurrentProfile;
+            _trailTokens = profile.TrailTokens;
+            _microTokens = profile.MicroTokens;
+            _tacticalTokens = profile.TacticalTokens;
         }
     }
 }
