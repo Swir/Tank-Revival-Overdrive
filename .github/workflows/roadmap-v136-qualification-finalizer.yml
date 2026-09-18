@@ -4,6 +4,10 @@ on:
   workflow_run:
     workflows: ['Battlefield Sensor Fusion v13.6 Windows Qualification Gate']
     types: [completed]
+  push:
+    branches: ['dev-v13-6']
+    paths:
+      - '.github/workflows/roadmap-v136-qualification-finalizer.yml'
 
 permissions:
   contents: write
@@ -11,7 +15,13 @@ permissions:
 
 jobs:
   finalize:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev-v13-6' }}
+    if: >-
+      ${{
+        (github.event_name == 'workflow_run' &&
+         github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.head_branch == 'dev-v13-6') ||
+        github.event_name == 'push'
+      }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -19,21 +29,58 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "CANDIDATE_SHA=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_ENV"
-          echo "QUALIFICATION_RUN=${{ github.event.workflow_run.id }}" >> "$GITHUB_ENV"
+          if [ '${{ github.event_name }}' = 'workflow_run' ]; then
+            echo 'CANDIDATE_SHA=${{ github.event.workflow_run.head_sha }}' >> "$GITHUB_ENV"
+            echo 'QUALIFICATION_RUN=${{ github.event.workflow_run.id }}' >> "$GITHUB_ENV"
+            echo 'CHECKOUT_REF=${{ github.event.workflow_run.head_sha }}' >> "$GITHUB_ENV"
+            echo 'FALLBACK_MODE=0' >> "$GITHUB_ENV"
+          else
+            # Safe fallback for this already-green exact candidate. The push that adds this
+            # fallback may change only this workflow file; gameplay/source must stay identical.
+            echo 'CANDIDATE_SHA=6509b163ab0fa2f29d88f2f9c06188f7a1de1bdb' >> "$GITHUB_ENV"
+            echo 'QUALIFICATION_RUN=35388766882' >> "$GITHUB_ENV"
+            echo 'CHECKOUT_REF=${{ github.sha }}' >> "$GITHUB_ENV"
+            echo 'FALLBACK_MODE=1' >> "$GITHUB_ENV"
+          fi
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ env.CHECKOUT_REF }}
           fetch-depth: 0
-      - name: Refuse stale or non-current candidate
-        shell: bash
+      - name: Verify exact qualification evidence and branch safety
+        shell: python
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "${CANDIDATE_SHA}"
-          git fetch origin dev-v13-6
-          current="$(git rev-parse origin/dev-v13-6)"
-          test "$current" = "${CANDIDATE_SHA}" || { echo "Qualified SHA is stale: current=$current candidate=$CANDIDATE_SHA"; exit 1; }
-          test "$(cat VERSION)" = 'v13.6.0-dev'
+          import json, os, subprocess, urllib.request
+          candidate=os.environ['CANDIDATE_SHA']
+          run_id=os.environ['QUALIFICATION_RUN']
+          req=urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['REPOSITORY']}/actions/runs/{run_id}",
+              headers={
+                  'Authorization': f"Bearer {os.environ['GITHUB_TOKEN']}",
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+              })
+          with urllib.request.urlopen(req, timeout=30) as response:
+              run=json.load(response)
+          assert run['status']=='completed', run['status']
+          assert run['conclusion']=='success', run['conclusion']
+          assert run['head_sha']==candidate, (run['head_sha'], candidate)
+          assert run['head_branch']=='dev-v13-6', run['head_branch']
+
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          subprocess.run(['git','fetch','origin','dev-v13-6'],check=True)
+          current=subprocess.check_output(['git','rev-parse','origin/dev-v13-6'],text=True).strip()
+          assert current==head, (current,head)
+          subprocess.run(['git','merge-base','--is-ancestor',candidate,head],check=True)
+          if os.environ.get('FALLBACK_MODE')=='1':
+              changed=subprocess.check_output(['git','diff','--name-only',f'{candidate}..{head}'],text=True).splitlines()
+              assert changed==['.github/workflows/roadmap-v136-qualification-finalizer.yml'], changed
+          else:
+              assert head==candidate, (head,candidate)
+          assert open('VERSION',encoding='utf-8').read().strip()=='v13.6.0-dev'
+          print(f'Exact v13.6 qualification evidence verified: run={run_id} candidate={candidate}')
       - name: Revalidate open qualified source state
         shell: bash
         run: |
@@ -101,6 +148,8 @@ jobs:
           assert 'V13.6%20QUALIFIED' in s
           assert s.count('assets/readme/progress-mini.svg')==1
           r=Path('README.md').read_text(encoding='utf-8')
+          assert '<!-- SWIR-README-STANDARD:v2 -->' in r
+          assert '## 🔎 Search Keywords' in r
           assert r.count('assets/readme/progress-card.svg')==1
           print('v13.6 closed-state roadmap/SVG contract: PASS')
           PY
