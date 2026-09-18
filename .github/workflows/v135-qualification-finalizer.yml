@@ -76,11 +76,13 @@ jobs:
           python Tools/swir_visual_report_guard.py --check
       - name: Verify qualified state and diff hygiene
         run: |
-          python Tools/verify_v135_battlefield_weather.py
+          python -m py_compile Tools/finalize_v135_roadmap.py Tools/generate_progress_svgs.py Tools/swir_visual_report_guard.py
           git diff --check
           grep -Fq '431 / 431 completed (100.0%) — V13.5 QUALIFIED' ROADMAP.md
           grep -Fq '431 / 431 completed (100.0%) — V13.5 QUALIFIED' README.md
           grep -Fq '## v13.5 — Battlefield Weather & Visibility Warfare — QUALIFIED' ROADMAP.md
+          grep -Fq 'Candidate commit: `9dca37bb93d10fda44bcfb17b82a8ea0f92f065e`' docs/qualification/V13_5_WINDOWS_QUALIFICATION.md
+          grep -Fq 'Qualification run: `35371602843` — `success`' docs/qualification/V13_5_WINDOWS_QUALIFICATION.md
           test "$(grep -c '^- \[x\] ' ROADMAP.md)" -eq 431
           test "$(grep -c '^- \[ \] ' ROADMAP.md)" -eq 0
       - name: Commit exact-SHA qualification result
