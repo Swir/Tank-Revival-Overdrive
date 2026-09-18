@@ -11,7 +11,7 @@
   <text x="32" y="73" fill="#9FB7C8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="13">Measured scope: ROADMAP deliverables</text>
   <text x="728" y="51" text-anchor="end" fill="#EAF8FF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="24" font-weight="700">100.0%</text>
   <rect x="32" y="94" width="656" height="18" rx="9" fill="#02050A" stroke="#143449"/>
-  <rect x="32" y="94" width="656.00" height="18" rx="9" fill="url(#swirProgress)" filter="url(#softGlow)"/>
+  <rect data-role="progress-fill" x="32" y="94" width="656.00" height="18" rx="9" fill="url(#swirProgress)" filter="url(#softGlow)"/>
   <text x="32" y="139" fill="#D6EAF5" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="14" font-weight="600">Status: V13.3 QUALIFIED</text>
   <text x="728" y="139" text-anchor="end" fill="#D6EAF5" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="14">415 / 415 completed</text>
   <text x="32" y="169" fill="#7FA2B5" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12">Release readiness: tracked separately by Windows qualification gates</text>

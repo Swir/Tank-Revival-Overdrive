@@ -1,19 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="220" viewBox="0 0 760 220" role="img" aria-labelledby="title desc">
-  <title id="title">SWIR Progress SVG Pro reusable template</title>
-  <desc id="desc">Template only. Progress values are N/A until generated from verified authoritative data.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="220" viewBox="0 0 760 220" role="img" aria-labelledby="title desc" data-template="SWIR-PROGRESS-SVG-PRO:v1">
+  <title id="title">SWIR Progress SVG Pro — TEMPLATE</title>
+  <desc id="desc">TEMPLATE only. Progress is N/A until generated from verified authoritative data.</desc>
   <defs>
     <linearGradient id="swirProgress" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0088FF"/><stop offset="1" stop-color="#62E5FF"/></linearGradient>
     <filter id="softGlow" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
   </defs>
   <rect x="1" y="1" width="758" height="218" rx="18" fill="#02050A" stroke="#16394C" stroke-width="2"/>
   <rect x="18" y="18" width="724" height="184" rx="14" fill="#07111C" stroke="#0B2637"/>
-  <text x="32" y="48" fill="#62E5FF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="20" font-weight="700">{{PROJECT}}</text>
+  <text x="32" y="48" fill="#62E5FF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="20" font-weight="700">{{PROJECT}} — TEMPLATE</text>
   <text x="32" y="73" fill="#9FB7C8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="13">Measured scope: {{SCOPE}}</text>
   <text x="728" y="51" text-anchor="end" fill="#EAF8FF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="24" font-weight="700">N/A</text>
   <rect x="32" y="94" width="656" height="18" rx="9" fill="#02050A" stroke="#143449"/>
-  <rect data-role="progress-fill" x="32" y="94" width="1" height="18" rx="9" fill="url(#swirProgress)" opacity="0"/>
-  <text x="32" y="139" fill="#D6EAF5" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="14" font-weight="600">Status: {{STATUS}}</text>
+  <rect data-role="progress-fill" x="32" y="94" width="0" height="18" rx="9" fill="url(#swirProgress)" opacity="0"/>
+  <text x="32" y="139" fill="#D6EAF5" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="14">Status: {{STATUS}}</text>
   <text x="728" y="139" text-anchor="end" fill="#D6EAF5" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="14">{{COUNTER}}</text>
   <text x="32" y="169" fill="#7FA2B5" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12">Release readiness: tracked separately</text>
-  <text x="32" y="190" fill="#4D748A" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Template — replace only from verified authoritative data</text>
+  <text x="32" y="190" fill="#4D748A" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">TEMPLATE — populate only from verified authoritative data</text>
 </svg>

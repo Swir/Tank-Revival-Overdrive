@@ -1,11 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="700" height="92" viewBox="0 0 700 92" role="img" aria-labelledby="title desc">
   <title id="title">Tank Revival: Orzeł Overdrive roadmap — 100.0%</title>
   <desc id="desc">Roadmap progress: 415 / 415 completed (100.0%) — V13.3 QUALIFIED. Release readiness is tracked separately by Windows qualification gates.</desc>
-  <defs><linearGradient id="swirMini" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0088FF"/><stop offset="1" stop-color="#62E5FF"/></linearGradient></defs>
+  <defs>
+    <linearGradient id="swirMini" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0088FF"/><stop offset="1" stop-color="#62E5FF"/></linearGradient>
+    <filter id="miniGlow" x="-10%" y="-60%" width="120%" height="220%"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
   <rect x="1" y="1" width="698" height="90" rx="14" fill="#02050A" stroke="#16394C" stroke-width="2"/>
-  <text x="18" y="28" fill="#62E5FF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="14" font-weight="700">ROADMAP deliverables</text>
-  <text x="682" y="28" text-anchor="end" fill="#EAF8FF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="15" font-weight="700">100.0% · 415 / 415 completed</text>
-  <rect x="18" y="42" width="360" height="12" rx="6" fill="#07111C" stroke="#143449"/>
-  <rect x="18" y="42" width="360.00" height="12" rx="6" fill="url(#swirMini)"/>
-  <text x="18" y="76" fill="#9FB7C8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12">V13.3 QUALIFIED · release readiness tracked separately</text>
+  <rect x="12" y="12" width="676" height="68" rx="10" fill="#07111C" stroke="#0B2637"/>
+  <text x="24" y="32" fill="#62E5FF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="14" font-weight="700">ROADMAP deliverables</text>
+  <text x="676" y="32" text-anchor="end" fill="#EAF8FF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="14" font-weight="700">100.0% · 415 / 415 completed</text>
+  <rect x="24" y="43" width="360" height="12" rx="6" fill="#02050A" stroke="#143449"/>
+  <rect data-role="progress-fill" x="24" y="43" width="360.00" height="12" rx="6" fill="url(#swirMini)" filter="url(#miniGlow)"/>
+  <text x="24" y="72" fill="#9FB7C8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">V13.3 QUALIFIED · release readiness tracked separately</text>
 </svg>

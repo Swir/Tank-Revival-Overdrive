@@ -13,7 +13,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)](https://github.com/Swir/Tank-Revival-Overdrive/releases)
 [![Unity](https://img.shields.io/badge/Unity-6000.3.17f1-02050A?style=for-the-badge&logo=unity&logoColor=62E5FF)](https://unity.com/)
 [![Roadmap](https://img.shields.io/badge/Roadmap-100.0%25%20V13.3%20Qualified-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
-[![v13.2 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/adaptive-command-v132-windows.yml/badge.svg?branch=dev-v13-2)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/adaptive-command-v132-windows.yml)
+[![v13.3 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-cohesion-v133-windows.yml/badge.svg?branch=dev-v13-3)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-cohesion-v133-windows.yml)
 
 [**Highlights**](#-highlights) · [**Download**](#-quick-start--download) · [**Controls**](#-controls) · [**Roadmap**](#-roadmap--quality-gates) · [**Releases**](#-releases)
 
@@ -53,7 +53,7 @@ The campaign combines direct tank combat with directional armor, component damag
 | 🦅 **Orzełek defense** | Protect a persistent stronghold whose defenses and battlefield pressure escalate through the campaign. |
 | 💯 **100-round encounter campaign** | Deterministic encounter planning creates controlled escalation from round 1 to 100. |
 | 🧠 **Adaptive enemy command v13.2** | A bounded 8-round combat history can shift enemy doctrine between seven tactical responses without creating a second AI/movement authority. |
-| 🧩 **Battlefield cohesion v13.3 — in development** | Fixed-capacity four-vehicle squads add deterministic roles, leader-loss shock, regroup intent and readable command markers while existing `EnemyTank` remains movement/fire authority. |
+| 🧩 **Battlefield cohesion v13.3 — qualified** | Fixed-capacity four-vehicle squads add deterministic roles, leader-loss shock, regroup intent and readable command markers while existing `EnemyTank` remains movement/fire authority. |
 | 🎯 **Dynamic objective warfare** | Objective planning layers mission pressure onto the existing round/spawn loop instead of replacing it. |
 | 👑 **Multi-phase bosses** | Boss behavior escalates through health/component-driven phases while existing movement, projectile and survivability authorities remain canonical. |
 | 🛡️ **Directional armor & modules** | Front/side/rear armor, ricochets and engine/tracks/gun/ammo-rack degradation affect how vehicles move and fight. |
@@ -63,7 +63,7 @@ The campaign combines direct tank combat with directional armor, component damag
 | 📡 **Operational warfare stack** | Combined Arms, sustainment, route intelligence, Recon/EW, Mobile Signal and SIGINT feed bounded encounter decisions. |
 | 🎯 **Independent hull and turret control** | Drive, aim and fire independently instead of locking the cannon to chassis direction. |
 | ✨ **Procedural 2.5D presentation** | Animated tracks, recoil, muzzle flashes, trails, smoke, sparks, explosions, tactical telegraphs and pooled combat feedback. |
-| 🧪 **Exact-candidate qualification** | The last qualified milestone, v13.2, passed one packaged Windows EXE through its smoke plus v13.1/v13.0/v12.9/v12.8 regressions and late-round 80/90/100 soak. v13.3 remains unqualified until its own gate passes. |
+| 🧪 **Exact-candidate qualification** | v13.3 passed one packaged Windows EXE through authored-audio preflight, v13.3 smoke, v13.2/v13.1/v13.0/v12.9/v12.8 regressions and late-round 80/90/100 soak. |
 
 ## 🔫 Ammunition
 
@@ -151,9 +151,9 @@ The cross-system doctrine layer reads bounded public state from Mobile Front, Op
 
 `AdaptiveEnemyCommandV132` observes a fixed eight-round combat-history window and selects between seven bounded doctrines with hysteresis and repeat caps. It can influence composition, concurrency, cadence and existing `EnemyTank` intent only within hard limits. A deterministic `RecoveryWindow` can reduce pressure after sustained player/Orzełek distress instead of using hidden healing, enemy deletion or invulnerability.
 
-### Battlefield Cohesion v13.3 — in development
+### Battlefield Cohesion v13.3 — qualified
 
-The current v13.3 core adds a fixed-capacity squad registry for at most **24 eligible enemy actors / six four-vehicle squads**. Slots deterministically map to Leader, Wingman, Breacher and Support roles. Cohesion can transition through Forming, Cohesive, Shocked and Regrouping states; losing a leader creates a finite shock before deterministic promotion and regrouping. The director publishes bounded movement, reload, spread, target and cardinal formation intent only — it does not spawn, move, fire, damage or heal actors itself. A dedicated packaged-EXE smoke probe exists in source, but v13.3 remains **IN DEVELOPMENT** until Windows qualification is green.
+The qualified v13.3 core adds a fixed-capacity squad registry for at most **24 eligible enemy actors / six four-vehicle squads**. Slots deterministically map to Leader, Wingman, Breacher and Support roles. Cohesion can transition through Forming, Cohesive, Shocked and Regrouping states; losing a leader creates a finite shock before deterministic promotion and regrouping. The director publishes bounded movement, reload, spread, target and cardinal formation intent only — it does not spawn, move, fire, damage or heal actors itself. Exact candidate `0e3496ce095d27b2a686efbb5539cc7e475e3213` passed Windows qualification run `35304207429`.
 
 ### Orzełek escalation
 
@@ -180,16 +180,18 @@ The project intentionally avoids parallel damage, movement and economy authoriti
 
 The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **415 / 415 (100.0%) — V13.3 QUALIFIED**. Release readiness is tracked separately by exact-candidate Windows qualification gates.
 
-Recent qualified milestone layers include v13.0 encounter/boss warfare, v13.1 objective warfare and v13.2 adaptive enemy command. The qualified v13.2 exact-candidate gate required source/authority contracts, a clean Unity Windows x64 build, deterministic packaging and one exact packaged EXE running:
+Recent qualified milestone layers include v13.0 encounter/boss warfare, v13.1 objective warfare, v13.2 adaptive enemy command and v13.3 battlefield cohesion. The qualified v13.3 exact-candidate gate required source/authority contracts, a clean Unity Windows x64 build, deterministic packaging and one exact packaged EXE running:
 
-- v13.2 adaptive-command smoke across the planned campaign;
+- authored production-audio preflight with both HeavyCannon and BossAlarm;
+- v13.3 battlefield-cohesion smoke;
+- v13.2 adaptive-command regression;
 - v13.1 objective regression;
 - v13.0 encounter/cross-stack/boss regression;
 - v12.9 component/repair/casualty/presentation regression;
 - v12.8 full-stack integration regression;
 - late-round soak covering rounds 80 / 90 / 100.
 
-The qualified v13.2 candidate is `538c4a3790749bcb9180f2d49e6fff4bed9f0f45`; its Windows qualification and exact-SHA roadmap finalization both completed successfully. v13.3 now has its own source/authority contract and smoke source, but its eight roadmap items remain pending until the v13.3 exact-candidate Windows qualification train is complete.
+The qualified v13.3 candidate is `0e3496ce095d27b2a686efbb5539cc7e475e3213`; Windows qualification run `35304207429` completed successfully. Roadmap qualification and public-release readiness remain separate.
 
 ## 📦 Releases
 
@@ -197,7 +199,7 @@ The qualified development branch does **not** automatically replace the public r
 
 - **Latest public demo:** `v6.3.0-demo` (prerelease)
 - **Latest stable release:** `v2.2.0`
-- **Development milestone:** v13.3 is in development on `dev-v13-3`; v13.2 remains the last qualified milestone and has not been published as a new public v13.2 release.
+- **Development milestone:** v13.3 is qualified on `dev-v13-3`; it has not been published as a new public v13.3 release.
 
 This separation keeps public downloads distinct from qualified-but-not-yet-published development milestones.
 
