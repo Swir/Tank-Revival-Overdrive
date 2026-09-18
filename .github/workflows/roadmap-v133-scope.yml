@@ -1,0 +1,78 @@
+name: ROADMAP v13.3 Scope Registrar
+
+on:
+  push:
+    branches:
+      - dev-v13-3
+    paths:
+      - .v133-scope-trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          ref: dev-v13-3
+          fetch-depth: 0
+
+      - name: Register or verify v13.3 milestone
+        run: python Tools/register_v133_scope.py
+
+      - name: Verify deterministic SVG-only presentation
+        run: python Tools/generate_progress_svgs.py --check
+
+      - name: Re-read Roadmap, README and SVG contracts
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, xml.etree.ElementTree as ET
+          roadmap = Path('ROADMAP.md').read_text(encoding='utf-8')
+          readme = Path('README.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$', roadmap, re.M)) == 1
+          assert '<!-- SWIR-README-STANDARD:v2 -->' in readme
+          assert '## 🔎 Search Keywords' in readme
+          assert roadmap.count('assets/readme/progress-mini.svg') == 1
+          assert readme.count('assets/readme/progress-card.svg') == 1
+          assert 'assets/readme/progress-card.svg' not in roadmap
+          assert 'assets/readme/progress-mini.svg' not in readme
+          assert 'progress-template.svg' not in roadmap and 'progress-template.svg' not in readme
+          legacy = re.compile(r'(?m)^[ \t]*[█▓▒░▉▊▋▌▍▎▏■□]{8,}(?:[ \t]+[0-9]+(?:\.[0-9]+)?%)?[ \t]*$')
+          assert not legacy.search(roadmap) and not legacy.search(readme)
+          assert '20-segment bar' not in roadmap
+          checked = len(re.findall(r'^- \[x\] ', roadmap, re.M))
+          pending = len(re.findall(r'^- \[ \] ', roadmap, re.M))
+          total = checked + pending
+          assert (checked, pending, total) in {(407,8,415),(415,0,415)}
+          section = roadmap.split('## v13.3 — Battlefield Cohesion & Squad Command Warfare', 1)[1]
+          assert section.count('- [x]') + section.count('- [ ]') == 8
+          for p in ['assets/readme/progress-card.svg','assets/readme/progress-mini.svg','assets/readme/progress-template.svg']:
+              ET.parse(p)
+          print(f'ROADMAP/README/Progress v13.3 invariants: PASS ({checked}/{total}, remaining={pending})')
+
+      - name: Verify deterministic no-op regeneration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Tools/generate_progress_svgs.py --embed
+          python Tools/generate_progress_svgs.py --check
+          git diff --check
+
+      - name: Commit synchronized scope presentation if needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- ROADMAP.md README.md assets/readme; then
+            echo 'v13.3 scope and SVG-only presentation are current; no commit needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
+          git commit -m 'docs(v13.3): synchronize SVG-only roadmap scope'
+          git push origin HEAD:dev-v13-3

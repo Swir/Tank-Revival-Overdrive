@@ -1,0 +1,58 @@
+name: Battlefield Cohesion v13.3 Source Contract
+
+on:
+  push:
+    branches: ['dev-v13-3']
+    paths:
+      - 'Assets/Editor/CIBuild.cs'
+      - 'Assets/Scripts/BattlefieldCohesionV133.cs'
+      - 'Assets/Scripts/BattlefieldCohesionCISmokeProbe.cs'
+      - 'Assets/Scripts/EnemyTank.cs'
+      - 'Assets/Scripts/ProductionBattleAudioDirector.cs'
+      - 'Assets/Scripts/ProductionPresentationCISmokeProbe.cs'
+      - 'Assets/Resources/TankRevivalProduction/Audio/*.wav'
+      - 'Assets/Resources/TankRevivalProduction/Audio/*.wav.meta'
+      - 'ROADMAP.md'
+      - 'README.md'
+      - 'assets/readme/progress-card.svg'
+      - 'assets/readme/progress-mini.svg'
+      - 'Tools/verify_v133_battlefield_cohesion.py'
+      - 'Tools/verify_production_audio_assets.py'
+      - 'Tools/generate_progress_svgs.py'
+      - '.github/workflows/battlefield-cohesion-v133-source.yml'
+      - '.github/workflows/battlefield-cohesion-v133-windows.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    name: Verify bounded squad authority and roadmap truth
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact source candidate and compile verification tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "${GITHUB_REF_NAME}" = 'dev-v13-3'
+          python -m py_compile Tools/verify_v133_battlefield_cohesion.py Tools/verify_production_audio_assets.py Tools/generate_progress_svgs.py
+      - name: Verify v13.3 squad/authority contracts
+        run: python Tools/verify_v133_battlefield_cohesion.py
+      - name: Verify production audio source contract
+        run: python Tools/verify_production_audio_assets.py
+      - name: Verify SWIR Progress SVG Pro remains deterministic
+        run: python Tools/generate_progress_svgs.py --check
+      - name: Verify protected documentation markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(grep -c '^<!-- SWIR-ROADMAP-STANDARD:v1 -->$' ROADMAP.md)" -eq 1
+          test "$(grep -c '^<!-- SWIR-README-STANDARD:v2 -->$' README.md)" -eq 1
+          test "$(grep -c '^<!-- SWIR-PROGRESS-SVG-PRO:v1 -->$' README.md)" -eq 1
+          grep -q '^## 🔎 Search Keywords$' README.md
+          grep -q '407 / 415 completed (98.1%) — V13.3 IN DEVELOPMENT' README.md
+          echo 'v13.3 source + authority + production audio + SWIR documentation contracts passed.'

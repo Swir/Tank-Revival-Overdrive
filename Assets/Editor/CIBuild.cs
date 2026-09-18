@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
@@ -11,6 +12,19 @@ namespace TankRevival.Editor
         private const string ScenePath = "Assets/Scenes/Bootstrap.unity";
         private const string BuildFolder = "build/StandaloneWindows64";
         private const string ExePath = BuildFolder + "/TankRevivalOverdrive.exe";
+
+        private static readonly string[] RequiredProductionAudioAssets =
+        {
+            "Assets/Resources/TankRevivalProduction/Audio/HeavyCannon.wav",
+            "Assets/Resources/TankRevivalProduction/Audio/BossAlarm.wav"
+        };
+
+        private static readonly Dictionary<string, string> RequiredProductionAudioGuids =
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                { "Assets/Resources/TankRevivalProduction/Audio/HeavyCannon.wav", "4e496dac21264c68a0c77e2597b08a72" },
+                { "Assets/Resources/TankRevivalProduction/Audio/BossAlarm.wav", "a9423fa26ea64656a77b6a6552d46332" }
+            };
 
         public static void BuildWindows()
         {
@@ -34,6 +48,7 @@ namespace TankRevival.Editor
 
             Debug.Log("[Tank Revival CI] Project version=" + version);
             ValidateStaticBootstrapScene();
+            ValidateProductionAudioAssets();
 
             PlayerSettings.companyName = "SWIR Games";
             PlayerSettings.productName = "Tank Revival Overdrive";
@@ -114,6 +129,46 @@ namespace TankRevival.Editor
                 throw new Exception("Bootstrap scene could not be imported as a SceneAsset: " + ScenePath);
 
             Debug.Log("[Tank Revival CI] Using immutable bootstrap scene " + ScenePath + " guid=" + guid);
+        }
+
+        private static void ValidateProductionAudioAssets()
+        {
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            var seenGuids = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (string path in RequiredProductionAudioAssets)
+            {
+                if (!File.Exists(path))
+                    throw new FileNotFoundException("Required production audio asset is missing.", path);
+
+                AssetDatabase.ImportAsset(
+                    path,
+                    ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+
+                AudioImporter importer = AssetImporter.GetAtPath(path) as AudioImporter;
+                if (importer == null)
+                    throw new InvalidOperationException($"Production audio importer unavailable: {path}");
+
+                AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+                if (clip == null)
+                    throw new InvalidOperationException($"Production audio asset did not import as AudioClip: {path}");
+                if (clip.samples <= 0 || clip.channels <= 0 || clip.frequency <= 0)
+                    throw new InvalidOperationException(
+                        $"Production audio asset has invalid decoded metadata: {path} samples={clip.samples} channels={clip.channels} frequency={clip.frequency}");
+
+                string guid = AssetDatabase.AssetPathToGUID(path);
+                if (string.IsNullOrWhiteSpace(guid) || !seenGuids.Add(guid))
+                    throw new InvalidOperationException($"Production audio GUID is missing or duplicated: {path} ({guid})");
+                if (!RequiredProductionAudioGuids.TryGetValue(path, out string expectedGuid) ||
+                    !string.Equals(guid, expectedGuid, StringComparison.Ordinal))
+                    throw new InvalidOperationException($"Production audio GUID changed: {path} ({guid} != {expectedGuid})");
+
+                Debug.Log(
+                    $"[Tank Revival CI] Production audio ready: path={path} guid={guid} clip={clip.name} samples={clip.samples} channels={clip.channels} frequency={clip.frequency}");
+            }
+
+            if (seenGuids.Count != RequiredProductionAudioAssets.Length)
+                throw new InvalidOperationException("Production audio asset inventory is incomplete after import.");
         }
 
         private static string ResolveVersion()

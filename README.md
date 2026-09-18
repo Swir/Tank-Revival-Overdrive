@@ -12,8 +12,8 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)](https://github.com/Swir/Tank-Revival-Overdrive/releases)
 [![Unity](https://img.shields.io/badge/Unity-6000.3.17f1-02050A?style=for-the-badge&logo=unity&logoColor=62E5FF)](https://unity.com/)
-[![Roadmap](https://img.shields.io/badge/Roadmap-100.0%25%20V13.2%20Qualified-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
-[![v13.2 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/adaptive-command-v132-windows.yml/badge.svg?branch=dev-v13-2)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/adaptive-command-v132-windows.yml)
+[![Roadmap](https://img.shields.io/badge/Roadmap-100.0%25%20V13.3%20Qualified-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
+[![v13.3 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-cohesion-v133-windows.yml/badge.svg?branch=dev-v13-3)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-cohesion-v133-windows.yml)
 
 [**Highlights**](#-highlights) · [**Download**](#-quick-start--download) · [**Controls**](#-controls) · [**Roadmap**](#-roadmap--quality-gates) · [**Releases**](#-releases)
 
@@ -22,7 +22,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 <!-- SWIR-PROGRESS-SVG-PRO:v1 -->
 <p align="center"><img src="assets/readme/progress-card.svg" alt="SWIR project roadmap progress" width="760"></p>
-<p align="center"><sub>Roadmap progress: 407 / 407 completed (100.0%) — V13.2 QUALIFIED. Release readiness is tracked separately by Windows qualification gates.</sub></p>
+<p align="center"><sub>Roadmap progress: 415 / 415 completed (100.0%) — V13.3 QUALIFIED. Release readiness is tracked separately by Windows qualification gates.</sub></p>
 
 ---
 
@@ -30,8 +30,8 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 | Item | Status |
 |---|---|
-| Development milestone | **V13.2 QUALIFIED** on `dev-v13-2` |
-| Roadmap | **407 / 407 completed (100.0%)** — authoritative `ROADMAP.md` scope |
+| Development milestone | **V13.3 QUALIFIED** on `dev-v13-3` |
+| Roadmap | **415 / 415 completed (100.0%)** — authoritative `ROADMAP.md` scope |
 | Primary platform | **Windows 10 / 11 x64** |
 | Development engine | **Unity 6000.3.17f1** |
 | Latest public demo | **v6.3.0-demo** — prerelease |
@@ -53,6 +53,7 @@ The campaign combines direct tank combat with directional armor, component damag
 | 🦅 **Orzełek defense** | Protect a persistent stronghold whose defenses and battlefield pressure escalate through the campaign. |
 | 💯 **100-round encounter campaign** | Deterministic encounter planning creates controlled escalation from round 1 to 100. |
 | 🧠 **Adaptive enemy command v13.2** | A bounded 8-round combat history can shift enemy doctrine between seven tactical responses without creating a second AI/movement authority. |
+| 🧩 **Battlefield cohesion v13.3 — qualified** | Fixed-capacity four-vehicle squads add deterministic roles, leader-loss shock, regroup intent and readable command markers while existing `EnemyTank` remains movement/fire authority. |
 | 🎯 **Dynamic objective warfare** | Objective planning layers mission pressure onto the existing round/spawn loop instead of replacing it. |
 | 👑 **Multi-phase bosses** | Boss behavior escalates through health/component-driven phases while existing movement, projectile and survivability authorities remain canonical. |
 | 🛡️ **Directional armor & modules** | Front/side/rear armor, ricochets and engine/tracks/gun/ammo-rack degradation affect how vehicles move and fight. |
@@ -62,7 +63,7 @@ The campaign combines direct tank combat with directional armor, component damag
 | 📡 **Operational warfare stack** | Combined Arms, sustainment, route intelligence, Recon/EW, Mobile Signal and SIGINT feed bounded encounter decisions. |
 | 🎯 **Independent hull and turret control** | Drive, aim and fire independently instead of locking the cannon to chassis direction. |
 | ✨ **Procedural 2.5D presentation** | Animated tracks, recoil, muzzle flashes, trails, smoke, sparks, explosions, tactical telegraphs and pooled combat feedback. |
-| 🧪 **Exact-candidate qualification** | One packaged Windows EXE must pass v13.2 plus v13.1/v13.0/v12.9/v12.8 regressions and late-round 80/90/100 soak. |
+| 🧪 **Exact-candidate qualification** | v13.3 passed one packaged Windows EXE through authored-audio preflight, v13.3 smoke, v13.2/v13.1/v13.0/v12.9/v12.8 regressions and late-round 80/90/100 soak. |
 
 ## 🔫 Ammunition
 
@@ -114,7 +115,7 @@ Active milestone work lives on dedicated `dev-vX-Y` / `dev-vX.Y` branches. For r
 | OS | Windows 10 / 11 x64 |
 | Packaged game | Portable ZIP containing EXE + `_Data` runtime |
 | Unity required to play | No |
-| Source development | Unity 6000.3.17f1 for the qualified v13.2 CI path |
+| Source development | Unity 6000.3.17f1 for the current Windows qualification path |
 | Input | Keyboard + mouse |
 
 Other platforms are not advertised as supported unless a dedicated verified build exists.
@@ -150,6 +151,10 @@ The cross-system doctrine layer reads bounded public state from Mobile Front, Op
 
 `AdaptiveEnemyCommandV132` observes a fixed eight-round combat-history window and selects between seven bounded doctrines with hysteresis and repeat caps. It can influence composition, concurrency, cadence and existing `EnemyTank` intent only within hard limits. A deterministic `RecoveryWindow` can reduce pressure after sustained player/Orzełek distress instead of using hidden healing, enemy deletion or invulnerability.
 
+### Battlefield Cohesion v13.3 — qualified
+
+The qualified v13.3 core adds a fixed-capacity squad registry for at most **24 eligible enemy actors / six four-vehicle squads**. Slots deterministically map to Leader, Wingman, Breacher and Support roles. Cohesion can transition through Forming, Cohesive, Shocked and Regrouping states; losing a leader creates a finite shock before deterministic promotion and regrouping. The director publishes bounded movement, reload, spread, target and cardinal formation intent only — it does not spawn, move, fire, damage or heal actors itself. Exact candidate `0e3496ce095d27b2a686efbb5539cc7e475e3213` passed Windows qualification run `35304207429`.
+
 ### Orzełek escalation
 
 Late-campaign defense can strengthen the flanking shoulders while preserving a destructible center approach. This keeps a visible breach route for standard loadouts instead of turning high-tier defense into an inaccessible objective wall.
@@ -173,18 +178,20 @@ The project intentionally avoids parallel damage, movement and economy authoriti
 
 ## 🗺️ Roadmap & Quality Gates
 
-The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **407 / 407 (100.0%) — V13.2 QUALIFIED**. Release readiness is tracked separately by exact-candidate Windows qualification gates.
+The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **415 / 415 (100.0%) — V13.3 QUALIFIED**. Release readiness is tracked separately by exact-candidate Windows qualification gates.
 
-Recent qualified milestone layers include v13.0 encounter/boss warfare, v13.1 objective warfare and v13.2 adaptive enemy command. The v13.2 exact-candidate gate requires source/authority contracts, a clean Unity Windows x64 build, deterministic packaging and one exact packaged EXE running:
+Recent qualified milestone layers include v13.0 encounter/boss warfare, v13.1 objective warfare, v13.2 adaptive enemy command and v13.3 battlefield cohesion. The qualified v13.3 exact-candidate gate required source/authority contracts, a clean Unity Windows x64 build, deterministic packaging and one exact packaged EXE running:
 
-- v13.2 adaptive-command smoke across the planned campaign;
+- authored production-audio preflight with both HeavyCannon and BossAlarm;
+- v13.3 battlefield-cohesion smoke;
+- v13.2 adaptive-command regression;
 - v13.1 objective regression;
 - v13.0 encounter/cross-stack/boss regression;
 - v12.9 component/repair/casualty/presentation regression;
 - v12.8 full-stack integration regression;
 - late-round soak covering rounds 80 / 90 / 100.
 
-The qualified v13.2 candidate is `538c4a3790749bcb9180f2d49e6fff4bed9f0f45`; its Windows qualification and exact-SHA roadmap finalization both completed successfully before the roadmap changed to 100%.
+The qualified v13.3 candidate is `0e3496ce095d27b2a686efbb5539cc7e475e3213`; Windows qualification run `35304207429` completed successfully. Roadmap qualification and public-release readiness remain separate.
 
 ## 📦 Releases
 
@@ -192,7 +199,7 @@ The qualified development branch does **not** automatically replace the public r
 
 - **Latest public demo:** `v6.3.0-demo` (prerelease)
 - **Latest stable release:** `v2.2.0`
-- **Development milestone:** v13.2 is qualified on `dev-v13-2` but has not been published as a new public v13.2 release.
+- **Development milestone:** v13.3 is qualified on `dev-v13-3`; it has not been published as a new public v13.3 release.
 
 This separation keeps public downloads distinct from qualified-but-not-yet-published development milestones.
 
@@ -202,7 +209,7 @@ Tank Revival: Orzeł Overdrive is an original project with its own code, project
 
 ## 🔎 Search Keywords
 
-`tank defense game` • `Windows tank game` • `2.5D tank action` • `top down tank game` • `Unity 6 game` • `C# Unity game` • `100 round campaign` • `adaptive enemy AI` • `tank command AI` • `boss tank battles` • `tank armor simulation` • `component damage system` • `special ammunition game` • `Orzelek defense` • `procedural combat effects` • `Windows x64 game` • `Unity GitHub Actions` • `headless Unity CI`
+`tank defense game` • `Windows tank game` • `2.5D tank action` • `top down tank game` • `Unity 6 game` • `C# Unity game` • `100 round campaign` • `adaptive enemy AI` • `tank command AI` • `squad command AI` • `boss tank battles` • `tank armor simulation` • `component damage system` • `special ammunition game` • `Orzelek defense` • `procedural combat effects` • `Windows x64 game` • `Unity GitHub Actions` • `headless Unity CI`
 
 ---
 
