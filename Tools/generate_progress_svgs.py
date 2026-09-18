@@ -166,8 +166,8 @@ def svg_mini(p: Progress) -> str:
 
 def svg_template() -> str:
     return '''<svg xmlns="http://www.w3.org/2000/svg" width="760" height="220" viewBox="0 0 760 220" role="img" aria-labelledby="title desc">
-  <title id="title">SWIR Progress SVG Pro reusable template</title>
-  <desc id="desc">Template only. Progress values are N/A until generated from verified authoritative data.</desc>
+  <title id="title">SWIR Progress SVG Pro reusable TEMPLATE</title>
+  <desc id="desc">TEMPLATE only. Progress values are N/A until generated from verified authoritative data.</desc>
   <defs>
     <linearGradient id="swirProgress" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0088FF"/><stop offset="1" stop-color="#62E5FF"/></linearGradient>
     <filter id="softGlow" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
@@ -182,7 +182,7 @@ def svg_template() -> str:
   <text x="32" y="139" fill="#D6EAF5" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="14" font-weight="600">Status: {{STATUS}}</text>
   <text x="728" y="139" text-anchor="end" fill="#D6EAF5" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="14">{{COUNTER}}</text>
   <text x="32" y="169" fill="#7FA2B5" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12">Release readiness: tracked separately</text>
-  <text x="32" y="190" fill="#4D748A" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Template — replace only from verified authoritative data</text>
+  <text x="32" y="190" fill="#4D748A" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">TEMPLATE — replace only from verified authoritative data</text>
 </svg>\n'''
 
 

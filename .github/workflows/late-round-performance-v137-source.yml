@@ -1,0 +1,43 @@
+name: Late-Round Performance v13.7 Source Qualification
+
+on:
+  push:
+    branches: ['dev-v13-7']
+    paths:
+      - 'Assets/Scripts/LateRoundPerformanceV137.cs'
+      - 'Assets/Scripts/LateRoundPerformanceCISmokeProbe.cs'
+      - 'Assets/Scripts/MassBattleFxBudget.cs'
+      - 'Tools/verify_v137_late_round_performance.py'
+      - 'Tools/verify_csharp_type_uniqueness.py'
+      - 'Tools/generate_progress_svgs.py'
+      - 'Tools/swir_visual_report_guard.py'
+      - 'ROADMAP.md'
+      - 'README.md'
+      - 'VERSION'
+      - '.github/workflows/late-round-performance-v137-source.yml'
+  pull_request:
+    branches: ['dev-v13-6']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify v13.7 source, authority and presentation contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile Tools/verify_v137_late_round_performance.py Tools/verify_csharp_type_uniqueness.py Tools/generate_progress_svgs.py Tools/swir_visual_report_guard.py
+          python Tools/verify_v137_late_round_performance.py
+          python Tools/verify_csharp_type_uniqueness.py
+          python Tools/generate_progress_svgs.py --check
+          python Tools/swir_visual_report_guard.py --check
+          git diff --check
