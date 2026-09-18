@@ -148,20 +148,26 @@ def main() -> int:
     assert 'private const string BuildFolder = "build/StandaloneWindows64";' in ci_build
     assert "ValidateStaticBootstrapScene();" in ci_build
     assert "ValidateProductionAudioAssets();" in ci_build
-    assert "AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport)" in ci_build
+    # Qualification must keep the static-scene build immutable. Each known audio asset is imported
+    # synchronously and explicitly; a global AssetDatabase.Refresh would reimport the whole project.
+    assert "AssetDatabase.Refresh(" not in ci_build
+    assert "AssetDatabase.ImportAsset(" in ci_build
+    assert "ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate" in ci_build
     assert "AssetDatabase.LoadAssetAtPath<AudioClip>(path)" in ci_build
     for filename, contract in EXPECTED.items():
         assert filename in ci_build, f"CIBuild missing required audio asset {filename}"
         assert str(contract["guid"]) in ci_build, f"CIBuild missing pinned guid for {filename}"
 
-    windows_workflow = (ROOT / ".github/workflows/battlefield-cohesion-v133-windows.yml").read_text(encoding="utf-8")
+    windows_workflow = (ROOT / ".github/workflows/tactical-terrain-v134-windows.yml").read_text(encoding="utf-8")
     assert "buildMethod: TankRevival.Editor.CIBuild.BuildWindows" in windows_workflow, (
-        "v13.3 qualification must invoke the stable CIBuild.BuildWindows entry point"
+        "v13.4 qualification must invoke the stable CIBuild.BuildWindows entry point"
     )
+    assert "Enforce clean Unity qualification state" in windows_workflow
 
     print(
         "[production-audio-source] PASS inventory=2 tracked_meta=2 unique_guids=2 "
-        "resources=HeavyCannon,BossAlarm smoke_min=2 content_guard=pcm+duration stable_ci_builder=1"
+        "resources=HeavyCannon,BossAlarm smoke_min=2 content_guard=pcm+duration "
+        "stable_ci_builder=1 global_refresh=0"
     )
     return 0
 

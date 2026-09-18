@@ -10,7 +10,14 @@ on:
       - 'Assets/Scripts/EnemyTank.cs'
       - 'Assets/Scripts/Obstacle.cs'
       - 'Assets/Scripts/ReactiveCoverBreachDirector.cs'
+      - 'Assets/Scripts/ProductionBattleAudioDirector.cs'
+      - 'Assets/Scripts/ProductionPresentationCISmokeProbe.cs'
+      - 'Assets/Editor/CIBuild.cs'
+      - 'Assets/Resources/TankRevivalProduction/Audio/*.wav'
+      - 'Assets/Resources/TankRevivalProduction/Audio/*.meta'
       - 'Tools/verify_v134_tactical_terrain.py'
+      - 'Tools/verify_production_audio_assets.py'
+      - 'Tools/verify_unity_ci_bootstrap.py'
       - 'Tools/generate_progress_svgs.py'
       - 'ROADMAP.md'
       - 'README.md'
@@ -18,6 +25,7 @@ on:
       - 'assets/readme/progress-mini.svg'
       - 'assets/readme/progress-template.svg'
       - '.github/workflows/tactical-terrain-v134-source.yml'
+      - '.github/workflows/tactical-terrain-v134-windows.yml'
   workflow_dispatch:
 
 permissions:
@@ -40,9 +48,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile Tools/verify_v134_tactical_terrain.py Tools/generate_progress_svgs.py
+          python -m py_compile Tools/verify_v134_tactical_terrain.py Tools/verify_production_audio_assets.py Tools/verify_unity_ci_bootstrap.py Tools/generate_progress_svgs.py
       - name: Verify tactical terrain source and authority contracts
         run: python Tools/verify_v134_tactical_terrain.py
+      - name: Verify production authored-audio source contract
+        run: python Tools/verify_production_audio_assets.py
+      - name: Verify immutable Unity CI bootstrap contract
+        run: python Tools/verify_unity_ci_bootstrap.py
       - name: Verify deterministic Progress SVG assets
         run: python Tools/generate_progress_svgs.py --check
       - name: Verify repository diff hygiene
