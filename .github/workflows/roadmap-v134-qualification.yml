@@ -77,13 +77,57 @@ jobs:
           python Tools/generate_progress_svgs.py --write --embed --check
           python Tools/generate_progress_svgs.py --write --embed --check
           git diff --check
+      - name: Synchronize qualified README milestone evidence
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('README.md'); s=p.read_text(encoding='utf-8')
+          candidate=Path('.v134-roadmap-qualification-trigger').read_text(encoding='utf-8').strip()
+          assert len(candidate)==40
+          s=re.sub(
+              r'(?m)^\[!\[v13\.2 Windows Gate\].*$',
+              '[![v13.4 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/tactical-terrain-v134-windows.yml/badge.svg?branch=dev-v13-4)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/tactical-terrain-v134-windows.yml)',
+              s,count=1)
+          s=s.replace('**Battlefield cohesion v13.3 — in development**','**Battlefield cohesion v13.3 — qualified**')
+          s=re.sub(
+              r'(?m)^\| 🧪 \*\*Exact-candidate qualification\*\* \|.*?\|$',
+              f'| 🧪 **Exact-candidate qualification** | v13.4 qualified exact candidate `{candidate}`: one packaged Windows x64 EXE passed production-audio preflight, v13.4 tactical-terrain smoke, v13.3/v13.2/v13.1/v13.0/v12.9/v12.8 regressions and rounds 80/90/100 soak. |',
+              s,count=1)
+          s=s.replace('### Battlefield Cohesion v13.3 — in development','### Battlefield Cohesion v13.3 — qualified')
+          s=s.replace(
+              'A dedicated packaged-EXE smoke probe exists in source, but v13.3 remains **IN DEVELOPMENT** until Windows qualification is green.',
+              'The v13.3 packaged-EXE qualification is green; its bounded squad layer remains underneath v13.4 tactical-terrain intent without taking spawn, movement, fire, damage or healing authority.')
+          s=s.replace(
+              'Recent qualified milestone layers include v13.0 encounter/boss warfare, v13.1 objective warfare and v13.2 adaptive enemy command.',
+              'Recent qualified milestone layers include v13.0 encounter/boss warfare, v13.1 objective warfare, v13.2 adaptive enemy command and v13.3 battlefield cohesion.')
+          stale=(
+              'The qualified v13.2 candidate is `538c4a3790749bcb9180f2d49e6fff4bed9f0f45`; its Windows qualification and exact-SHA roadmap finalization both completed successfully. '
+              'v13.3 now has its own source/authority contract and smoke source, but its eight roadmap items remain pending until the v13.3 exact-candidate Windows qualification train is complete.'
+          )
+          fresh=(
+              'The v13.3 exact candidate `0e3496ce095d27b2a686efbb5539cc7e475e3213` completed its Windows qualification before v13.4 development started. '
+              f'v13.4 is now qualified at exact candidate `{candidate}`; roadmap completion records that verified development scope only and does not publish a public release automatically.'
+          )
+          assert stale in s, 'stale v13.2/v13.3 roadmap evidence changed unexpectedly'
+          s=s.replace(stale,fresh,1)
+          s=re.sub(
+              r'(?m)^- \*\*Development milestone:\*\*.*$',
+              '- **Development milestone:** v13.4 is qualified on `dev-v13-4`; this qualified development milestone has not been promoted to a new public v13.4 release.',
+              s,count=1)
+          assert '<!-- SWIR-README-STANDARD:v2 -->' in s and '## 🔎 Search Keywords' in s
+          assert 'v13.3 remains unqualified' not in s and 'v13.3 remains **IN DEVELOPMENT**' not in s
+          assert not re.search(r'(?m)^[█░]{8,}\s+[0-9.]+%$',s)
+          p.write_text(s,encoding='utf-8')
       - name: Re-read and verify qualified state
         shell: python
         run: |
           from pathlib import Path
           import re,xml.etree.ElementTree as ET
           s=Path('ROADMAP.md').read_text(encoding='utf-8'); r=Path('README.md').read_text(encoding='utf-8'); t=Path('assets/readme/progress-template.svg').read_text(encoding='utf-8')
+          candidate=Path('.v134-roadmap-qualification-trigger').read_text(encoding='utf-8').strip()
           assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',s,re.M))==1
+          assert len(re.findall(r'^<!-- SWIR-README-STANDARD:v2 -->$',r,re.M))==1
           done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
           assert (done,open_,total)==(423,0,423)
           assert 'ROADMAP-100.0%25-brightgreen' in s and 'DONE-423%2F423' in s and 'STATUS-V13.4%20QUALIFIED-brightgreen' in s
@@ -97,8 +141,11 @@ jobs:
           assert 'progress-template.svg' not in s and 'progress-template.svg' not in r
           assert 'Template' in t and 'N/A' in t
           assert '423 / 423 completed (100.0%)' in s and '423 / 423 completed (100.0%)' in r
+          assert candidate in r and 'v13.4 Windows Gate' in r and 'Battlefield Cohesion v13.3 — qualified' in r
+          assert 'v13.3 remains unqualified' not in r and 'v13.3 remains **IN DEVELOPMENT**' not in r
+          assert '## 🔎 Search Keywords' in r
           for p in ['assets/readme/progress-card.svg','assets/readme/progress-mini.svg','assets/readme/progress-template.svg']: ET.parse(p)
-          print('SWIR v13.4 qualified SVG-only state: PASS')
+          print('SWIR v13.4 qualified SVG-only README/roadmap state: PASS')
       - name: Commit qualified roadmap and deterministic progress assets
         shell: bash
         run: |
