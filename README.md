@@ -13,7 +13,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)](https://github.com/Swir/Tank-Revival-Overdrive/releases)
 [![Unity](https://img.shields.io/badge/Unity-6000.3.17f1-02050A?style=for-the-badge&logo=unity&logoColor=62E5FF)](https://unity.com/)
 [![Roadmap](https://img.shields.io/badge/Roadmap-100.0%25%20V13.6%20Qualified-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
-[![v13.5 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-weather-v135-windows.yml/badge.svg?branch=dev-v13-5)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-weather-v135-windows.yml)
+[![v13.6 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-sensor-fusion-v136-windows.yml/badge.svg?branch=dev-v13-6)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-sensor-fusion-v136-windows.yml)
 
 [**Highlights**](#-highlights) · [**Download**](#-quick-start--download) · [**Controls**](#-controls) · [**Roadmap**](#-roadmap--quality-gates) · [**Releases**](#-releases)
 
@@ -34,7 +34,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 | Roadmap | **439 / 439 completed (100.0%)** — authoritative `ROADMAP.md` scope |
 | Primary platform | **Windows 10 / 11 x64** |
 | Development engine | **Unity 6000.3.17f1** |
-| Latest qualified milestone | **v13.5** — exact Windows candidate qualified |
+| Latest qualified milestone | **v13.6** — exact Windows candidate qualified |
 | Latest public demo | **v6.3.0-demo** — prerelease |
 | Latest stable release | **v2.2.0** |
 | Public release readiness | Tracked separately from roadmap completion by packaged Windows gates |
@@ -57,7 +57,7 @@ The campaign combines direct tank combat with directional armor, component damag
 | 🧩 **Battlefield cohesion v13.3** | Fixed-capacity four-vehicle squads add deterministic roles, leader-loss shock, regroup intent and readable command markers while existing `EnemyTank` remains movement/fire authority. |
 | 🧱 **Tactical terrain v13.4 — qualified** | Deterministic cover overlays add bounded brick, steel and water layouts, safe-route preservation and breach-aware squad movement while canonical `Obstacle` damage authority remains unchanged. |
 | 🌦️ **Battlefield weather v13.5 — qualified** | Deterministic Clear, Mist, Rain, Storm and Snow fronts change bounded traction, visibility, spread and reload pressure while AP/Plasma retain measured precision counterplay and existing movement/ballistics authorities remain canonical. |
-| 📡 **Sensor fusion v13.6 — in development** | Battlefield-wide Unknown/Detected/Tracked/Verified contact confidence fuses distance, class signature, weather, terrain and existing Recon/EW telemetry; a finite active sweep improves information only and never replaces targeting, movement or damage authority. |
+| 📡 **Sensor fusion v13.6 — qualified** | Battlefield-wide Unknown/Detected/Tracked/Verified contact confidence fuses distance, class signature, weather, terrain and existing Recon/EW telemetry; a finite active sweep improves information only and never replaces targeting, movement or damage authority. |
 | 🎯 **Dynamic objective warfare** | Objective planning layers mission pressure onto the existing round/spawn loop instead of replacing it. |
 | 👑 **Multi-phase bosses** | Boss behavior escalates through health/component-driven phases while existing movement, projectile and survivability authorities remain canonical. |
 | 🛡️ **Directional armor & modules** | Front/side/rear armor, ricochets and engine/tracks/gun/ammo-rack degradation affect how vehicles move and fight. |
@@ -67,7 +67,7 @@ The campaign combines direct tank combat with directional armor, component damag
 | 📡 **Operational warfare stack** | Combined Arms, sustainment, route intelligence, Recon/EW, Mobile Signal and SIGINT feed bounded encounter decisions. |
 | 🎯 **Independent hull and turret control** | Drive, aim and fire independently instead of locking the cannon to chassis direction. |
 | ✨ **Procedural 2.5D presentation** | Animated tracks, recoil, muzzle flashes, trails, smoke, sparks, explosions, tactical telegraphs and pooled combat feedback. |
-| 🧪 **Exact-candidate qualification** | v13.5 passed one packaged Windows EXE through production-audio preflight, v13.5 weather smoke, v13.4/v13.3 regressions and late-round 80/90/100 soak. |
+| 🧪 **Exact-candidate qualification** | v13.6 passed one packaged Windows EXE through production-audio preflight, v13.6 sensor-fusion smoke, v13.5/v13.4/v13.3 regressions and late-round 80/90/100 soak. |
 
 ## 🔫 Ammunition
 
@@ -168,11 +168,11 @@ The v13.4 branch adds a deterministic tactical overlay built from canonical `Obs
 
 The v13.5 layer deterministically assigns Clear, Mist, Rain, Storm or Snow across the 100-round campaign. Weather supplies bounded traction, visibility, spread and enemy-reload multipliers through the existing `PlayerTank`, `EnemyTank`, `Rigidbody2D` and fire-control paths; it does not create a second movement, projectile, damage or round authority. Rain, Snow and Storm couple conservatively to canonical `TacticalTerrainMap` surfaces, AP/Plasma reduce only the player spread penalty, and presentation is capped at 24 deterministic weather streaks. The exact Windows candidate passed the authored-audio preflight, v13.5 weather smoke, v13.4/v13.3 regressions and rounds 80/90/100 soak on the same executable.
 
-### Battlefield Sensor Fusion & Contact Warfare v13.6 — in development
+### Battlefield Sensor Fusion & Contact Warfare v13.6 — qualified
 
 The v13.6 milestone adds a battlefield-wide informational contact layer above the existing combat authorities. Contact confidence is bounded to Unknown, Detected, Tracked or Verified and is derived from enemy class signature, range, v13.5 weather visibility, canonical `TacticalTerrainMap` concealment and the existing v12.3 Recon/EW signal-quality bridge. The runtime tracks at most 24 registered enemies and displays at most eight high-value contact markers; it does not hide enemies, choose targets, move tanks, spawn projectiles, deal damage or create a parallel economy.
 
-A finite **C-key active sensor sweep** provides deliberate counterplay with hard range, duration and cooldown limits. When the existing Recon/EW logistics operation is active, the same input can request only its already-bounded counter-jamming window. Close-range and boss detection floors prevent weather or concealment from turning the information layer into unavoidable blindness. The milestone remains **IN DEVELOPMENT** until its exact packaged Windows candidate passes the v13.6 smoke, v13.5/v13.4/v13.3 regressions and rounds 80/90/100 soak.
+A finite **C-key active sensor sweep** provides deliberate counterplay with hard range, duration and cooldown limits. When the existing Recon/EW logistics operation is active, the same input can request only its already-bounded counter-jamming window. Close-range and boss detection floors prevent weather or concealment from turning the information layer into unavoidable blindness. The exact v13.6 candidate `6509b163ab0fa2f29d88f2f9c06188f7a1de1bdb` passed Windows qualification run `35388766882`: production authored-audio preflight, v13.6 sensor-fusion smoke, v13.5/v13.4/v13.3 regressions and rounds 80/90/100 soak on the same packaged executable.
 
 ### Orzełek escalation
 
