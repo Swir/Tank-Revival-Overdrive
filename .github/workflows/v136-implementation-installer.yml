@@ -1,0 +1,109 @@
+name: v13.6 Implementation Installer
+
+on:
+  push:
+    branches: ['dev-v13-6']
+    paths:
+      - '.github/workflows/v136-implementation-installer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Materialize verified implementation
+        shell: python
+        run: |
+          from pathlib import Path
+          import base64,hashlib,io,tarfile
+          encoded=''.join((Path('.v136bundle')/p).read_text().strip() for p in ('part0','part1','rest'))
+          raw=base64.b64decode(encoded)
+          expected='aaf83c2150abe29d091f8e3abcd5074ce7859cf3aae2bcf0b710c61494145166'
+          if hashlib.sha256(raw).hexdigest()!=expected: raise SystemExit('bundle digest mismatch')
+          allowed={
+            'Assets/Scripts/BattlefieldSensorFusionV136.cs','Assets/Scripts/BattlefieldSensorFusionV136.cs.meta',
+            'Assets/Scripts/BattlefieldSensorFusionCISmokeProbe.cs','Assets/Scripts/BattlefieldSensorFusionCISmokeProbe.cs.meta',
+            'Tools/verify_v136_sensor_fusion.py','.github/scripts/package_v136_sensor_fusion.py',
+            '.github/scripts/test_package_v136_sensor_fusion.py','.github/workflows/battlefield-sensor-fusion-v136-source.yml',
+            '.github/workflows/battlefield-sensor-fusion-v136-windows.yml','.github/workflows/roadmap-v136-qualification-finalizer.yml',
+            'CHANGELOG_v13.6.md','VERSION'}
+          with tarfile.open(fileobj=io.BytesIO(raw),mode='r:gz') as tf:
+            if set(tf.getnames())!=allowed: raise SystemExit('unexpected bundle members')
+            for m in tf.getmembers():
+              if m.name.startswith('/') or '..' in Path(m.name).parts or not m.isfile(): raise SystemExit('unsafe member '+m.name)
+              p=Path(m.name); p.parent.mkdir(parents=True,exist_ok=True); p.write_bytes(tf.extractfile(m).read())
+          print('bundle PASS',expected)
+      - name: Sync README PRO v2 and roadmap control truth
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          rp=Path('README.md'); r=rp.read_text(encoding='utf-8')
+          if '<!-- SWIR-README-STANDARD:v2 -->' not in r or '## 🔎 Search Keywords' not in r: raise SystemExit('README v2 contract missing')
+          w='| 🌦️ **Battlefield weather v13.5 — qualified** | Deterministic Clear, Mist, Rain, Storm and Snow fronts change bounded traction, visibility, spread and reload pressure while AP/Plasma retain measured precision counterplay and existing movement/ballistics authorities remain canonical. |'
+          s='| 📡 **Sensor fusion v13.6 — in development** | Battlefield-wide Unknown/Detected/Tracked/Verified contact confidence fuses distance, class signature, weather, terrain and existing Recon/EW telemetry; a finite active sweep improves information only and never replaces targeting, movement or damage authority. |'
+          if s not in r:
+            if w not in r: raise SystemExit('weather highlight anchor missing')
+            r=r.replace(w,w+'\n'+s,1)
+          q='| **Q / E** | Previous / next available ammunition |'; c='| **C** | Active sensor sweep when v13.6 sensor fusion is available and off cooldown |'
+          if c not in r:
+            if q not in r: raise SystemExit('ammo control anchor missing')
+            r=r.replace(q,q+'\n'+c,1)
+          h='### Battlefield Sensor Fusion & Contact Warfare v13.6 — in development'
+          if h not in r:
+            anchor='### Orzełek escalation'
+            sec=(h+'\n\nThe v13.6 milestone adds a battlefield-wide informational contact layer above the existing combat authorities. Contact confidence is bounded to Unknown, Detected, Tracked or Verified and is derived from enemy class signature, range, v13.5 weather visibility, canonical `TacticalTerrainMap` concealment and the existing v12.3 Recon/EW signal-quality bridge. The runtime tracks at most 24 registered enemies and displays at most eight high-value contact markers; it does not hide enemies, choose targets, move tanks, spawn projectiles, deal damage or create a parallel economy.\n\nA finite **C-key active sensor sweep** provides deliberate counterplay with hard range, duration and cooldown limits. When the existing Recon/EW logistics operation is active, the same input can request only its already-bounded counter-jamming window. Close-range and boss detection floors prevent weather or concealment from turning the information layer into unavoidable blindness. The milestone remains **IN DEVELOPMENT** until its exact packaged Windows candidate passes the v13.6 smoke, v13.5/v13.4/v13.3 regressions and rounds 80/90/100 soak.\n\n')
+            if anchor not in r: raise SystemExit('combat section anchor missing')
+            r=r.replace(anchor,sec+anchor,1)
+          old='- **Development milestone:** v13.5 is qualified on `dev-v13-5`; it remains a development milestone and has not been published as a new public v13.5 release.'
+          new='- **Development milestone:** v13.6 is in development on `dev-v13-6`; v13.5 remains the latest qualified development milestone and neither state is automatically a new public release.'
+          r=r.replace(old,new,1)
+          if '`sensor fusion tank game`' not in r and '`battlefield weather game`' in r:
+            r=r.replace('`battlefield weather game`','`battlefield weather game` • `sensor fusion tank game` • `contact warfare game`',1)
+          rp.write_text(r,encoding='utf-8')
+          mp=Path('ROADMAP.md'); m=mp.read_text(encoding='utf-8').replace('Q-key battlefield scan','C-key battlefield scan',1)
+          done=len(re.findall(r'^- \[x\] ',m,re.M)); open_=len(re.findall(r'^- \[ \] ',m,re.M))
+          if (done,open_,done+open_)!=(431,8,439): raise SystemExit((done,open_,done+open_))
+          mp.write_text(m,encoding='utf-8')
+      - name: Verify implementation before commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile Tools/verify_v136_sensor_fusion.py .github/scripts/package_v136_sensor_fusion.py .github/scripts/test_package_v136_sensor_fusion.py
+          python .github/scripts/test_package_v136_sensor_fusion.py
+          python Tools/verify_v136_sensor_fusion.py
+          python Tools/verify_csharp_type_uniqueness.py
+          python Tools/verify_production_audio_assets.py
+          python Tools/verify_unity_ci_bootstrap.py
+          python Tools/generate_progress_svgs.py --write --embed --check
+          python Tools/swir_visual_report_guard.py --check
+          python Tools/generate_progress_svgs.py --write --embed --check
+          python Tools/swir_visual_report_guard.py --check
+          git diff --check
+          grep -Fq '| **C** | Active sensor sweep' README.md
+          grep -Fq 'C-key battlefield scan' ROADMAP.md
+          ! grep -Eq '[█▓▒░]{3,}' README.md ROADMAP.md
+      - name: Commit verified v13.6 milestone
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .v136bundle
+          rm -f .github/workflows/v136-implementation-installer.yml .github/workflows/v136-scope-bootstrap.yml .github/workflows/v136-readme-sync.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'feat(v13.6): add battlefield sensor fusion and contact warfare'
+          for attempt in 1 2 3; do
+            if git push origin HEAD:dev-v13-6; then exit 0; fi
+            git fetch origin dev-v13-6
+            git rebase origin/dev-v13-6
+          done
+          exit 1
