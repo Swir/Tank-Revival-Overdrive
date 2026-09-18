@@ -54,8 +54,15 @@ require('CandidateSlotIndex(a, ordinal)' in smoke and 'duplicate/invalid tactica
         'packaged smoke does not guard deterministic unique terrain slots')
 require('runtimeDirector.ApplyDeterministicPlan(64' in smoke and 'runtimeDirector.ApplyDeterministicPlan(65' in smoke,
         'packaged smoke does not exercise live overlay and same-frame rebuild')
-require(smoke.count('runtimeDirector.ValidateActiveOverlay(out overlayReason)') >= 2,
-        'packaged smoke must validate both initial and rebuilt live overlays')
+require('string overlayReason = string.Empty;' in smoke,
+        'packaged smoke must initialize overlay diagnostics before any short-circuit condition')
+require('bool firstOverlayValid = runtimeDirector.ValidateActiveOverlay(out overlayReason);' in smoke and
+        'bool rebuiltOverlayValid = runtimeDirector.ValidateActiveOverlay(out overlayReason);' in smoke,
+        'packaged smoke must evaluate both live-overlay validators before diagnostic conditions')
+require('|| !runtimeDirector.ValidateActiveOverlay(out overlayReason)' not in smoke,
+        'packaged smoke reintroduced a definite-assignment hazard through short-circuit validation')
+require('!firstOverlayValid' in smoke and '!rebuiltOverlayValid' in smoke,
+        'packaged smoke validation results are not enforced')
 require('same-frame tactical overlay rebuild invalid' in smoke,
         'packaged smoke lacks lifecycle regression marker')
 
@@ -93,4 +100,4 @@ require(len(re.findall(r'^<!-- SWIR-README-STANDARD:v2 -->$', readme, re.M)) == 
 require('415 / 423 completed (98.1%) — V13.4 IN DEVELOPMENT' in roadmap, 'ROADMAP numeric fallback stale')
 require('415 / 423 completed (98.1%) — V13.4 IN DEVELOPMENT' in readme, 'README numeric fallback stale')
 
-print('v13.4 tactical terrain source/authority/lifecycle/SVG-only contract: PASS')
+print('v13.4 tactical terrain source/authority/lifecycle/compile-safety/SVG-only contract: PASS')
