@@ -8,6 +8,7 @@ on:
       - "README.md"
       - "ROADMAP.md"
       - "Tools/generate_progress_svgs.py"
+      - "Tools/swir_visual_report_guard.py"
       - "assets/readme/progress-card.svg"
       - "assets/readme/progress-mini.svg"
       - "assets/readme/progress-template.svg"
@@ -17,6 +18,7 @@ on:
       - "README.md"
       - "ROADMAP.md"
       - "Tools/generate_progress_svgs.py"
+      - "Tools/swir_visual_report_guard.py"
       - "assets/readme/progress-card.svg"
       - "assets/readme/progress-mini.svg"
       - "assets/readme/progress-template.svg"
@@ -39,6 +41,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Remove retired text meters safely
+        run: python Tools/swir_visual_report_guard.py --fix --self-test
+
       - name: Generate SVG-only progress presentation
         run: python Tools/generate_progress_svgs.py --embed
 
@@ -59,7 +64,10 @@ jobs:
           grep -Fq '## 🔎 Search Keywords' README.md
           grep -Fq 'TEMPLATE' assets/readme/progress-template.svg
 
-      - name: Deterministic SVG and legacy-meter check
+      - name: SVG-only presentation regression guard
+        run: python Tools/swir_visual_report_guard.py --check --self-test
+
+      - name: Deterministic SVG and roadmap-math check
         run: python Tools/generate_progress_svgs.py --check
 
       - name: Commit generated presentation drift
@@ -69,8 +77,8 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add README.md ROADMAP.md Tools/generate_progress_svgs.py assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
+          git add README.md ROADMAP.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
           if ! git diff --cached --quiet; then
-            git commit -m "docs(progress): migrate active status to SVG-only presentation [skip ci]"
+            git commit -m "docs(progress): enforce SVG-only visual report presentation [skip ci]"
             git push
           fi
