@@ -1,0 +1,224 @@
+name: Tactical Terrain v13.4 Windows Qualification Gate
+
+on:
+  push:
+    branches: ['dev-v13-4']
+    paths:
+      - '.v134-windows-gate-trigger'
+      - 'Assets/Scripts/TacticalTerrainV134.cs'
+      - 'Assets/Scripts/TacticalTerrainCISmokeProbe.cs'
+      - 'Assets/Scripts/TankGame.cs'
+      - 'Assets/Scripts/EnemyTank.cs'
+      - 'Assets/Scripts/Obstacle.cs'
+      - 'Assets/Scripts/ReactiveCoverBreachDirector.cs'
+      - 'Assets/Editor/CIBuild.cs'
+      - 'Assets/Resources/TankRevivalProduction/Audio/*.wav'
+      - 'Assets/Resources/TankRevivalProduction/Audio/*.meta'
+      - '.github/scripts/package_v134_tactical_terrain.py'
+      - '.github/scripts/test_package_v134_tactical_terrain.py'
+      - '.github/workflows/tactical-terrain-v134-windows.yml'
+      - 'Tools/verify_v134_tactical_terrain.py'
+      - 'Tools/verify_production_audio_assets.py'
+      - 'Tools/verify_unity_ci_bootstrap.py'
+      - 'Tools/generate_progress_svgs.py'
+      - 'CHANGELOG_v13.4.md'
+      - 'VERSION'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UNITY_VERSION: 6000.3.17f1
+  CANDIDATE_ZIP: TankRevivalOverdrive-v13.4-tactical-terrain-Windows-x64.zip
+  PACKAGE_DIR: tro-v134-package
+
+jobs:
+  source-contracts:
+    name: Verify v13.4 terrain, authority, progress and package contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact branch and deterministic source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "${GITHUB_REF_NAME}" = 'dev-v13-4'
+          test "$(cat VERSION)" = 'v13.4.0-dev'
+          python -m py_compile .github/scripts/package_v134_tactical_terrain.py .github/scripts/test_package_v134_tactical_terrain.py Tools/verify_v134_tactical_terrain.py Tools/verify_production_audio_assets.py Tools/verify_unity_ci_bootstrap.py Tools/generate_progress_svgs.py
+          python .github/scripts/test_package_v134_tactical_terrain.py
+          python Tools/verify_v134_tactical_terrain.py
+          python Tools/verify_production_audio_assets.py
+          python Tools/verify_unity_ci_bootstrap.py
+          python Tools/generate_progress_svgs.py --check
+          git diff --check
+      - name: Verify clean exact-candidate Unity qualification policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflow='.github/workflows/tactical-terrain-v134-windows.yml'
+          grep -Fq 'Enforce clean Unity qualification state' "$workflow"
+          cache_action='actions/'"cache@"
+          if grep -Fq "uses: ${cache_action}" "$workflow"; then echo 'Qualification must not use Unity Library caches.' >&2; exit 1; fi
+          restore_key='restore'"-keys:"
+          if grep -Fq "$restore_key" "$workflow"; then echo 'Cross-candidate restore keys are forbidden.' >&2; exit 1; fi
+      - name: Verify canonical authority and v13.4 runtime gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in Assets/Scripts/TacticalTerrainV134.cs Assets/Scripts/TacticalTerrainCISmokeProbe.cs Assets/Scripts/TankGame.cs Assets/Scripts/EnemyTank.cs Assets/Scripts/Obstacle.cs Assets/Scripts/ReactiveCoverBreachDirector.cs CHANGELOG_v13.4.md; do test -f "$f"; done
+          grep -Fq 'public const int PlannedRounds = 100;' Assets/Scripts/TacticalTerrainV134.cs
+          grep -Fq 'public const int MaxCoverNodes = 12;' Assets/Scripts/TacticalTerrainV134.cs
+          grep -Fq 'public const int CandidateSlotCount = 24;' Assets/Scripts/TacticalTerrainV134.cs
+          grep -q -- '-tr-v134-smoke' Assets/Scripts/TacticalTerrainCISmokeProbe.cs
+          grep -q 'V13_4_TACTICAL_TERRAIN_OK.txt' Assets/Scripts/TacticalTerrainCISmokeProbe.cs
+          grep -q 'TacticalTerrainDirector' Assets/Scripts/TankGame.cs
+          grep -q 'TacticalTerrainDirector.AdjustDirection' Assets/Scripts/EnemyTank.cs
+          if grep -Eq 'Health\.Damage\(|new Projectile|ProjectilePool\.|SpawnEnemy\(|RepairEagle\(|OnBaseDestroyed\(' Assets/Scripts/TacticalTerrainV134.cs; then echo 'v13.4 terrain layer contains forbidden gameplay authority.' >&2; exit 1; fi
+      - name: Verify open v13.4 ROADMAP state and protected dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s=Path('ROADMAP.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',s,re.M))==1
+          for t in ['<!-- ROADMAP-PROGRESS:START -->','<!-- ROADMAP-PROGRESS:END -->','## 📊 Overall progress','| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |','<!-- SWIR-PROGRESS-SVG-PRO:v1 -->']: assert t in s,t
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
+          assert (done,open_,total)==(415,8,423),(done,open_,total)
+          assert 'ROADMAP-98.1%25-yellow' in s and 'DONE-415%2F423' in s and 'STATUS-V13.4%20IN%20DEVELOPMENT-yellow' in s
+          assert '███████████████████░ 98.1%' in s and '| **415** | **8** | **423** | **98.1%** |' in s
+          section=s[s.index('## v13.4 — Tactical Terrain & Cover Warfare — IN DEVELOPMENT'):]
+          assert section.count('- [ ]')==8 and section.count('- [x]')==0
+          print('v13.4 open roadmap state: PASS')
+
+  build-candidate:
+    name: Build and package one exact v13.4 Windows x64 candidate
+    needs: source-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$UNITY_LICENSE"; test -n "$UNITY_EMAIL"; test -n "$UNITY_PASSWORD"
+      - name: Enforce clean Unity qualification state
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf Library Temp obj
+          test ! -e Library; test ! -e Temp
+          echo 'Exact v13.4 qualification starts from a clean Unity import state.'
+      - name: Build development player once
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Discover, stage and package exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python .github/scripts/package_v134_tactical_terrain.py --build-root build --output-dir "${RUNNER_TEMP}/${PACKAGE_DIR}" --candidate-sha "${GITHUB_SHA}" --commit-sha "${GITHUB_SHA}" --unity-version "${UNITY_VERSION}" --version-file VERSION --zip-name "${CANDIDATE_ZIP}" --diagnostics-path "${GITHUB_WORKSPACE}/V134_TACTICAL_TERRAIN_BUILD_TREE.txt"
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v13.4-tactical-terrain-build-discovery
+          path: V134_TACTICAL_TERRAIN_BUILD_TREE.txt
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v13.4-tactical-terrain-Windows-x64
+          path: |
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/${{ env.CANDIDATE_ZIP }}
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/V134_TACTICAL_TERRAIN_SHA256.txt
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/V134_TACTICAL_TERRAIN_PROVENANCE.json
+          if-no-files-found: error
+          retention-days: 14
+
+  packaged-exe-regression:
+    name: Run v13.4 plus v13.3/v13.2/v13.1/v13.0/v12.9/v12.8 and 80/90/100 regression on the same EXE
+    needs: build-candidate
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v13.4-tactical-terrain-Windows-x64
+          path: candidate
+      - name: Verify package digest, provenance and attribution
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location candidate
+          $zip='${{ env.CANDIDATE_ZIP }}'; $expected=((Get-Content V134_TACTICAL_TERRAIN_SHA256.txt -Raw).Trim() -split '\s+')[0].ToLowerInvariant(); $actual=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if($actual -ne $expected){throw 'candidate ZIP digest mismatch'}
+          $p=Get-Content V134_TACTICAL_TERRAIN_PROVENANCE.json -Raw|ConvertFrom-Json
+          if($p.candidate_sha -ne '${{ github.sha }}' -or $p.commit_sha -ne '${{ github.sha }}' -or $p.sha256 -ne $actual -or $p.version -ne 'v13.4.0-dev'){throw 'candidate provenance mismatch'}
+          Expand-Archive $zip -DestinationPath runtime -Force
+          if(!(Test-Path runtime/TankRevivalOverdrive.exe) -or !(Test-Path runtime/TankRevivalOverdrive_Data)){throw 'packaged Unity runtime incomplete'}
+          $info=Get-Content runtime/V134_TACTICAL_TERRAIN_BUILD.txt -Raw; if($info -notmatch 'candidate_sha=${{ github.sha }}'){throw 'runtime attribution mismatch'}
+          Write-Host "Verified exact v13.4 candidate SHA256: $actual"
+      - name: Run exact single-binary qualification matrix
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location candidate/runtime
+          $blocking='Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|UnityException|TargetInvocationException'
+          function Invoke-Smoke([string]$Name,[string]$Flag,[string]$Pass,[string]$Fail,[string]$Log,[int]$TimeoutMs){
+            Remove-Item $Pass,$Fail,$Log -ErrorAction SilentlyContinue
+            $p=Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics',$Flag,'-logFile',$Log -PassThru
+            if(!$p.WaitForExit($TimeoutMs)){Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; throw "$Name timed out"}
+            if(Test-Path $Fail){Get-Content $Fail; if(Test-Path $Log){Get-Content $Log -Tail 350}; throw "$Name emitted FAIL"}
+            if(!(Test-Path $Pass)){if(Test-Path $Log){Get-Content $Log -Tail 350}; throw "$Name exited without PASS (exit=$($p.ExitCode))"}
+            if($p.ExitCode -ne 0){throw "$Name non-zero exit $($p.ExitCode)"}
+            if(Test-Path $Log){if(Select-String -Path $Log -Pattern $blocking -Quiet){Get-Content $Log -Tail 400; throw "$Name blocking exception signature"}}
+            Get-Content $Pass; Write-Host "$Name PASS"
+          }
+          Invoke-Smoke 'production authored-audio presentation preflight' '-production-presentation-smoke' 'PRODUCTION_PRESENTATION_PASS.txt' 'PRODUCTION_PRESENTATION_FAIL.txt' 'V134ProductionAudio.log' 80000
+          Invoke-Smoke 'v13.4 tactical terrain and destructible cover' '-tr-v134-smoke' 'V13_4_TACTICAL_TERRAIN_OK.txt' 'V13_4_TACTICAL_TERRAIN_FAIL.txt' 'V134Player.log' 90000
+          Invoke-Smoke 'v13.3 battlefield cohesion regression' '-tr-v133-smoke' 'V13_3_BATTLEFIELD_COHESION_OK.txt' 'V13_3_BATTLEFIELD_COHESION_FAIL.txt' 'V133Regression.log' 80000
+          Invoke-Smoke 'v13.2 adaptive enemy command regression' '-tr-v132-smoke' 'V13_2_ADAPTIVE_COMMAND_OK.txt' 'V13_2_ADAPTIVE_COMMAND_FAIL.txt' 'V132Regression.log' 80000
+          Invoke-Smoke 'v13.1 dynamic objective warfare regression' '-tr-v131-smoke' 'V13_1_OBJECTIVE_WARFARE_OK.txt' 'V13_1_OBJECTIVE_WARFARE_FAIL.txt' 'V131Regression.log' 80000
+          Invoke-Smoke 'v13.0 encounter warfare regression' '-tr-v130-smoke' 'V13_0_ENCOUNTER_WARFARE_OK.txt' 'V13_0_ENCOUNTER_WARFARE_FAIL.txt' 'V130Regression.log' 80000
+          Invoke-Smoke 'v12.9 component warfare regression' '-tr-v129-smoke' 'V12_9_COMPONENT_DAMAGE_REPAIR_OK.txt' 'V12_9_COMPONENT_DAMAGE_REPAIR_FAIL.txt' 'V129Regression.log' 80000
+          Invoke-Smoke 'v12.8 integration regression' '-tr-v128-smoke' 'V12_8_RELEASE_TRAIN_INTEGRATION_OK.txt' 'V12_8_RELEASE_TRAIN_INTEGRATION_FAIL.txt' 'V128Regression.log' 80000
+          Invoke-Smoke 'round 80/90/100 soak regression' '-demo-ci-soak' 'DEMO_SOAK_PASS.txt' 'DEMO_SOAK_FAIL.txt' 'V134Soak.log' 110000
+          'v13.4 exact-candidate qualification matrix PASS' | Set-Content V13_4_WINDOWS_MATRIX_OK.txt
+      - name: Upload runtime diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v13.4-tactical-terrain-diagnostics
+          path: |
+            candidate/runtime/PRODUCTION_PRESENTATION_PASS.txt
+            candidate/runtime/PRODUCTION_PRESENTATION_FAIL.txt
+            candidate/runtime/V13_4_TACTICAL_TERRAIN_OK.txt
+            candidate/runtime/V13_4_TACTICAL_TERRAIN_FAIL.txt
+            candidate/runtime/V13_3_BATTLEFIELD_COHESION_OK.txt
+            candidate/runtime/V13_2_ADAPTIVE_COMMAND_OK.txt
+            candidate/runtime/V13_1_OBJECTIVE_WARFARE_OK.txt
+            candidate/runtime/V13_0_ENCOUNTER_WARFARE_OK.txt
+            candidate/runtime/V12_9_COMPONENT_DAMAGE_REPAIR_OK.txt
+            candidate/runtime/V12_8_RELEASE_TRAIN_INTEGRATION_OK.txt
+            candidate/runtime/DEMO_SOAK_PASS.txt
+            candidate/runtime/V13_4_WINDOWS_MATRIX_OK.txt
+            candidate/runtime/V134ProductionAudio.log
+            candidate/runtime/V134Player.log
+            candidate/runtime/V134Soak.log
+          if-no-files-found: warn
+          retention-days: 14

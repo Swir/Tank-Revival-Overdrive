@@ -1,0 +1,66 @@
+name: Tactical Terrain v13.4 Source Qualification
+
+on:
+  push:
+    branches: ['dev-v13-4']
+    paths:
+      - 'Assets/Scripts/TacticalTerrainV134.cs'
+      - 'Assets/Scripts/TacticalTerrainCISmokeProbe.cs'
+      - 'Assets/Scripts/TankGame.cs'
+      - 'Assets/Scripts/EnemyTank.cs'
+      - 'Assets/Scripts/Obstacle.cs'
+      - 'Assets/Scripts/ReactiveCoverBreachDirector.cs'
+      - 'Tools/verify_v134_tactical_terrain.py'
+      - 'Tools/generate_progress_svgs.py'
+      - 'ROADMAP.md'
+      - 'README.md'
+      - 'assets/readme/progress-card.svg'
+      - 'assets/readme/progress-mini.svg'
+      - 'assets/readme/progress-template.svg'
+      - '.github/workflows/tactical-terrain-v134-source.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact branch and version
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "${GITHUB_REF_NAME}" = 'dev-v13-4'
+          test "$(cat VERSION)" = 'v13.4.0-dev'
+      - name: Compile deterministic verification tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile Tools/verify_v134_tactical_terrain.py Tools/generate_progress_svgs.py
+      - name: Verify tactical terrain source and authority contracts
+        run: python Tools/verify_v134_tactical_terrain.py
+      - name: Verify deterministic Progress SVG assets
+        run: python Tools/generate_progress_svgs.py --check
+      - name: Verify repository diff hygiene
+        run: git diff --check
+      - name: Verify protected SWIR documentation contracts
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, xml.etree.ElementTree as ET
+          roadmap=Path('ROADMAP.md').read_text(encoding='utf-8')
+          readme=Path('README.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',roadmap,re.M))==1
+          assert len(re.findall(r'^<!-- SWIR-README-STANDARD:v2 -->$',readme,re.M))==1
+          for token in ['<!-- ROADMAP-PROGRESS:START -->','<!-- ROADMAP-PROGRESS:END -->','## 📊 Overall progress','| ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |','<!-- SWIR-PROGRESS-SVG-PRO:v1 -->']:
+              assert token in roadmap,token
+          assert '███████████████████░ 98.1%' in roadmap
+          assert '| **415** | **8** | **423** | **98.1%** |' in roadmap
+          assert '## 🔎 Search Keywords' in readme
+          for p in ['assets/readme/progress-card.svg','assets/readme/progress-mini.svg','assets/readme/progress-template.svg']:
+              ET.parse(p)
+          print('v13.4 protected SWIR docs + SVG XML: PASS')

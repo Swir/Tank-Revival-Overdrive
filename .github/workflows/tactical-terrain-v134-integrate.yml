@@ -1,0 +1,47 @@
+name: Tactical Terrain v13.4 Runtime Integration
+
+on:
+  push:
+    branches: ['dev-v13-4']
+    paths: ['.v134-integration-trigger']
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify registered v13.4 scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'DONE-415%2F423' ROADMAP.md
+          grep -q 'STATUS-V13.4%20IN%20DEVELOPMENT-yellow' ROADMAP.md
+          test -f Assets/Scripts/TacticalTerrainV134.cs
+          test -f Assets/Scripts/TacticalTerrainCISmokeProbe.cs
+          test -f Tools/verify_v134_tactical_terrain.py
+          test -f Tools/integrate_v134.py
+      - name: Apply narrow runtime integration
+        run: python Tools/integrate_v134.py
+      - name: Verify source, authority and documentation contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile Tools/verify_v134_tactical_terrain.py Tools/integrate_v134.py Tools/generate_progress_svgs.py
+          python Tools/verify_v134_tactical_terrain.py
+          python Tools/generate_progress_svgs.py --check
+          test "$(cat VERSION)" = 'v13.4.0-dev'
+          git diff --check
+      - name: Commit playable v13.4 integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Assets/Scripts/TankGame.cs Assets/Scripts/EnemyTank.cs VERSION
+          git commit -m 'feat(v13.4): integrate tactical terrain runtime'
+          git push origin HEAD:dev-v13-4

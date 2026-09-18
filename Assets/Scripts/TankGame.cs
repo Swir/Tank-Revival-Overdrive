@@ -235,6 +235,7 @@ namespace TankRevival
             _nextEncounterDoctrineRefresh = Time.time + EncounterCrossSystemDoctrineV130.RefreshSeconds;
             _nextSpawn = Time.time + ResolveActiveSpawnInterval();
             BuildArena(round);
+            TacticalTerrainDirector.EnsureInstalled().BeginRound(this, round, _encounterPlan, _objectivePlan);
 
             if (_bossPending)
             {
@@ -849,7 +850,7 @@ namespace TankRevival
             int activeCount = _player != null ? _player.GetAmmoCount(active) : (active == AmmoType.Basic ? -1 : _savedAmmo[(int)active]);
             string ammoCount = active == AmmoType.Basic ? "∞" : activeCount.ToString();
 
-            GUI.Box(new Rect(14f, 12f, 560f, 233f), string.Empty);
+            GUI.Box(new Rect(14f, 12f, 560f, 283f), string.Empty);
             GUI.Label(new Rect(28f, 19f, 455f, 27f), $"ROUND {_round:000}/100     SCORE {_score:N0}     ENEMY {remaining}", _hudStyle);
             GUI.Label(new Rect(28f, 47f, 455f, 27f), $"LIVES {_lives}   ARMOR {playerHp}   ORZEŁEK {eagleHp}/{EagleMaxHealth}", eagleHp <= 2 ? _warningStyle : _hudStyle);
             GUI.Label(new Rect(28f, 75f, 455f, 27f), $"AMMO {AmmoDatabase.DisplayName(active)}  [{ammoCount}]   •   Q/E switch", _hudStyle);
@@ -863,6 +864,10 @@ namespace TankRevival
             GUI.Label(new Rect(28f, 178f, 530f, 25f), objectiveHud, _smallStyle);
             string commandHud = AdaptiveEnemyCommandDirector.Instance != null ? AdaptiveEnemyCommandDirector.Instance.HudText : "CMD STANDBY";
             GUI.Label(new Rect(28f, 203f, 530f, 25f), commandHud, _smallStyle);
+            string squadHud = BattlefieldCohesionDirector.Instance != null ? BattlefieldCohesionDirector.Instance.HudText : "SQD STANDBY";
+            GUI.Label(new Rect(28f, 228f, 530f, 25f), squadHud, _smallStyle);
+            string terrainHud = TacticalTerrainDirector.Instance != null ? TacticalTerrainDirector.Instance.HudText : "TRN STANDBY";
+            GUI.Label(new Rect(28f, 253f, 530f, 25f), terrainHud, _smallStyle);
 
             if (_player != null)
             {

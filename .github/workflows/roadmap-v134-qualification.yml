@@ -1,0 +1,105 @@
+name: ROADMAP v13.4 Qualification Finalizer
+
+on:
+  push:
+    branches: ['dev-v13-4']
+    paths: ['.v134-roadmap-qualification-trigger']
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify exact qualified v13.4 candidate
+        shell: python
+        run: |
+          from pathlib import Path
+          import json,os,subprocess,urllib.request
+          sha=Path('.v134-roadmap-qualification-trigger').read_text(encoding='utf-8').strip()
+          assert len(sha)==40 and all(c in '0123456789abcdef' for c in sha.lower()),sha
+          subprocess.run(['git','merge-base','--is-ancestor',sha,'HEAD'],check=True)
+          changed=subprocess.check_output(['git','diff','--name-only',sha+'..HEAD'],text=True).splitlines()
+          allowed={'.v134-roadmap-qualification-trigger','.github/workflows/roadmap-v134-qualification.yml'}
+          assert set(changed).issubset(allowed),'Unqualified source changes after candidate: '+repr(changed)
+          url='https://api.github.com/repos/'+os.environ['GITHUB_REPOSITORY']+'/actions/runs?head_sha='+sha+'&per_page=100'
+          req=urllib.request.Request(url,headers={'Accept':'application/vnd.github+json','User-Agent':'TankRevival-v134-qualifier'})
+          with urllib.request.urlopen(req) as response: data=json.load(response)
+          matches=[r for r in data.get('workflow_runs',[]) if r.get('name')=='Tactical Terrain v13.4 Windows Qualification Gate' and r.get('path')=='.github/workflows/tactical-terrain-v134-windows.yml' and r.get('head_sha')==sha and r.get('conclusion')=='success']
+          assert matches,'No successful exact v13.4 Windows qualification gate for '+sha
+          print('Qualified SHA:',sha,'run:',matches[0]['html_url'])
+      - name: Verify implementation and open roadmap state
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in Assets/Scripts/TacticalTerrainV134.cs Assets/Scripts/TacticalTerrainCISmokeProbe.cs Assets/Scripts/TankGame.cs Assets/Scripts/EnemyTank.cs Assets/Scripts/Obstacle.cs Assets/Scripts/ReactiveCoverBreachDirector.cs .github/workflows/tactical-terrain-v134-windows.yml .github/scripts/package_v134_tactical_terrain.py .github/scripts/test_package_v134_tactical_terrain.py CHANGELOG_v13.4.md Tools/verify_v134_tactical_terrain.py Tools/verify_production_audio_assets.py Tools/verify_unity_ci_bootstrap.py Tools/generate_progress_svgs.py; do test -f "$f"; done
+          test "$(cat VERSION)" = 'v13.4.0-dev'
+          grep -q 'V13_4_TACTICAL_TERRAIN_OK.txt' Assets/Scripts/TacticalTerrainCISmokeProbe.cs
+          grep -q 'V13_4_WINDOWS_MATRIX_OK.txt' .github/workflows/tactical-terrain-v134-windows.yml
+          for flag in -production-presentation-smoke -tr-v134-smoke -tr-v133-smoke -tr-v132-smoke -tr-v131-smoke -tr-v130-smoke -tr-v129-smoke -tr-v128-smoke -demo-ci-soak; do grep -q -- "$flag" .github/workflows/tactical-terrain-v134-windows.yml; done
+          python .github/scripts/test_package_v134_tactical_terrain.py
+          python Tools/verify_v134_tactical_terrain.py
+          python Tools/verify_production_audio_assets.py
+          python Tools/verify_unity_ci_bootstrap.py
+          python Tools/generate_progress_svgs.py --check
+          test "$(grep -c '^<!-- SWIR-ROADMAP-STANDARD:v1 -->$' ROADMAP.md)" -eq 1
+          grep -q 'DONE-415%2F423' ROADMAP.md
+          grep -q 'STATUS-V13.4%20IN%20DEVELOPMENT-yellow' ROADMAP.md
+          grep -q '███████████████████░ 98.1%' ROADMAP.md
+      - name: Finalize checklist and protected SWIR dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('ROADMAP.md'); s=p.read_text(encoding='utf-8')
+          marker='<!-- SWIR-ROADMAP-STANDARD:v1 -->'; assert len(re.findall(r'^'+re.escape(marker)+r'$',s,re.M))==1
+          heading='## v13.4 — Tactical Terrain & Cover Warfare — IN DEVELOPMENT'
+          start=s.index(heading); section=s[start:]
+          assert section.count('- [ ]')==8 and section.count('- [x]')==0
+          section=section.replace('— IN DEVELOPMENT','— QUALIFIED',1).replace('- [ ]','- [x]'); s=s[:start]+section
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
+          assert (done,open_,total)==(423,0,423),(done,open_,total)
+          pct=round(done*100/total,1); bar='█'*20
+          s=re.sub(r'ROADMAP-[0-9.]+%25-[A-Za-z0-9]+',f'ROADMAP-{pct:.1f}%25-brightgreen',s,count=1)
+          s=re.sub(r'DONE-[0-9]+%2F[0-9]+',f'DONE-{done}%2F{total}',s,count=1)
+          s=re.sub(r'STATUS-V13\.4%20IN%20DEVELOPMENT-yellow',r'STATUS-V13.4%20QUALIFIED-brightgreen',s,count=1)
+          s=re.sub(r'(?m)^([█░]{20}) [0-9.]+%$',f'{bar} {pct:.1f}%',s,count=1)
+          s=re.sub(r'\| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9]+\*\* \| \*\*[0-9.]+%\*\* \|',f'| **{done}** | **{open_}** | **{total}** | **{pct:.1f}%** |',s,count=1)
+          p.write_text(s,encoding='utf-8')
+      - name: Regenerate Progress SVG Pro and README from qualified ROADMAP
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Tools/generate_progress_svgs.py --write --embed --check
+          python Tools/generate_progress_svgs.py --write --embed --check
+          git diff --check
+      - name: Re-read and verify qualified state
+        shell: python
+        run: |
+          from pathlib import Path
+          import re,xml.etree.ElementTree as ET
+          s=Path('ROADMAP.md').read_text(encoding='utf-8'); r=Path('README.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',s,re.M))==1
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
+          assert (done,open_,total)==(423,0,423)
+          assert 'ROADMAP-100.0%25-brightgreen' in s and 'DONE-423%2F423' in s and 'STATUS-V13.4%20QUALIFIED-brightgreen' in s
+          assert '████████████████████ 100.0%' in s and '| **423** | **0** | **423** | **100.0%** |' in s
+          section=s[s.index('## v13.4 — Tactical Terrain & Cover Warfare — QUALIFIED'):]
+          assert section.count('- [x]')==8 and section.count('- [ ]')==0
+          assert s.count('<!-- SWIR-PROGRESS-SVG-PRO:v1 -->')==1 and r.count('<!-- SWIR-PROGRESS-SVG-PRO:v1 -->')==1
+          assert '423 / 423 completed (100.0%)' in s and '423 / 423 completed (100.0%)' in r
+          for p in ['assets/readme/progress-card.svg','assets/readme/progress-mini.svg','assets/readme/progress-template.svg']: ET.parse(p)
+          print('SWIR v13.4 qualified state: PASS')
+      - name: Commit qualified roadmap and deterministic progress assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
+          git commit -m 'docs(v13.4): qualify tactical terrain milestone'
+          git push origin HEAD:dev-v13-4

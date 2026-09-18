@@ -1,0 +1,64 @@
+name: ROADMAP v13.4 Scope + Progress SVG Migration
+
+on:
+  push:
+    branches: ['dev-v13-4']
+    paths: ['.v134-scope-trigger']
+
+permissions:
+  contents: write
+
+jobs:
+  register-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify qualified v13.3 base
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base --is-ancestor a363dcaea3467835314419b03ae55831b28e7f8d HEAD; echo $?)" = "0"
+          grep -q 'DONE-415%2F415' ROADMAP.md
+          grep -q 'STATUS-V13.3%20QUALIFIED-brightgreen' ROADMAP.md
+          test "$(grep -c '^<!-- SWIR-ROADMAP-STANDARD:v1 -->$' ROADMAP.md)" -eq 1
+          grep -q '^<!-- SWIR-README-STANDARD:v2 -->$' README.md
+          grep -q '^## 🔎 Search Keywords' README.md
+      - name: Register v13.4 scope and retire legacy meter
+        run: python Tools/register_v134_scope.py
+      - name: Regenerate deterministic Progress SVG Pro assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Tools/generate_progress_svgs.py --write --embed --check
+          python Tools/generate_progress_svgs.py --write --embed --check
+          git diff --check
+      - name: Re-read protected dashboard and SVG contract
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, xml.etree.ElementTree as ET
+          r=Path('ROADMAP.md').read_text(encoding='utf-8')
+          m=Path('README.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^<!-- SWIR-ROADMAP-STANDARD:v1 -->$',r,re.M))==1
+          assert len(re.findall(r'^<!-- SWIR-PROGRESS-SVG-PRO:v1 -->$',r,re.M))==1
+          assert len(re.findall(r'^<!-- SWIR-PROGRESS-SVG-PRO:v1 -->$',m,re.M))==1
+          assert 'DONE-415%2F423' in r and 'ROADMAP-98.1%25-yellow' in r
+          assert 'STATUS-V13.4%20IN%20DEVELOPMENT-yellow' in r
+          assert '| **415** | **8** | **423** | **98.1%** |' in r
+          assert not re.search(r'(?m)^[█░]{8,}\s+[0-9.]+%$',r)
+          assert '415 / 423 completed (98.1%) — V13.4 IN DEVELOPMENT' in r
+          assert '415 / 423 completed (98.1%) — V13.4 IN DEVELOPMENT' in m
+          for p in ['assets/readme/progress-card.svg','assets/readme/progress-mini.svg','assets/readme/progress-template.svg']:
+              ET.parse(p)
+          print('v13.4 scope dashboard + Progress SVG Pro: PASS')
+      - name: Commit registered scope and SVG-only progress assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md README.md Tools/generate_progress_svgs.py assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
+          git commit -m 'docs(v13.4): register tactical terrain milestone'
+          git push origin HEAD:dev-v13-4

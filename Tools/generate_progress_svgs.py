@@ -40,7 +40,6 @@ class Progress:
     total: int
     percent: float
     status: str
-    segments: int
 
     @property
     def counter(self) -> str:
@@ -112,15 +111,11 @@ def parse_progress(text: str) -> Progress:
         fail("ROADMAP percentage badge disagrees with checklist")
     status = urllib.parse.unquote(status_badge.group(1)).strip()
 
-    bar = re.search(r"^([█░]{20}) ([0-9.]+)%$", text, re.M)
-    if not bar:
-        fail("20-segment ROADMAP bar missing")
-    expected_segments = min(20, max(0, int(percent // 5)))
-    if percent >= 100.0:
-        expected_segments = 20
-    if bar.group(1).count("█") != expected_segments or float(bar.group(2)) != percent:
-        fail("ROADMAP text bar disagrees with documented checklist percentage")
-    return Progress(completed, remaining, total, percent, status, expected_segments)
+    # SWIR Progress SVG Pro v1 (2026-09-18 correction) retires legacy
+    # character meters. Numeric table + checklist remain the progress authority.
+    if re.search(r"(?m)^[█░]{8,}\s+[0-9.]+%$", text):
+        fail("legacy character progress meter must not appear in active ROADMAP dashboard")
+    return Progress(completed, remaining, total, percent, status)
 
 
 def esc(value: str) -> str:
@@ -310,6 +305,8 @@ def check_all() -> None:
         fail("README card embed or textual fallback is stale")
     if README_MARKER not in readme or "## 🔎 Search Keywords" not in readme:
         fail("README PRO v2 marker/Search Keywords must be preserved")
+    if re.search(r"(?m)^[█░]{8,}\s+[0-9.]+%$", roadmap):
+        fail("legacy character progress meter returned to ROADMAP")
     expected_branch = branch_for_status(p.status)
     if f"**{p.status}** on `{expected_branch}`" not in readme:
         fail("README milestone branch disagrees with roadmap status")
