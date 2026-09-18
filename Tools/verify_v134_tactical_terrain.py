@@ -47,11 +47,20 @@ require('obstacle.Kind == ObstacleKind.Water && !collider.isTrigger' in terrain,
 require('obstacle.Kind != ObstacleKind.Water && collider.isTrigger' in terrain,
         'runtime validator does not guard solid collider semantics')
 
+# Cover-kind quotas must be a true permutation for every supported CoverCount (7..12).
+# A fixed multiplier such as ordinal*7 aliases ranks when it shares a divisor with CoverCount.
+require('PositiveMod(Mathf.Max(0, ordinal) + plan.SlotOffset, Mathf.Max(1, plan.CoverCount))' in terrain,
+        'cover-kind rank must use the quota-preserving cyclic permutation')
+require('PositiveMod(ordinal * 7 + plan.SlotOffset' not in terrain,
+        'cover-kind quota aliasing stride returned')
+
 require('V13_4_TACTICAL_TERRAIN_OK.txt' in smoke and '-tr-v134-smoke' in smoke, 'packaged smoke markers missing')
 require('for (int round = 1; round <= 100; round++)' in smoke, '100-round packaged smoke coverage missing')
 require('Obstacle.StructuralDamageFor' in smoke, 'smoke does not guard canonical Obstacle counterplay')
 require('CandidateSlotIndex(a, ordinal)' in smoke and 'duplicate/invalid tactical slot' in smoke,
         'packaged smoke does not guard deterministic unique terrain slots')
+require('cover kind budget mismatch round=' in smoke,
+        'packaged smoke does not enforce exact brick/steel/water planner budgets')
 require('runtimeDirector.ApplyDeterministicPlan(64' in smoke and 'runtimeDirector.ApplyDeterministicPlan(65' in smoke,
         'packaged smoke does not exercise live overlay and same-frame rebuild')
 require('string overlayReason = string.Empty;' in smoke,
@@ -100,4 +109,4 @@ require(len(re.findall(r'^<!-- SWIR-README-STANDARD:v2 -->$', readme, re.M)) == 
 require('415 / 423 completed (98.1%) — V13.4 IN DEVELOPMENT' in roadmap, 'ROADMAP numeric fallback stale')
 require('415 / 423 completed (98.1%) — V13.4 IN DEVELOPMENT' in readme, 'README numeric fallback stale')
 
-print('v13.4 tactical terrain source/authority/lifecycle/compile-safety/SVG-only contract: PASS')
+print('v13.4 tactical terrain source/authority/lifecycle/quota/compile-safety/SVG-only contract: PASS')
