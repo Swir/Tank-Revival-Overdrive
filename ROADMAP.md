@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-8"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-455%2F455-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.8%20QUALIFIED-brightgreen?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-9"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.3%25-blue?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-455%2F463-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.9%20IN%20DEVELOPMENT-blue?style=for-the-badge">
 </p>
 
 
@@ -18,7 +18,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **455** | **0** | **455** | **100.0%** |
+| **455** | **8** | **463** | **98.3%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numeric table, percentage and generated Progress SVG. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -684,3 +684,14 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Performance and authority contracts** — verify fixed actor caps, bounded event fan-out, deterministic pressure/decay/scales, zero scene scans in the hot path and unchanged Health/Projectile/TankGame authority.
 - [x] **Packaged-EXE v13.8 runtime smoke** — validate direct-hit/near-miss/ammo profiles, suppression transitions, rally/fairness floors and runtime installation, then rerun v13.7/v13.6/v13.5/v13.4 regressions plus rounds 80/90/100 soak on the same executable.
 - [x] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.8 gate to pass and only then finalize roadmap/checklist/progress SVGs.
+
+## v13.9 — Suppression Counterplay & Tactical Fire-Support Command — IN DEVELOPMENT
+- [ ] **Bounded fire-support command authority** — add a deterministic `BattlefieldFireSupportDirector` readiness / active-window / cooldown state machine that publishes intent only and never spawns/despawns actors, moves rigidbodies, instantiates projectiles or applies `Health` damage.
+- [ ] **Suppression-aware support opportunities across 100 rounds** — derive finite tactical support windows from existing v13.8 suppression pressure, round intensity and verified contact state without hidden damage, free kills or uncontrolled random escalation.
+- [ ] **Class-aware enemy counterplay** — expose bounded Hold / Brace / Disperse / Evade reaction intent by enemy class while `EnemyTank`, `Rigidbody2D`, `Projectile` and `Health` remain canonical movement, fire and survivability authorities.
+- [ ] **Terrain, cohesion and sensor integration** — combine v13.4 cover/exposure, v13.3 squad cohesion and v13.6 contact confidence as read-only inputs so fire-support choices reward positioning and information instead of bypassing those systems.
+- [ ] **Player command readiness and anti-spam contract** — provide deliberate activation with hard readiness, range, active-window and cooldown limits, deterministic denial reasons and no parallel ammunition/economy authority.
+- [ ] **Readable budgeted fire-support telegraphing** — communicate ready / active / cooldown state, affected zone and enemy reaction cues through bounded HUD/world presentation that respects late-round performance budgets.
+- [ ] **Deterministic runtime, authority and performance contracts** — verify bounded actor/effect fan-out, stable command scheduling, class reaction floors, zero hot-path scene scans and unchanged spawn/movement/projectile/damage ownership.
+- [ ] **Exact-SHA Windows qualification** — package one Windows x64 candidate, pass the v13.9 fire-support smoke, rerun v13.8/v13.7/v13.6 regressions plus rounds 80/90/100 soak on that same executable, and only then finalize the checklist/progress SVGs.
+
