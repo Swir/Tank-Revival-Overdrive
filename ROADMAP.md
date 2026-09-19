@@ -4,8 +4,8 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v14-0"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.3%25-blue?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-463%2F471-1f6feb?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.9%25-blue?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-466%2F471-1f6feb?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/STATUS-V14.0%20IN%20DEVELOPMENT-blue?style=for-the-badge">
 </p>
 
@@ -18,7 +18,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **463** | **8** | **471** | **98.3%** |
+| **466** | **5** | **471** | **98.9%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numeric table, percentage and generated Progress SVG. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -696,9 +696,9 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Exact-SHA Windows qualification** — package one Windows x64 candidate, pass the v13.9 fire-support smoke, rerun v13.8/v13.7/v13.6 regressions plus rounds 80/90/100 soak on that same executable, and only then finalize the checklist/progress SVGs.
 
 ## v14.0 — Counter-Battery & Mobile Fire-Control Warfare — IN DEVELOPMENT
-- [ ] **Bounded counter-battery threat authority** — add a deterministic `CounterBatteryDirectorV140` Quiet / Searching / Locked / Barrage / Relocating state machine that publishes enemy fire intent only and never applies direct `Health` damage, teleports actors or replaces TankGame spawn authority.
-- [ ] **Fire-support signature and lock acquisition across 100 rounds** — convert existing v13.9 support-strike emissions into bounded exposure signatures with deterministic decay, repeat-use penalties and round-scaled enemy acquisition pressure instead of hidden random punishment.
-- [ ] **Canonical enemy barrage execution** — execute counter-battery salvos only through a separate intent bridge into existing `TankGame.SpawnProjectile` / `Projectile` authority with strict shell, cadence and damage caps and no parallel direct-damage path.
+- [x] **Bounded counter-battery threat authority** — add a deterministic `CounterBatteryDirectorV140` Quiet / Searching / Locked / Barrage / Relocating state machine that publishes enemy fire intent only and never applies direct `Health` damage, teleports actors or replaces TankGame spawn authority.
+- [x] **Fire-support signature and lock acquisition across 100 rounds** — convert existing v13.9 support-strike emissions into bounded exposure signatures with deterministic decay, repeat-use penalties and round-scaled enemy acquisition pressure instead of hidden random punishment.
+- [x] **Canonical enemy barrage execution** — execute counter-battery salvos only through a separate intent bridge into existing `TankGame.SpawnProjectile` / `Projectile` authority with strict shell, cadence and damage caps and no parallel direct-damage path.
 - [ ] **Terrain, sensor and relocation counterplay** — make movement between battlefield cells, v13.4 cover/exposure and v13.6 sensor information materially reduce or break enemy lock so the player can counter fire-control pressure through positioning rather than scripted immunity.
 - [ ] **Observer-class and command integration** — derive bounded acquisition strength from eligible Sniper / Siege / Elite / Supply-command actors plus existing v13.3 cohesion and v13.2 command posture without creating a second enemy AI or targeting authority.
 - [ ] **Readable budgeted warning and barrage presentation** — expose SEARCHING / LOCKED / INCOMING / RELOCATE states, impact telegraphs and observer pressure through fixed-cap HUD/world cues that preserve late-round battlefield visibility.

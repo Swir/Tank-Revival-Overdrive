@@ -12,7 +12,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)](https://github.com/Swir/Tank-Revival-Overdrive/releases)
 [![Unity](https://img.shields.io/badge/Unity-6000.3.17f1-02050A?style=for-the-badge&logo=unity&logoColor=62E5FF)](https://unity.com/)
-[![Roadmap](https://img.shields.io/badge/Roadmap-98.3%25%20V14.0%20In%20Development-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
+[![Roadmap](https://img.shields.io/badge/Roadmap-98.9%25%20V14.0%20In%20Development-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
 [![v13.9 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-fire-support-v139-windows.yml/badge.svg?branch=dev-v13-9)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-fire-support-v139-windows.yml)
 
 [**Highlights**](#-highlights) · [**Download**](#-quick-start--download) · [**Controls**](#-controls) · [**Roadmap**](#-roadmap--quality-gates) · [**Releases**](#-releases)
@@ -30,7 +30,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 | Item | Status |
 |---|---|
 | Development milestone | **V14.0 IN DEVELOPMENT** on `dev-v14-0` |
-| Roadmap | **463 / 471 completed (98.3%)** — authoritative `ROADMAP.md` scope |
+| Roadmap | **466 / 471 completed (98.9%)** — authoritative `ROADMAP.md` scope |
 | Primary platform | **Windows 10 / 11 x64** |
 | Development engine | **Unity 6000.3.17f1** |
 | Latest qualified milestone | **v13.9** — exact Windows candidate `30511fb9452dfb47e481ecb57f87ccd51aded1fa` qualified in run `35462501123` |
@@ -60,7 +60,7 @@ The campaign combines direct tank combat with directional armor, component damag
 | ⚙️ **Late-round performance v13.7 — qualified** | Deterministic Normal/Dense/Critical pressure budgets reduce optional FX/presentation churn during rounds 80/90/100 while preserving enemy counts, gameplay events, pool integrity and canonical combat authority. |
 | 💢 **Battlefield suppression v13.8 — qualified** | Player impacts and near misses build bounded Steady/Suppressed/Pinned pressure that affects only existing movement/reload/spread paths, with ammo-aware pressure, cohesion-aware recovery, boss resistance and no bonus damage or permanent stun. |
 | 🎯 **Fire-support counterplay v13.9 — qualified** | Earned F-key command windows combine qualified suppression, cover, cohesion and verified contacts into bounded fire-support intent with class-aware reactions, anti-spam cooldowns and canonical TankGame projectile execution. |
-| 📍 **Counter-battery warfare v14.0 — in development** | Planned enemy fire-control pressure will react to repeated support signatures with readable lock/barrage states while relocation, terrain and sensor information provide direct counterplay without a parallel damage authority. |
+| 📍 **Counter-battery warfare v14.0 — in development** | Source-verified exposure, search/lock/barrage state and canonical enemy projectile execution now answer repeated fire-support use; terrain/sensor/observer presentation and packaged runtime qualification remain open. |
 | 🎯 **Dynamic objective warfare** | Objective planning layers mission pressure onto the existing round/spawn loop instead of replacing it. |
 | 👑 **Multi-phase bosses** | Boss behavior escalates through health/component-driven phases while existing movement, projectile and survivability authorities remain canonical. |
 | 🛡️ **Directional armor & modules** | Front/side/rear armor, ricochets and engine/tracks/gun/ammo-rack degradation affect how vehicles move and fight. |
@@ -192,7 +192,7 @@ v13.9 adds a bounded command-and-counterplay layer above the qualified v13.8 sup
 
 ### Counter-Battery & Mobile Fire-Control Warfare v14.0 — in development
 
-v14.0 is being developed as a bounded enemy counter-battery layer above the qualified v13.9 fire-support system. Repeated support use will create readable exposure signatures that eligible enemy observers can turn into finite SEARCHING / LOCKED / BARRAGE pressure, while player relocation, terrain and sensor information provide direct counterplay. The new director remains intent-only; `TankGame`, `Projectile`, `Health`, `EnemyTank` and `Rigidbody2D` keep canonical gameplay authority. The milestone is not qualified until one exact packaged Windows candidate passes its dedicated smoke, historical regressions and rounds 80/90/100 soak.
+v14.0 phase one is source-verified: v13.9 support-strike intent now creates bounded exposure, eligible battlefield observers build deterministic SEARCHING / LOCKED / BARRAGE pressure across the 100-round profile, and a separate execution bridge forwards enemy barrage intent only through canonical `TankGame.SpawnProjectile`. The remaining terrain/sensor relocation integration, command-posture coupling, presentation, packaged runtime contracts and exact Windows qualification stay open; `Health`, `Projectile`, `EnemyTank` and `Rigidbody2D` retain canonical gameplay authority.
 
 ### Orzełek escalation
 
@@ -217,7 +217,7 @@ The project intentionally avoids parallel damage, movement and economy authoriti
 
 ## 🗺️ Roadmap & Quality Gates
 
-The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **463 / 471 (98.3%) — V14.0 IN DEVELOPMENT**. Release readiness is tracked separately by exact-candidate Windows qualification gates.
+The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **466 / 471 (98.9%) — V14.0 IN DEVELOPMENT**. Release readiness is tracked separately by exact-candidate Windows qualification gates.
 
 Recent qualified milestone layers include v13.0 encounter/boss warfare, v13.1 objective warfare, v13.2 adaptive enemy command and v13.3 battlefield cohesion. The v13.3 exact-candidate gate required source/authority contracts, a clean Unity Windows x64 build, deterministic packaging and one exact packaged EXE running production-audio preflight, v13.3 cohesion smoke, v13.2/v13.1/v13.0/v12.9/v12.8 regressions and late-round soak covering rounds 80 / 90 / 100.
 
