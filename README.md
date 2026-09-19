@@ -12,7 +12,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)](https://github.com/Swir/Tank-Revival-Overdrive/releases)
 [![Unity](https://img.shields.io/badge/Unity-6000.3.17f1-02050A?style=for-the-badge&logo=unity&logoColor=62E5FF)](https://unity.com/)
-[![Roadmap](https://img.shields.io/badge/Roadmap-100.0%25%20V13.8%20Qualified-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
+[![Roadmap](https://img.shields.io/badge/Roadmap-98.3%25%20V13.9%20In%20Development-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
 [![v13.8 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-suppression-v138-windows.yml/badge.svg?branch=dev-v13-8)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-suppression-v138-windows.yml)
 
 [**Highlights**](#-highlights) · [**Download**](#-quick-start--download) · [**Controls**](#-controls) · [**Roadmap**](#-roadmap--quality-gates) · [**Releases**](#-releases)
@@ -29,8 +29,8 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 | Item | Status |
 |---|---|
-| Development milestone | **V13.8 QUALIFIED** on `dev-v13-8` |
-| Roadmap | **455 / 455 completed (100.0%)** — authoritative `ROADMAP.md` scope |
+| Development milestone | **V13.9 IN DEVELOPMENT** on `dev-v13-9` |
+| Roadmap | **455 / 463 completed (98.3%)** — authoritative `ROADMAP.md` scope |
 | Primary platform | **Windows 10 / 11 x64** |
 | Development engine | **Unity 6000.3.17f1** |
 | Latest qualified milestone | **v13.8** — exact Windows candidate `0805a27a7a69a0d620e96f64e6cac66185be6547` qualified in run `35413636894` |
@@ -59,6 +59,7 @@ The campaign combines direct tank combat with directional armor, component damag
 | 📡 **Sensor fusion v13.6 — qualified** | Battlefield-wide Unknown/Detected/Tracked/Verified contact confidence fuses distance, class signature, weather, terrain and existing Recon/EW telemetry; a finite active sweep improves information only and never replaces targeting, movement or damage authority. |
 | ⚙️ **Late-round performance v13.7 — qualified** | Deterministic Normal/Dense/Critical pressure budgets reduce optional FX/presentation churn during rounds 80/90/100 while preserving enemy counts, gameplay events, pool integrity and canonical combat authority. |
 | 💢 **Battlefield suppression v13.8 — qualified** | Player impacts and near misses build bounded Steady/Suppressed/Pinned pressure that affects only existing movement/reload/spread paths, with ammo-aware pressure, cohesion-aware recovery, boss resistance and no bonus damage or permanent stun. |
+| 🎯 **Fire-support counterplay v13.9 — in development** | Planned bounded command windows will turn qualified suppression, cover, cohesion and contact confidence into readable tactical opportunities and class-aware reactions without creating a second damage/projectile authority. |
 | 🎯 **Dynamic objective warfare** | Objective planning layers mission pressure onto the existing round/spawn loop instead of replacing it. |
 | 👑 **Multi-phase bosses** | Boss behavior escalates through health/component-driven phases while existing movement, projectile and survivability authorities remain canonical. |
 | 🛡️ **Directional armor & modules** | Front/side/rear armor, ricochets and engine/tracks/gun/ammo-rack degradation affect how vehicles move and fight. |
@@ -182,6 +183,10 @@ v13.7 targets late-campaign frame-pressure and presentation churn without loweri
 ### Battlefield Suppression & Morale Warfare v13.8 — qualified
 
 v13.8 adds a bounded information-and-behavior layer for enemy suppression without creating a second damage, movement or firing authority. Existing player-owned Projectile impacts and near misses build finite Steady / Suppressed / Pinned pressure with ammo-aware profiles; EnemyTank consumes only clamped movement/reload/spread multipliers, while v13.3 cohesion and class resistance govern recovery. The runtime remains fixed-cap, avoids hot-path scene scans, preserves enemy counts and keeps bosses resistant rather than immune. Exact candidate `0805a27a7a69a0d620e96f64e6cac66185be6547` passed Windows qualification run `35413636894`, including production authored-audio preflight, v13.8 suppression/morale smoke, v13.7/v13.6/v13.5/v13.4/v13.3 regressions and rounds 80/90/100 soak on the same packaged executable.
+
+### Suppression Counterplay & Tactical Fire-Support Command v13.9 — in development
+
+v13.9 is being developed as a bounded command-and-counterplay layer above the qualified v13.8 suppression system. The planned director may publish finite support-window and enemy-reaction intent derived from suppression, terrain, cohesion and sensor confidence, but existing `TankGame`, `EnemyTank`, `Rigidbody2D`, `Projectile` and `Health` systems remain the canonical gameplay authorities. The milestone is not qualified until one exact packaged Windows candidate passes its dedicated smoke, historical regressions and rounds 80/90/100 soak.
 
 ### Orzełek escalation
 
