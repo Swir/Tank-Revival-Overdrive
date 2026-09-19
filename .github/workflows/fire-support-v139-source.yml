@@ -4,6 +4,7 @@ on:
   push:
     branches: ['dev-v13-9']
     paths:
+      - 'VERSION'
       - 'Assets/Scripts/BattlefieldFireSupportV139.cs'
       - 'Assets/Scripts/BattlefieldSuppressionMoraleV138.cs'
       - 'Assets/Scripts/BattlefieldCohesionV133.cs'
