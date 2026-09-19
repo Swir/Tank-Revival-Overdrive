@@ -61,6 +61,7 @@ namespace TankRevival
             Health.Died += _ => _game.OnEnemyDestroyed(this, transform.position, Kind);
             Health.Damaged += OnDamaged;
             BattlefieldCohesionDirector.EnsureInstalled().Register(this, Kind, _round);
+            BattlefieldSuppressionMoraleDirector.EnsureInstalled().Register(this, Kind);
             CurrentCasualtyTactic = ComponentCasualtyTactic.FightThrough;
             _nextCasualtyEvaluation = Time.time;
             ChooseDirection(true);
@@ -94,7 +95,7 @@ namespace TankRevival
                 float reload = _armor != null ? _armor.ReloadMultiplier : 1f;
                 _nextShot = Time.time + Random.Range(_shotDelay * .82f, _shotDelay * 1.18f) * reload
                     * AdaptiveEnemyCommandDirector.ReloadScale(Kind) * BattlefieldCohesionDirector.ReloadScale(this)
-                    * BattlefieldWeatherDirector.EnemyReloadScale(Kind);
+                    * BattlefieldWeatherDirector.EnemyReloadScale(Kind) * BattlefieldSuppressionMoraleDirector.ReloadScale(this);
             }
         }
 
@@ -126,7 +127,7 @@ namespace TankRevival
             float weatherMobility = BattlefieldWeatherDirector.MobilityScale(Team.Enemy, transform.position);
             _body.MovePosition(_body.position + _facing * (_speed * m * casualtyScale
                 * AdaptiveEnemyCommandDirector.MovementScale(Kind) * BattlefieldCohesionDirector.MovementScale(this)
-                * weatherMobility * Time.fixedDeltaTime));
+                * BattlefieldSuppressionMoraleDirector.MovementScale(this) * weatherMobility * Time.fixedDeltaTime));
         }
 
         private void ChooseDirection(bool random)
@@ -159,6 +160,7 @@ namespace TankRevival
             desired = ComponentCasualtyTactics.AdjustDirection(CurrentCasualtyTactic,
                 transform.position, _game.PlayerPosition, desired, GetInstanceID());
             desired = BattlefieldCohesionDirector.AdjustDirection(this, transform.position, desired);
+            desired = BattlefieldSuppressionMoraleDirector.AdjustDirection(this, transform.position, _game.PlayerPosition, desired);
             desired = TacticalTerrainDirector.AdjustDirection(this, transform.position, _game.PlayerPosition, desired);
             if (desired.sqrMagnitude < .001f) return;
             _facing = desired;
@@ -213,7 +215,8 @@ namespace TankRevival
                 * CounterFireThreatMemory.AccuracyMultiplier(this)
                 * AdaptiveEnemyCommandDirector.SpreadScale(Kind)
                 * BattlefieldCohesionDirector.SpreadScale(this)
-                * BattlefieldWeatherDirector.EnemySpreadScale(Kind);
+                * BattlefieldWeatherDirector.EnemySpreadScale(Kind)
+                * BattlefieldSuppressionMoraleDirector.SpreadScale(this);
             Vector2 dir = FireControlBallisticsDirector.ApplySpread(raw, spread);
             float md = Kind == EnemyKind.Boss ? 1.03f : Kind == EnemyKind.Siege ? .86f : .76f;
             Vector2 muzzle = (Vector2)transform.position + dir * md;
@@ -238,6 +241,7 @@ namespace TankRevival
         private void OnDestroy()
         {
             BattlefieldCohesionDirector.Instance?.Unregister(this);
+            BattlefieldSuppressionMoraleDirector.Instance?.Unregister(this);
             AdaptivePlatoonManeuverDirector.NotifyLoss(Kind);
             PlatoonFireMissionCoordinator.Release(this);
         }

@@ -2,10 +2,10 @@
 """Generate and verify SWIR Progress SVG Pro assets from canonical ROADMAP.md data.
 
 ROADMAP.md is the sole progress authority. The generator validates the protected
-SWIR Roadmap Standard v1 dashboard before writing visual assets, keeps release
-readiness separate from milestone completion, and idempotently embeds textual
-fallbacks in README/ROADMAP. Milestone branch labels are derived from the
-verified roadmap status instead of being hard-coded to a previous milestone.
+SWIR Roadmap Standard v1 dashboard, deterministically regenerates the card/mini
+SVGs and embeds SVG-only presentation blocks in README/ROADMAP. Numeric counters
+and percentages stay in the authoritative table and SVG; retired textual meter
+fallbacks are neither emitted nor accepted.
 """
 from __future__ import annotations
 
@@ -31,6 +31,11 @@ PROJECT = "Tank Revival: Orzeł Overdrive"
 SCOPE = "ROADMAP deliverables"
 TRACK_CARD = 656.0
 TRACK_MINI = 360.0
+TEXTUAL_METER_RE = re.compile(
+    r"Roadmap\s+progress:\s*\d+\s*/\s*\d+\s+completed\s*\([0-9.]+%\)", re.I
+)
+LEGACY_CHAR_RE = re.compile(r"(?m)^[\s>*-]*[█▓▒░]{6,}(?:\s+[0-9]+(?:\.[0-9]+)?%)?\s*$")
+LEGACY_BRACKET_RE = re.compile(r"(?m)^[\s>*-]*\[[=#█▓▒░-]{8,}\](?:\s+[0-9]+(?:\.[0-9]+)?%)?\s*$")
 
 
 @dataclass(frozen=True)
@@ -50,20 +55,19 @@ class Progress:
         return "Release readiness: tracked separately by Windows qualification gates"
 
     @property
-    def fallback(self) -> str:
+    def accessible_summary(self) -> str:
         return (
-            f"Roadmap progress: {self.completed} / {self.total} completed "
+            f"Roadmap deliverables: {self.completed} / {self.total} completed "
             f"({self.percent:.1f}%) — {self.status}. "
             "Release readiness is tracked separately by Windows qualification gates."
         )
 
 
-def fail(message: str):
+def fail(message: str) -> None:
     raise RuntimeError(message)
 
 
 def branch_for_status(status: str) -> str:
-    """Map a verified status such as V13.3 IN DEVELOPMENT to dev-v13-3."""
     match = re.search(r"\bV(\d+)\.(\d+)\b", status, re.I)
     if not match:
         fail(f"cannot derive development branch from roadmap status: {status!r}")
@@ -111,10 +115,10 @@ def parse_progress(text: str) -> Progress:
         fail("ROADMAP percentage badge disagrees with checklist")
     status = urllib.parse.unquote(status_badge.group(1)).strip()
 
-    # SWIR Progress SVG Pro v1 (2026-09-18 correction) retires legacy
-    # character meters. Numeric table + checklist remain the progress authority.
-    if re.search(r"(?m)^[█░]{8,}\s+[0-9.]+%$", text):
-        fail("legacy character progress meter must not appear in active ROADMAP dashboard")
+    if LEGACY_CHAR_RE.search(text) or LEGACY_BRACKET_RE.search(text):
+        fail("legacy character/ASCII progress meter must not appear in active ROADMAP")
+    if TEXTUAL_METER_RE.search(text):
+        fail("retired textual progress meter fallback must not appear in active ROADMAP")
     return Progress(completed, remaining, total, percent, status)
 
 
@@ -130,7 +134,7 @@ def svg_card(p: Progress) -> str:
     fill = width(TRACK_CARD, p)
     return f'''<svg xmlns="http://www.w3.org/2000/svg" width="760" height="220" viewBox="0 0 760 220" role="img" aria-labelledby="title desc">
   <title id="title">{esc(PROJECT)} progress — {p.percent:.1f}%</title>
-  <desc id="desc">{esc(p.fallback)}</desc>
+  <desc id="desc">{esc(p.accessible_summary)}</desc>
   <defs>
     <linearGradient id="swirProgress" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0088FF"/><stop offset="1" stop-color="#62E5FF"/></linearGradient>
     <filter id="softGlow" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -153,7 +157,7 @@ def svg_mini(p: Progress) -> str:
     fill = width(TRACK_MINI, p)
     return f'''<svg xmlns="http://www.w3.org/2000/svg" width="700" height="92" viewBox="0 0 700 92" role="img" aria-labelledby="title desc">
   <title id="title">{esc(PROJECT)} roadmap — {p.percent:.1f}%</title>
-  <desc id="desc">{esc(p.fallback)}</desc>
+  <desc id="desc">{esc(p.accessible_summary)}</desc>
   <defs><linearGradient id="swirMini" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0088FF"/><stop offset="1" stop-color="#62E5FF"/></linearGradient></defs>
   <rect x="1" y="1" width="698" height="90" rx="14" fill="#02050A" stroke="#16394C" stroke-width="2"/>
   <text x="18" y="28" fill="#62E5FF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="14" font-weight="700">{esc(SCOPE)}</text>
@@ -188,16 +192,32 @@ def svg_template() -> str:
 
 def validate_svg(name: str, content: str, max_width: float | None = None) -> None:
     try:
-        ET.fromstring(content)
+        root = ET.fromstring(content)
     except ET.ParseError as exc:
         fail(f"{name} is not valid XML: {exc}")
+    if not root.tag.endswith("svg"):
+        fail(f"{name} root is not svg")
     for color in ("#02050A", "#07111C", "#0088FF", "#62E5FF"):
         if color not in content:
             fail(f"{name} does not contain required SWIR color {color}")
+    if "<title" not in content or "<desc" not in content:
+        fail(f"{name} must include accessible title and description")
     if max_width is not None:
         widths = [float(x) for x in re.findall(r'<rect x="(?:18|32)" y="(?:42|94)" width="([0-9.]+)"', content)]
         if not widths or max(widths) > max_width + 1e-9:
             fail(f"{name} progress geometry exceeds its track")
+
+
+def replace_progress_block(text: str, image_name: str, block: str, next_anchor: str) -> str:
+    # Replace the whole maintained block so older textual <sub> fallbacks disappear.
+    pattern = rf"\n*{re.escape(MARKER)}\n.*?(?=\n{re.escape(next_anchor)})"
+    cleaned, count = re.subn(pattern, "\n\n", text, count=1, flags=re.S)
+    if count == 0 and image_name in cleaned:
+        fail(f"found {image_name} outside the protected progress block")
+    anchor = "\n" + next_anchor
+    if anchor not in cleaned:
+        fail(f"progress embed anchor missing: {next_anchor}")
+    return cleaned.replace(anchor, "\n" + block + "\n" + next_anchor, 1)
 
 
 def embed_docs(p: Progress) -> bool:
@@ -207,20 +227,13 @@ def embed_docs(p: Progress) -> bool:
         fail("cannot embed progress mini without protected ROADMAP marker")
     mini_block = (
         f"{MARKER}\n"
-        '<p align="center"><img src="assets/readme/progress-mini.svg" alt="SWIR roadmap progress mini" width="700"></p>\n'
-        f'<p align="center"><sub>{p.fallback}</sub></p>\n'
+        '<p align="center"><img src="assets/readme/progress-mini.svg" alt="SWIR roadmap progress — authoritative values in the table below" width="700"></p>\n'
     )
-    roadmap = re.sub(
-        r"\n*<!-- SWIR-PROGRESS-SVG-PRO:v1 -->\n<p align=\"center\"><img src=\"assets/readme/progress-mini\.svg\".*?</p>\n<p align=\"center\"><sub>.*?</sub></p>\n*",
-        "\n\n", roadmap, flags=re.S,
+    roadmap_new = replace_progress_block(
+        roadmap, "assets/readme/progress-mini.svg", mini_block, "## 📊 Overall progress"
     )
-    anchor = "\n\n## 📊 Overall progress"
-    if anchor not in roadmap:
-        fail("ROADMAP Overall progress anchor missing")
-    roadmap = roadmap.replace(anchor, "\n\n" + mini_block + "\n## 📊 Overall progress", 1)
-    original = ROADMAP.read_text(encoding="utf-8")
-    if roadmap != original:
-        ROADMAP.write_text(roadmap, encoding="utf-8")
+    if roadmap_new != roadmap:
+        ROADMAP.write_text(roadmap_new, encoding="utf-8")
         changed = True
 
     readme = README.read_text(encoding="utf-8")
@@ -229,43 +242,29 @@ def embed_docs(p: Progress) -> bool:
     card_block = (
         f"{MARKER}\n"
         '<p align="center"><img src="assets/readme/progress-card.svg" alt="SWIR project roadmap progress" width="760"></p>\n'
-        f'<p align="center"><sub>{p.fallback}</sub></p>\n'
     )
-    readme = re.sub(
-        r"\n*<!-- SWIR-PROGRESS-SVG-PRO:v1 -->\n<p align=\"center\"><img src=\"assets/readme/progress-card\.svg\".*?</p>\n<p align=\"center\"><sub>.*?</sub></p>\n*",
-        "\n\n", readme, flags=re.S,
+    readme_new = replace_progress_block(
+        readme, "assets/readme/progress-card.svg", card_block, "---\n\n## 📌 Project Status"
     )
-    marker = "\n---\n\n## 📌 Project Status"
-    if marker not in readme:
-        fail("README Project Status anchor missing")
-    readme = readme.replace(marker, "\n\n" + card_block + "\n---\n\n## 📌 Project Status", 1)
     badge_status = urllib.parse.quote(p.status.title(), safe="")
     roadmap_badge = f"[![Roadmap](https://img.shields.io/badge/Roadmap-{p.percent:.1f}%25%20{badge_status}-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)"
-    readme = re.sub(r"(?m)^\[!\[Roadmap\]\([^\n]+\]\(ROADMAP\.md\)$", roadmap_badge, readme, count=1)
+    readme_new = re.sub(r"(?m)^\[!\[Roadmap\]\([^\n]+\)\]\(ROADMAP\.md\)$", roadmap_badge, readme_new, count=1)
     branch = branch_for_status(p.status)
-    readme = re.sub(
+    readme_new = re.sub(
         r"\| Development milestone \| \*\*.*?\*\* on `dev-v[^`]+` \|",
-        f"| Development milestone | **{p.status}** on `{branch}` |",
-        readme,
-        count=1,
+        f"| Development milestone | **{p.status}** on `{branch}` |", readme_new, count=1,
     )
-    readme = re.sub(
+    readme_new = re.sub(
         r"\| Roadmap \| \*\*\d+ / \d+[^\n]*\|",
         f"| Roadmap | **{p.completed} / {p.total} completed ({p.percent:.1f}%)** — authoritative `ROADMAP.md` scope |",
-        readme,
-        count=1,
+        readme_new, count=1,
     )
-    readme = re.sub(
-        r"(?m)^The authoritative roadmap is \[`ROADMAP\.md`\]\(ROADMAP\.md\)\..*$",
-        f"The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **{p.completed} / {p.total} ({p.percent:.1f}%) — {p.status}**. Release readiness is tracked separately by exact-candidate Windows qualification gates.",
-        readme,
-        count=1,
-    )
-    if "## 🔎 Search Keywords" not in readme:
+    if "## 🔎 Search Keywords" not in readme_new:
         fail("README PRO v2 Search Keywords section is missing")
-    before = README.read_text(encoding="utf-8")
-    if readme != before:
-        README.write_text(readme, encoding="utf-8")
+    if TEXTUAL_METER_RE.search(readme_new) or TEXTUAL_METER_RE.search(roadmap_new):
+        fail("retired textual progress fallback survived SVG-only embedding")
+    if readme_new != readme:
+        README.write_text(readme_new, encoding="utf-8")
         changed = True
     return changed
 
@@ -299,14 +298,20 @@ def check_all() -> None:
     readme = README.read_text(encoding="utf-8")
     if roadmap.count(MARKER) != 1 or readme.count(MARKER) != 1:
         fail("progress marker must occur exactly once in both ROADMAP and README")
-    if 'assets/readme/progress-mini.svg' not in roadmap or p.fallback not in roadmap:
-        fail("ROADMAP mini embed or textual fallback is stale")
-    if 'assets/readme/progress-card.svg' not in readme or p.fallback not in readme:
-        fail("README card embed or textual fallback is stale")
+    if roadmap.count('assets/readme/progress-mini.svg') != 1:
+        fail("ROADMAP must embed exactly one progress-mini.svg")
+    if readme.count('assets/readme/progress-card.svg') != 1:
+        fail("README must embed exactly one progress-card.svg")
+    if 'assets/readme/progress-card.svg' in roadmap or 'assets/readme/progress-mini.svg' in readme:
+        fail("card/mini duplicated across documentation scopes")
+    if 'progress-template.svg' in roadmap or 'progress-template.svg' in readme:
+        fail("progress-template.svg must not be embedded as project data")
+    if TEXTUAL_METER_RE.search(roadmap) or TEXTUAL_METER_RE.search(readme):
+        fail("retired textual progress meter fallback returned to maintained docs")
+    if LEGACY_CHAR_RE.search(roadmap) or LEGACY_CHAR_RE.search(readme) or LEGACY_BRACKET_RE.search(roadmap) or LEGACY_BRACKET_RE.search(readme):
+        fail("legacy character/ASCII progress meter returned to maintained docs")
     if README_MARKER not in readme or "## 🔎 Search Keywords" not in readme:
         fail("README PRO v2 marker/Search Keywords must be preserved")
-    if re.search(r"(?m)^[█░]{8,}\s+[0-9.]+%$", roadmap):
-        fail("legacy character progress meter returned to ROADMAP")
     expected_branch = branch_for_status(p.status)
     if f"**{p.status}** on `{expected_branch}`" not in readme:
         fail("README milestone branch disagrees with roadmap status")

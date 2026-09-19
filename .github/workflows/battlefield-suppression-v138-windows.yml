@@ -1,0 +1,238 @@
+name: Battlefield Suppression v13.8 Windows Qualification Gate
+
+on:
+  push:
+    branches: ['dev-v13-8']
+    paths:
+      - '.v138-windows-gate-trigger'
+      - 'Assets/Scripts/BattlefieldSuppressionMoraleV138.cs'
+      - 'Assets/Scripts/BattlefieldSuppressionMoraleCISmokeProbe.cs'
+      - 'Assets/Scripts/EnemyTank.cs'
+      - 'Assets/Scripts/Projectile.cs'
+      - 'Assets/Scripts/RuntimeBattleRegistry.cs'
+      - 'Assets/Scripts/BattlefieldCohesionV133.cs'
+      - 'Assets/Scripts/LateRoundPerformanceV137.cs'
+      - 'Assets/Scripts/DemoCISoakProbe.cs'
+      - 'Assets/Editor/CIBuild.cs'
+      - '.github/scripts/package_v138_suppression_morale.py'
+      - '.github/scripts/test_package_v138_suppression_morale.py'
+      - '.github/workflows/battlefield-suppression-v138-windows.yml'
+      - 'Tools/verify_v138_suppression_morale.py'
+      - 'Tools/verify_csharp_type_uniqueness.py'
+      - 'Tools/verify_production_audio_assets.py'
+      - 'Tools/verify_unity_ci_bootstrap.py'
+      - 'Tools/generate_progress_svgs.py'
+      - 'Tools/swir_visual_report_guard.py'
+      - 'assets/readme/progress-card.svg'
+      - 'assets/readme/progress-mini.svg'
+      - 'assets/readme/progress-template.svg'
+      - 'CHANGELOG_v13.8.md'
+      - 'README.md'
+      - 'ROADMAP.md'
+      - 'VERSION'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UNITY_VERSION: 6000.3.17f1
+  CANDIDATE_ZIP: TankRevivalOverdrive-v13.8-suppression-morale-Windows-x64.zip
+  PACKAGE_DIR: tro-v138-package
+
+jobs:
+  source-contracts:
+    name: Verify v13.8 suppression, authority, progress and package contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      qualification_needed: ${{ steps.roadmap-state.outputs.qualification_needed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact source/package contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "${GITHUB_REF_NAME}" = 'dev-v13-8'
+          test "$(cat VERSION)" = 'v13.8.0-dev'
+          python -m py_compile .github/scripts/package_v138_suppression_morale.py .github/scripts/test_package_v138_suppression_morale.py Tools/verify_v138_suppression_morale.py Tools/verify_csharp_type_uniqueness.py Tools/verify_production_audio_assets.py Tools/verify_unity_ci_bootstrap.py Tools/generate_progress_svgs.py Tools/swir_visual_report_guard.py
+          python .github/scripts/test_package_v138_suppression_morale.py
+          python Tools/verify_v138_suppression_morale.py
+          python Tools/verify_csharp_type_uniqueness.py
+          python Tools/verify_production_audio_assets.py
+          python Tools/verify_unity_ci_bootstrap.py
+          python Tools/generate_progress_svgs.py --check
+          python Tools/swir_visual_report_guard.py --check
+          git diff --check
+      - name: Verify clean qualification policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflow='.github/workflows/battlefield-suppression-v138-windows.yml'
+          grep -Fq 'Enforce clean Unity qualification state' "$workflow"
+          cache_action='actions/'"cache@"
+          if grep -Fq "uses: ${cache_action}" "$workflow"; then echo 'Qualification must not use Unity Library caches.' >&2; exit 1; fi
+          restore_key='restore'"-keys:"
+          if grep -Fq "$restore_key" "$workflow"; then echo 'Cross-candidate restore keys are forbidden.' >&2; exit 1; fi
+      - name: Verify open v13.8 roadmap truth
+        id: roadmap-state
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import os,re
+          s=Path('ROADMAP.md').read_text(encoding='utf-8'); r=Path('README.md').read_text(encoding='utf-8')
+          done=len(re.findall(r'^- \[x\] ',s,re.M)); open_=len(re.findall(r'^- \[ \] ',s,re.M)); total=done+open_
+          if (done,open_,total)!=(447,8,455):
+              raise SystemExit(f'v13.8 exact-candidate gate requires open roadmap state 447/455; found {done}/{total} with {open_} open')
+          assert '| **447** | **8** | **455** | **98.2%** |' in s
+          assert 'V13.8%20IN%20DEVELOPMENT' in s
+          assert s.count('assets/readme/progress-mini.svg')==1 and r.count('assets/readme/progress-card.svg')==1
+          assert '<sub>Roadmap progress:' not in s and '<sub>Roadmap progress:' not in r
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out: out.write('qualification_needed=true\n')
+          print('qualification_needed=true')
+          PY
+
+  build-candidate:
+    name: Build and package one exact v13.8 Windows x64 candidate
+    needs: source-contracts
+    if: needs.source-contracts.outputs.qualification_needed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$UNITY_LICENSE"; test -n "$UNITY_EMAIL"; test -n "$UNITY_PASSWORD"
+      - name: Enforce clean Unity qualification state
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf Library Temp obj
+          test ! -e Library; test ! -e Temp
+          echo 'Exact v13.8 qualification starts from a clean Unity import state.'
+      - name: Build development player once
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildWindows
+          allowDirtyBuild: true
+      - name: Discover, stage and package exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python .github/scripts/package_v138_suppression_morale.py --build-root build --output-dir "${RUNNER_TEMP}/${PACKAGE_DIR}" --candidate-sha "${GITHUB_SHA}" --commit-sha "${GITHUB_SHA}" --unity-version "${UNITY_VERSION}" --version-file VERSION --zip-name "${CANDIDATE_ZIP}" --diagnostics-path "${GITHUB_WORKSPACE}/V138_SUPPRESSION_MORALE_BUILD_TREE.txt"
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v13.8-suppression-morale-build-discovery
+          path: V138_SUPPRESSION_MORALE_BUILD_TREE.txt
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload exact candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v13.8-suppression-morale-Windows-x64
+          path: |
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/${{ env.CANDIDATE_ZIP }}
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/V138_SUPPRESSION_MORALE_SHA256.txt
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/V138_SUPPRESSION_MORALE_PROVENANCE.json
+          if-no-files-found: error
+          retention-days: 14
+
+  packaged-exe-regression:
+    name: Run v13.8 suppression plus v13.7-v13.3 and 80/90/100 regression on the same EXE
+    needs: [source-contracts, build-candidate]
+    if: needs.source-contracts.outputs.qualification_needed == 'true' && needs.build-candidate.result == 'success'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v13.8-suppression-morale-Windows-x64
+          path: candidate
+      - name: Verify exact package provenance
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location candidate
+          $zip='${{ env.CANDIDATE_ZIP }}'; $expected=((Get-Content V138_SUPPRESSION_MORALE_SHA256.txt -Raw).Trim() -split '\s+')[0].ToLowerInvariant(); $actual=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if($actual -ne $expected){throw 'candidate ZIP digest mismatch'}
+          $p=Get-Content V138_SUPPRESSION_MORALE_PROVENANCE.json -Raw|ConvertFrom-Json
+          if($p.candidate_sha -ne '${{ github.sha }}' -or $p.commit_sha -ne '${{ github.sha }}' -or $p.sha256 -ne $actual -or $p.version -ne 'v13.8.0-dev'){throw 'candidate provenance mismatch'}
+          Expand-Archive $zip -DestinationPath runtime -Force
+          if(!(Test-Path runtime/TankRevivalOverdrive.exe) -or !(Test-Path runtime/TankRevivalOverdrive_Data)){throw 'packaged Unity runtime incomplete'}
+          $info=Get-Content runtime/V138_SUPPRESSION_MORALE_BUILD.txt -Raw; if($info -notmatch 'candidate_sha=${{ github.sha }}'){throw 'runtime attribution mismatch'}
+          Write-Host "Verified exact v13.8 candidate SHA256: $actual"
+      - name: Run exact single-binary qualification matrix
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location candidate/runtime
+          $blocking='Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|UnityException|TargetInvocationException'
+          function Invoke-Smoke([string]$Name,[string]$Flag,[string]$Pass,[string]$Fail,[string]$Log,[int]$TimeoutMs){
+            Remove-Item $Pass,$Fail,$Log -ErrorAction SilentlyContinue
+            $p=Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics',$Flag,'-logFile',$Log -PassThru
+            if(!$p.WaitForExit($TimeoutMs)){Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; throw "$Name timed out"}
+            if(Test-Path $Fail){Get-Content $Fail; if(Test-Path $Log){Get-Content $Log -Tail 350}; throw "$Name emitted FAIL"}
+            if(!(Test-Path $Pass)){if(Test-Path $Log){Get-Content $Log -Tail 350}; throw "$Name exited without PASS (exit=$($p.ExitCode))"}
+            if($p.ExitCode -ne 0){throw "$Name non-zero exit $($p.ExitCode)"}
+            if(Test-Path $Log){if(Select-String -Path $Log -Pattern $blocking -Quiet){Get-Content $Log -Tail 400; throw "$Name blocking exception signature"}}
+            Get-Content $Pass; Write-Host "$Name PASS"
+          }
+          Invoke-Smoke 'production authored-audio presentation preflight' '-production-presentation-smoke' 'PRODUCTION_PRESENTATION_PASS.txt' 'PRODUCTION_PRESENTATION_FAIL.txt' 'V138ProductionAudio.log' 80000
+          Invoke-Smoke 'v13.8 suppression and morale' '-tr-v138-smoke' 'V13_8_SUPPRESSION_MORALE_OK.txt' 'V13_8_SUPPRESSION_MORALE_FAIL.txt' 'V138Player.log' 90000
+          Invoke-Smoke 'v13.7 late-round performance regression' '-tr-v137-smoke' 'V13_7_LATE_ROUND_PERFORMANCE_OK.txt' 'V13_7_LATE_ROUND_PERFORMANCE_FAIL.txt' 'V137Regression.log' 90000
+          Invoke-Smoke 'v13.6 sensor fusion regression' '-tr-v136-smoke' 'V13_6_SENSOR_FUSION_OK.txt' 'V13_6_SENSOR_FUSION_FAIL.txt' 'V136Regression.log' 90000
+          Invoke-Smoke 'v13.5 battlefield weather regression' '-tr-v135-smoke' 'V13_5_BATTLEFIELD_WEATHER_OK.txt' 'V13_5_BATTLEFIELD_WEATHER_FAIL.txt' 'V135Regression.log' 90000
+          Invoke-Smoke 'v13.4 tactical terrain regression' '-tr-v134-smoke' 'V13_4_TACTICAL_TERRAIN_OK.txt' 'V13_4_TACTICAL_TERRAIN_FAIL.txt' 'V134Regression.log' 90000
+          Invoke-Smoke 'v13.3 battlefield cohesion regression' '-tr-v133-smoke' 'V13_3_BATTLEFIELD_COHESION_OK.txt' 'V13_3_BATTLEFIELD_COHESION_FAIL.txt' 'V133Regression.log' 80000
+          Invoke-Smoke 'round 80/90/100 soak regression' '-demo-ci-soak' 'DEMO_SOAK_PASS.txt' 'DEMO_SOAK_FAIL.txt' 'V138Soak.log' 110000
+          'v13.8 exact-candidate qualification matrix PASS' | Set-Content V13_8_WINDOWS_MATRIX_OK.txt
+      - name: Upload runtime diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v13.8-suppression-morale-diagnostics
+          path: |
+            candidate/runtime/PRODUCTION_PRESENTATION_PASS.txt
+            candidate/runtime/PRODUCTION_PRESENTATION_FAIL.txt
+            candidate/runtime/V13_8_SUPPRESSION_MORALE_OK.txt
+            candidate/runtime/V13_8_SUPPRESSION_MORALE_FAIL.txt
+            candidate/runtime/V13_7_LATE_ROUND_PERFORMANCE_OK.txt
+            candidate/runtime/V13_6_SENSOR_FUSION_OK.txt
+            candidate/runtime/V13_5_BATTLEFIELD_WEATHER_OK.txt
+            candidate/runtime/V13_4_TACTICAL_TERRAIN_OK.txt
+            candidate/runtime/V13_3_BATTLEFIELD_COHESION_OK.txt
+            candidate/runtime/DEMO_SOAK_PASS.txt
+            candidate/runtime/V13_8_WINDOWS_MATRIX_OK.txt
+            candidate/runtime/V138ProductionAudio.log
+            candidate/runtime/V138Player.log
+            candidate/runtime/V137Regression.log
+            candidate/runtime/V136Regression.log
+            candidate/runtime/V135Regression.log
+            candidate/runtime/V134Regression.log
+            candidate/runtime/V133Regression.log
+            candidate/runtime/V138Soak.log
+          if-no-files-found: ignore
+          retention-days: 14
