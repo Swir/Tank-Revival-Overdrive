@@ -22,7 +22,6 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 <!-- SWIR-PROGRESS-SVG-PRO:v1 -->
 <p align="center"><img src="assets/readme/progress-card.svg" alt="SWIR project roadmap progress" width="760"></p>
-<p align="center"><sub>Roadmap progress: 447 / 455 completed (98.2%) — V13.8 IN DEVELOPMENT. Release readiness is tracked separately by Windows qualification gates.</sub></p>
 
 ---
 

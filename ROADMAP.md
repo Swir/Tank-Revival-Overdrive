@@ -9,9 +9,9 @@
   <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.8%20IN%20DEVELOPMENT-blue?style=for-the-badge">
 </p>
 
+
 <!-- SWIR-PROGRESS-SVG-PRO:v1 -->
-<p align="center"><img src="assets/readme/progress-mini.svg" alt="SWIR roadmap progress mini" width="700"></p>
-<p align="center"><sub>Roadmap progress: 447 / 455 completed (98.2%) — V13.8 IN DEVELOPMENT. Release readiness is tracked separately by Windows qualification gates.</sub></p>
+<p align="center"><img src="assets/readme/progress-mini.svg" alt="SWIR roadmap progress — authoritative values in the table below" width="700"></p>
 
 ## 📊 Overall progress
 
