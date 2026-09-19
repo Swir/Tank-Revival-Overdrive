@@ -6,11 +6,13 @@ on:
     paths:
       - 'VERSION'
       - 'Assets/Scripts/BattlefieldFireSupportV139.cs'
+      - 'Assets/Scripts/BattlefieldFireSupportCISmokeProbe.cs'
       - 'Assets/Scripts/BattlefieldSuppressionMoraleV138.cs'
       - 'Assets/Scripts/BattlefieldCohesionV133.cs'
+      - 'Assets/Scripts/BattlefieldSensorFusionV136.cs'
       - 'Assets/Scripts/TacticalTerrainV134.cs'
       - 'Assets/Scripts/RuntimeBattleRegistry.cs'
-      - 'Assets/Scripts/ProjectilePool.cs'
+      - 'Assets/Scripts/TankGame.cs'
       - 'Tools/verify_v139_fire_support.py'
       - 'Tools/verify_csharp_type_uniqueness.py'
       - 'Tools/generate_progress_svgs.py'
@@ -53,9 +55,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -Eq '\.Damage\(|Destroy\(\s*enemy|FindObjectsByType<EnemyTank>|Physics2D\.Overlap' Assets/Scripts/BattlefieldFireSupportV139.cs
-          grep -Fq 'ProjectilePool.Spawn' Assets/Scripts/BattlefieldFireSupportV139.cs
+          ! grep -Eq '\.Damage\(|Destroy\(\s*enemy|FindObjectsByType<EnemyTank>|Physics2D\.Overlap|ProjectilePool\.Spawn' Assets/Scripts/BattlefieldFireSupportV139.cs
+          grep -Fq 'StrikeIntentPublished' Assets/Scripts/BattlefieldFireSupportV139.cs
+          grep -Fq '_game.SpawnProjectile(' Assets/Scripts/BattlefieldFireSupportV139.cs
+          grep -Fq 'BattlefieldSensorFusionDirector' Assets/Scripts/BattlefieldFireSupportV139.cs
           grep -Fq 'RuntimeBattleRegistry.EnemySnapshot' Assets/Scripts/BattlefieldFireSupportV139.cs
           grep -Fq '| **455** | **8** | **463** | **98.3%** |' ROADMAP.md
           test "$(grep -c '^- \[ \] ' ROADMAP.md)" -eq 8
-          echo 'v13.9 source qualification kept roadmap open and canonical authorities intact.'
+          echo 'v13.9 source qualification kept roadmap open and intent/projectile authorities separated.'

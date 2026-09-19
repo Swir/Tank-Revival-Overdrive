@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace TankRevival
@@ -21,6 +22,14 @@ namespace TankRevival
         Boss = 6
     }
 
+    public enum FireSupportReactionV139
+    {
+        Hold = 0,
+        Brace = 1,
+        Disperse = 2,
+        Evade = 3
+    }
+
     public readonly struct FireSupportProfileV139
     {
         public readonly int Round;
@@ -39,10 +48,48 @@ namespace TankRevival
         }
     }
 
+    public readonly struct FireSupportStrikeIntentV139
+    {
+        public readonly Vector2 Origin;
+        public readonly Vector2 Aim;
+        public readonly Vector2 Direction;
+        public readonly int Damage;
+        public readonly float Speed;
+        public readonly AmmoType Ammo;
+        public readonly FireSupportRoleV139 Role;
+        public readonly FireSupportReactionV139 Reaction;
+        public readonly int StrikeOrdinal;
+        public readonly int RoundSignature;
+
+        public FireSupportStrikeIntentV139(
+            Vector2 origin,
+            Vector2 aim,
+            Vector2 direction,
+            int damage,
+            float speed,
+            AmmoType ammo,
+            FireSupportRoleV139 role,
+            FireSupportReactionV139 reaction,
+            int strikeOrdinal,
+            int roundSignature)
+        {
+            Origin = origin;
+            Aim = aim;
+            Direction = direction;
+            Damage = damage;
+            Speed = speed;
+            Ammo = ammo;
+            Role = role;
+            Reaction = reaction;
+            StrikeOrdinal = strikeOrdinal;
+            RoundSignature = roundSignature;
+        }
+    }
+
     /// <summary>
     /// Pure deterministic v13.9 command-window model. It owns no Health, spawn, enemy movement,
-    /// terrain damage or projectile resolution authority. Runtime support shots are routed through
-    /// the canonical ProjectilePool/Projectile path so existing armor, cover and suppression rules win.
+    /// terrain damage or projectile resolution authority. Runtime support intent is executed only
+    /// through the canonical TankGame projectile path so existing armor, cover and suppression rules win.
     /// </summary>
     public static class BattlefieldFireSupportModelV139
     {
@@ -59,14 +106,18 @@ namespace TankRevival
         public const float StrikeCadenceSeconds = 0.82f;
         public const float MinCooldownSeconds = 15f;
         public const float MaxCooldownSeconds = 22f;
+        public const float MinContactConfidence = BattlefieldSensorFusionPlannerV136.DetectionThreshold;
 
         public static bool ConfigurationValid =>
             PlannedRounds == 100 && MaxTrackedHostiles == BattlefieldSuppressionModelV138.MaxTrackedEnemies &&
-            MaxTelegraphs > 0 && MaxTelegraphs <= 8 && MaxStrikes > 0 && MaxStrikes <= MaxTelegraphs &&
+            MaxTrackedHostiles == BattlefieldSensorFusionPlannerV136.MaxTrackedContacts &&
+            MaxTelegraphs > 0 && MaxTelegraphs <= BattlefieldSensorFusionPlannerV136.MaxWorldMarkers &&
+            MaxStrikes > 0 && MaxStrikes <= MaxTelegraphs &&
             SampleCadenceSeconds >= 0.20f && SampleCadenceSeconds <= 0.50f &&
             ReadyPressure >= 25f && ReadyPressure <= 45f && ChargeSecondsAtFullPressure >= 3.5f &&
             ActiveSeconds > 0f && ActiveSeconds <= 6f && StrikeCadenceSeconds >= 0.65f &&
-            MinCooldownSeconds >= 12f && MaxCooldownSeconds <= 24f && MinCooldownSeconds < MaxCooldownSeconds;
+            MinCooldownSeconds >= 12f && MaxCooldownSeconds <= 24f && MinCooldownSeconds < MaxCooldownSeconds &&
+            MinContactConfidence >= 0.20f && MinContactConfidence <= 0.40f;
 
         public static FireSupportProfileV139 ProfileForRound(int requestedRound)
         {
@@ -107,6 +158,20 @@ namespace TankRevival
             }
         }
 
+        public static FireSupportReactionV139 ReactionFor(EnemyKind kind)
+        {
+            switch (RoleFor(kind))
+            {
+                case FireSupportRoleV139.Scout: return FireSupportReactionV139.Evade;
+                case FireSupportRoleV139.Bruiser: return FireSupportReactionV139.Brace;
+                case FireSupportRoleV139.Sniper: return FireSupportReactionV139.Disperse;
+                case FireSupportRoleV139.Elite: return FireSupportReactionV139.Evade;
+                case FireSupportRoleV139.Officer: return FireSupportReactionV139.Hold;
+                case FireSupportRoleV139.Boss: return FireSupportReactionV139.Brace;
+                default: return FireSupportReactionV139.Disperse;
+            }
+        }
+
         public static float ClassPriority(EnemyKind kind)
         {
             switch (RoleFor(kind))
@@ -134,20 +199,37 @@ namespace TankRevival
             }
         }
 
+        public static float SensorOpportunity(SensorContactStateV136 state, float confidence)
+        {
+            float c = Mathf.Clamp01(confidence);
+            switch (state)
+            {
+                case SensorContactStateV136.Verified: return Mathf.Lerp(1.12f, 1.22f, c);
+                case SensorContactStateV136.Tracked: return Mathf.Lerp(0.98f, 1.08f, c);
+                case SensorContactStateV136.Detected: return Mathf.Lerp(0.82f, 0.96f, c);
+                default: return 0f;
+            }
+        }
+
         public static float TargetScore(
             EnemyKind kind,
             float pressure,
             float cohesionSpreadScale,
             float terrainOpportunity,
+            SensorContactStateV136 contactState,
+            float contactConfidence,
             int slot,
             FireSupportProfileV139 profile)
         {
+            float sensor = SensorOpportunity(contactState, contactConfidence);
+            if (sensor <= 0f) return float.NegativeInfinity;
+
             float suppression = Mathf.Clamp01(pressure / BattlefieldSuppressionModelV138.MaxPressure);
             float cohesion = Mathf.Clamp01((cohesionSpreadScale - 1f) / 0.50f);
             float classBias = ClassPriority(kind);
             float tieBreak = (Mathf.Clamp(slot, 0, MaxTrackedHostiles - 1) + 1) * 0.0005f;
             return (0.42f + suppression * 0.38f + cohesion * 0.20f) * classBias *
-                Mathf.Clamp(terrainOpportunity, 0.55f, 1.20f) * profile.PriorityBias + tieBreak;
+                Mathf.Clamp(terrainOpportunity, 0.55f, 1.20f) * sensor * profile.PriorityBias + tieBreak;
         }
 
         public static Vector2 AimOffset(FireSupportRoleV139 role, int strikeOrdinal, int roundSignature)
@@ -158,17 +240,36 @@ namespace TankRevival
             float scale = role == FireSupportRoleV139.Scout ? 1.30f : role == FireSupportRoleV139.Boss ? 0.55f : 1f;
             return new Vector2(x, y) * scale;
         }
+
+        public static FireSupportStrikeIntentV139 BuildIntent(
+            EnemyKind kind,
+            Vector2 targetPosition,
+            int strikeOrdinal,
+            int round,
+            int roundSignature)
+        {
+            FireSupportRoleV139 role = RoleFor(kind);
+            FireSupportReactionV139 reaction = ReactionFor(kind);
+            Vector2 aim = targetPosition + AimOffset(role, strikeOrdinal, roundSignature);
+            Vector2 origin = aim + new Vector2((strikeOrdinal & 1) == 0 ? -0.45f : 0.45f, 2.6f);
+            Vector2 direction = (aim - origin).normalized;
+            int damage = Mathf.Clamp(round, 1, PlannedRounds) >= 70 ? 2 : 1;
+            return new FireSupportStrikeIntentV139(
+                origin, aim, direction, damage, 11.5f, AmmoType.Explosive,
+                role, reaction, strikeOrdinal, roundSignature);
+        }
     }
 
     /// <summary>
     /// Earned player fire-support command. Suppression builds readiness; F commits a short bounded
-    /// support window. Targeting consumes existing registry/cohesion/terrain/morale data and every
-    /// strike is a normal pooled player projectile, preserving canonical collision and damage authority.
+    /// support window. This director publishes immutable strike intent only. It never creates a
+    /// projectile, damages an actor or moves gameplay rigidbodies.
     /// </summary>
     [DefaultExecutionOrder(-8860)]
     public sealed class BattlefieldFireSupportDirector : MonoBehaviour
     {
         public static BattlefieldFireSupportDirector Instance { get; private set; }
+        public static event Action<FireSupportStrikeIntentV139> StrikeIntentPublished;
 
         private TankGame _game;
         private FireSupportStateV139 _state = FireSupportStateV139.Building;
@@ -181,6 +282,8 @@ namespace TankRevival
         private int _strikesUsed;
         private int _commandsActivated;
         private int _targetsEvaluated;
+        private int _intentsPublished;
+        private FireSupportReactionV139 _lastReaction = FireSupportReactionV139.Hold;
         private GUIStyle _hudStyle;
 
         public FireSupportStateV139 State => _state;
@@ -188,6 +291,8 @@ namespace TankRevival
         public int StrikesUsed => _strikesUsed;
         public int CommandsActivated => _commandsActivated;
         public int TargetsEvaluated => _targetsEvaluated;
+        public int IntentsPublished => _intentsPublished;
+        public FireSupportReactionV139 LastReaction => _lastReaction;
         public FireSupportProfileV139 CurrentProfile => _profile;
         public string HudText => BuildHudText();
 
@@ -211,6 +316,8 @@ namespace TankRevival
             DontDestroyOnLoad(gameObject);
             _game = FindAnyObjectByType<TankGame>();
             BattlefieldSuppressionMoraleDirector.EnsureInstalled();
+            BattlefieldSensorFusionDirector.EnsureInstalled();
+            BattlefieldFireSupportExecutionBridgeV139.EnsureInstalled();
             _nextSample = Time.unscaledTime;
         }
 
@@ -238,7 +345,7 @@ namespace TankRevival
                 }
                 if (now >= _nextStrike)
                 {
-                    ExecuteStrike(_strikesUsed);
+                    PublishStrikeIntent(_strikesUsed);
                     _strikesUsed++;
                     _nextStrike = now + BattlefieldFireSupportModelV139.StrikeCadenceSeconds;
                 }
@@ -289,7 +396,8 @@ namespace TankRevival
         private void SampleReadiness()
         {
             BattlefieldSuppressionMoraleDirector morale = BattlefieldSuppressionMoraleDirector.Instance;
-            if (morale == null || morale.TrackedCount <= 0)
+            BattlefieldSensorFusionDirector sensor = BattlefieldSensorFusionDirector.Instance;
+            if (morale == null || sensor == null || morale.TrackedCount <= 0)
             {
                 _charge = BattlefieldFireSupportModelV139.AdvanceCharge(
                     _charge, 0f, 0f, BattlefieldFireSupportModelV139.SampleCadenceSeconds);
@@ -300,34 +408,37 @@ namespace TankRevival
             int count = Mathf.Min(enemies.Length, BattlefieldFireSupportModelV139.MaxTrackedHostiles);
             float cohesionStress = 0f;
             int live = 0;
+            int actionableContacts = 0;
             for (int i = 0; i < count; i++)
             {
                 EnemyTank enemy = enemies[i];
                 if (enemy == null || enemy.Health == null || enemy.Health.IsDead) continue;
                 cohesionStress += Mathf.Clamp01((BattlefieldCohesionDirector.SpreadScale(enemy) - 1f) / 0.50f);
                 live++;
+                if (sensor.TryGetContact(enemy, out SensorContactStateV136 state, out float confidence, out _) &&
+                    state >= SensorContactStateV136.Detected &&
+                    confidence >= BattlefieldFireSupportModelV139.MinContactConfidence)
+                {
+                    actionableContacts++;
+                }
             }
             cohesionStress = live > 0 ? cohesionStress / live : 0f;
             _charge = BattlefieldFireSupportModelV139.AdvanceCharge(
                 _charge, morale.GlobalPressure, cohesionStress, BattlefieldFireSupportModelV139.SampleCadenceSeconds);
-            if (_charge >= BattlefieldFireSupportModelV139.ReadyCharge && live > 0)
+            if (_charge >= BattlefieldFireSupportModelV139.ReadyCharge && actionableContacts > 0)
                 _state = FireSupportStateV139.Ready;
         }
 
-        private void ExecuteStrike(int ordinal)
+        private void PublishStrikeIntent(int ordinal)
         {
             EnemyTank target = SelectTarget(ordinal);
             if (target == null) return;
 
-            FireSupportRoleV139 role = BattlefieldFireSupportModelV139.RoleFor(target.Kind);
-            Vector2 aim = (Vector2)target.transform.position + BattlefieldFireSupportModelV139.AimOffset(role, ordinal, _profile.Signature);
-            Vector2 origin = aim + new Vector2((ordinal & 1) == 0 ? -0.45f : 0.45f, 2.6f);
-            Vector2 direction = (aim - origin).normalized;
-            int damage = _round >= 70 ? 2 : 1;
-
-            VisualFactory.RingPulse(aim, new Color(0.20f, 0.82f, 1f), 0.78f);
-            ProjectilePool.Spawn(origin, direction, Team.Player, damage, 11.5f,
-                AmmoDatabase.Color(AmmoType.Explosive), AmmoType.Explosive);
+            FireSupportStrikeIntentV139 intent = BattlefieldFireSupportModelV139.BuildIntent(
+                target.Kind, target.transform.position, ordinal, _round, _profile.Signature);
+            _lastReaction = intent.Reaction;
+            _intentsPublished++;
+            StrikeIntentPublished?.Invoke(intent);
         }
 
         private EnemyTank SelectTarget(int ordinal)
@@ -338,6 +449,7 @@ namespace TankRevival
             float bestScore = float.NegativeInfinity;
             TacticalTerrainDirector terrain = TacticalTerrainDirector.Instance;
             TacticalTerrainPlanV134 terrainPlan = terrain != null ? terrain.CurrentPlan : default;
+            BattlefieldSensorFusionDirector sensor = BattlefieldSensorFusionDirector.Instance;
             _targetsEvaluated = 0;
 
             for (int i = 0; i < count; i++)
@@ -345,6 +457,15 @@ namespace TankRevival
                 EnemyTank enemy = enemies[i];
                 if (enemy == null || enemy.Health == null || enemy.Health.IsDead) continue;
                 _targetsEvaluated++;
+
+                SensorContactStateV136 contactState = SensorContactStateV136.Unknown;
+                float contactConfidence = 0f;
+                if (sensor == null || !sensor.TryGetContact(enemy, out contactState, out contactConfidence, out _))
+                    continue;
+                if (contactState < SensorContactStateV136.Detected ||
+                    contactConfidence < BattlefieldFireSupportModelV139.MinContactConfidence)
+                    continue;
+
                 float pressure = 0f;
                 if (BattlefieldSuppressionMoraleDirector.TryIntent(enemy, out SuppressionIntentV138 suppression))
                     pressure = suppression.Pressure;
@@ -353,7 +474,8 @@ namespace TankRevival
                     ? BattlefieldFireSupportModelV139.TerrainOpportunity(terrainPlan, enemy.transform.position)
                     : 1f;
                 float score = BattlefieldFireSupportModelV139.TargetScore(
-                    enemy.Kind, pressure, cohesion, terrainOpportunity, i, _profile);
+                    enemy.Kind, pressure, cohesion, terrainOpportunity,
+                    contactState, contactConfidence, i, _profile);
                 score += ((ordinal + i + _profile.Signature) & 3) * 0.0001f;
                 if (score <= bestScore) continue;
                 bestScore = score;
@@ -374,8 +496,10 @@ namespace TankRevival
             switch (_state)
             {
                 case FireSupportStateV139.Ready: return "FIRE SUPPORT  READY [F]";
-                case FireSupportStateV139.Active: return "FIRE SUPPORT  ACTIVE  " + _strikesUsed + "/" + _profile.StrikeBudget;
-                case FireSupportStateV139.Cooldown: return "FIRE SUPPORT  COOLDOWN  " + Mathf.CeilToInt(Mathf.Max(0f, _stateUntil - Time.unscaledTime)) + "s";
+                case FireSupportStateV139.Active:
+                    return "FIRE SUPPORT  ACTIVE  " + _strikesUsed + "/" + _profile.StrikeBudget + "  " + _lastReaction.ToString().ToUpperInvariant();
+                case FireSupportStateV139.Cooldown:
+                    return "FIRE SUPPORT  COOLDOWN  " + Mathf.CeilToInt(Mathf.Max(0f, _stateUntil - Time.unscaledTime)) + "s";
                 default: return "FIRE SUPPORT  CHARGE  " + Mathf.RoundToInt(_charge * 100f) + "%";
             }
         }
@@ -393,7 +517,67 @@ namespace TankRevival
                 };
                 _hudStyle.normal.textColor = new Color(0.38f, 0.90f, 1f);
             }
-            GUI.Label(new Rect(Screen.width - 330f, 82f, 300f, 26f), BuildHudText(), _hudStyle);
+            GUI.Label(new Rect(Screen.width - 350f, 82f, 320f, 26f), BuildHudText(), _hudStyle);
+        }
+    }
+
+    /// <summary>
+    /// Thin canonical execution adapter. It owns no target selection or damage rules: it only forwards
+    /// the director's immutable strike intent through TankGame's existing projectile creation path.
+    /// </summary>
+    [DefaultExecutionOrder(-8850)]
+    public sealed class BattlefieldFireSupportExecutionBridgeV139 : MonoBehaviour
+    {
+        public static BattlefieldFireSupportExecutionBridgeV139 Instance { get; private set; }
+
+        private TankGame _game;
+        private int _executedIntents;
+
+        public int ExecutedIntents => _executedIntents;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void Install() => EnsureInstalled();
+
+        public static BattlefieldFireSupportExecutionBridgeV139 EnsureInstalled()
+        {
+            if (Instance != null) return Instance;
+            BattlefieldFireSupportExecutionBridgeV139 existing = FindAnyObjectByType<BattlefieldFireSupportExecutionBridgeV139>();
+            if (existing != null) { Instance = existing; return existing; }
+            GameObject go = new GameObject("BattlefieldFireSupportExecutionBridge_v13_9");
+            DontDestroyOnLoad(go);
+            return go.AddComponent<BattlefieldFireSupportExecutionBridgeV139>();
+        }
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+            _game = FindAnyObjectByType<TankGame>();
+            BattlefieldFireSupportDirector.StrikeIntentPublished += ExecuteIntent;
+        }
+
+        private void OnDestroy()
+        {
+            BattlefieldFireSupportDirector.StrikeIntentPublished -= ExecuteIntent;
+            if (Instance == this) Instance = null;
+        }
+
+        private void ExecuteIntent(FireSupportStrikeIntentV139 intent)
+        {
+            if (_game == null) _game = FindAnyObjectByType<TankGame>();
+            if (_game == null || !_game.IsPlaying) return;
+
+            VisualFactory.RingPulse(intent.Aim, new Color(0.20f, 0.82f, 1f), 0.78f);
+            _game.SpawnProjectile(
+                intent.Origin,
+                intent.Direction,
+                Team.Player,
+                intent.Damage,
+                intent.Speed,
+                AmmoDatabase.Color(intent.Ammo),
+                intent.Ammo);
+            _executedIntents++;
         }
     }
 }
