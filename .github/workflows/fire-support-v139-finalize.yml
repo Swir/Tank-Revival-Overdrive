@@ -1,0 +1,156 @@
+name: ROADMAP v13.9 Qualification Finalizer
+
+on:
+  push:
+    branches: ['dev-v13-9']
+    paths:
+      - 'Tools/finalize_v139_roadmap.py'
+      - '.github/workflows/fire-support-v139-finalize.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  QUALIFIED_SHA: '30511fb9452dfb47e481ecb57f87ccd51aded1fa'
+  QUALIFIED_RUN: '35462501123'
+  QUALIFIED_WORKFLOW: 'Fire Support v13.9 Windows Qualification Gate'
+  CANDIDATE_ARTIFACT_ID: '10590695610'
+  CANDIDATE_ARTIFACT_NAME: 'TankRevivalOverdrive-v13.9-fire-support-Windows-x64'
+  CANDIDATE_ARTIFACT_BYTES: '60268470'
+  CANDIDATE_ARTIFACT_DIGEST: 'sha256:7af94e0ef1032ccd7309740da061cd3e1351dde3e4fe06a139ab05a733db872d'
+
+jobs:
+  finalize:
+    name: Verify exact v13.9 evidence and finalize roadmap
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout development branch
+        uses: actions/checkout@v4
+        with:
+          ref: dev-v13-9
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify exact successful Windows qualification and post-candidate diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$QUALIFIED_SHA" HEAD
+          unexpected="$(git diff --name-only "$QUALIFIED_SHA"..HEAD -- | grep -Ev '^(Tools/finalize_v139_roadmap.py|\.github/workflows/fire-support-v139-finalize.yml)$' || true)"
+          if [ -n "$unexpected" ]; then
+            echo 'Unexpected post-candidate changes:' >&2
+            echo "$unexpected" >&2
+            exit 1
+          fi
+          python - <<'PY'
+          import json, os, urllib.request
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          token = os.environ['GH_TOKEN']
+          run_id = os.environ['QUALIFIED_RUN']
+          headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json'}
+          req = urllib.request.Request(f'https://api.github.com/repos/{repo}/actions/runs/{run_id}', headers=headers)
+          with urllib.request.urlopen(req, timeout=30) as response:
+              run = json.load(response)
+          expected = {
+              'head_sha': os.environ['QUALIFIED_SHA'],
+              'head_branch': 'dev-v13-9',
+              'name': os.environ['QUALIFIED_WORKFLOW'],
+              'status': 'completed',
+              'conclusion': 'success',
+          }
+          for key, value in expected.items():
+              if run.get(key) != value:
+                  raise SystemExit(f'qualification run mismatch for {key}: {run.get(key)!r} != {value!r}')
+
+          req = urllib.request.Request(f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts', headers=headers)
+          with urllib.request.urlopen(req, timeout=30) as response:
+              artifacts = json.load(response).get('artifacts', [])
+          artifact = next((a for a in artifacts if str(a.get('id')) == os.environ['CANDIDATE_ARTIFACT_ID']), None)
+          if not artifact:
+              raise SystemExit('qualified candidate artifact missing')
+          checks = {
+              'name': os.environ['CANDIDATE_ARTIFACT_NAME'],
+              'size_in_bytes': int(os.environ['CANDIDATE_ARTIFACT_BYTES']),
+              'digest': os.environ['CANDIDATE_ARTIFACT_DIGEST'],
+              'expired': False,
+          }
+          for key, value in checks.items():
+              if artifact.get(key) != value:
+                  raise SystemExit(f'candidate artifact mismatch for {key}: {artifact.get(key)!r} != {value!r}')
+          if artifact.get('workflow_run', {}).get('head_sha') != os.environ['QUALIFIED_SHA']:
+              raise SystemExit('candidate artifact does not belong to exact qualified SHA')
+          print('Exact v13.9 Windows qualification evidence: PASS')
+          PY
+
+      - name: Re-verify open-state implementation contracts before closure
+        run: |
+          python -m py_compile Tools/finalize_v139_roadmap.py Tools/verify_v139_fire_support.py Tools/verify_csharp_type_uniqueness.py Tools/generate_progress_svgs.py Tools/swir_visual_report_guard.py
+          python Tools/verify_v139_fire_support.py
+          python Tools/verify_csharp_type_uniqueness.py
+          python Tools/generate_progress_svgs.py --check
+          python Tools/swir_visual_report_guard.py --check
+          git diff --check
+
+      - name: Finalize authoritative roadmap and README
+        run: |
+          python Tools/finalize_v139_roadmap.py \
+            --qualified-sha "$QUALIFIED_SHA" \
+            --qualified-run "$QUALIFIED_RUN" \
+            --finalizer-run "$GITHUB_RUN_ID"
+
+      - name: Regenerate and verify SWIR Progress SVG Pro
+        run: |
+          python Tools/generate_progress_svgs.py --write
+          python Tools/generate_progress_svgs.py --check
+          python Tools/swir_visual_report_guard.py --check
+          python Tools/verify_csharp_type_uniqueness.py
+
+      - name: Verify closed-state roadmap math and exact evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          roadmap = Path('ROADMAP.md').read_text(encoding='utf-8')
+          readme = Path('README.md').read_text(encoding='utf-8')
+          evidence = Path('docs/qualification/V13_9_WINDOWS_QUALIFICATION.md').read_text(encoding='utf-8')
+          done = len(re.findall(r'^- \[x\] ', roadmap, re.M))
+          open_ = len(re.findall(r'^- \[ \] ', roadmap, re.M))
+          assert (done, open_, done + open_) == (463, 0, 463), (done, open_)
+          assert '| **463** | **0** | **463** | **100.0%** |' in roadmap
+          assert 'STATUS-V13.9%20QUALIFIED-brightgreen' in roadmap
+          assert '## v13.9 — Suppression Counterplay & Tactical Fire-Support Command — QUALIFIED' in roadmap
+          assert '**463 / 463 completed (100.0%)**' in readme
+          assert 'V13.9 QUALIFIED' in readme
+          assert '30511fb9452dfb47e481ecb57f87ccd51aded1fa' in readme
+          assert '35462501123' in readme
+          assert '30511fb9452dfb47e481ecb57f87ccd51aded1fa' in evidence
+          assert '10590695610' in evidence
+          assert 'sha256:7af94e0ef1032ccd7309740da061cd3e1351dde3e4fe06a139ab05a733db872d' in evidence
+          print('v13.9 closed-state math/readback: PASS')
+          PY
+
+      - name: Commit verified finalization
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --short
+          if git diff --quiet && git diff --cached --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+            echo 'No finalization changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg docs/qualification/V13_9_WINDOWS_QUALIFICATION.md
+          git diff --cached --check
+          git commit -m 'docs(v13.9): finalize qualified fire-support milestone'
+          git push origin HEAD:dev-v13-9
