@@ -12,7 +12,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)](https://github.com/Swir/Tank-Revival-Overdrive/releases)
 [![Unity](https://img.shields.io/badge/Unity-6000.3.17f1-02050A?style=for-the-badge&logo=unity&logoColor=62E5FF)](https://unity.com/)
-[![Roadmap](https://img.shields.io/badge/Roadmap-100.0%25%20V13.9%20Qualified-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
+[![Roadmap](https://img.shields.io/badge/Roadmap-98.3%25%20V14.0%20In%20Development-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
 [![v13.9 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-fire-support-v139-windows.yml/badge.svg?branch=dev-v13-9)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/battlefield-fire-support-v139-windows.yml)
 
 [**Highlights**](#-highlights) · [**Download**](#-quick-start--download) · [**Controls**](#-controls) · [**Roadmap**](#-roadmap--quality-gates) · [**Releases**](#-releases)
@@ -29,8 +29,8 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 | Item | Status |
 |---|---|
-| Development milestone | **V13.9 QUALIFIED** on `dev-v13-9` |
-| Roadmap | **463 / 463 completed (100.0%)** — authoritative `ROADMAP.md` scope |
+| Development milestone | **V14.0 IN DEVELOPMENT** on `dev-v14-0` |
+| Roadmap | **463 / 471 completed (98.3%)** — authoritative `ROADMAP.md` scope |
 | Primary platform | **Windows 10 / 11 x64** |
 | Development engine | **Unity 6000.3.17f1** |
 | Latest qualified milestone | **v13.9** — exact Windows candidate `30511fb9452dfb47e481ecb57f87ccd51aded1fa` qualified in run `35462501123` |
@@ -60,6 +60,7 @@ The campaign combines direct tank combat with directional armor, component damag
 | ⚙️ **Late-round performance v13.7 — qualified** | Deterministic Normal/Dense/Critical pressure budgets reduce optional FX/presentation churn during rounds 80/90/100 while preserving enemy counts, gameplay events, pool integrity and canonical combat authority. |
 | 💢 **Battlefield suppression v13.8 — qualified** | Player impacts and near misses build bounded Steady/Suppressed/Pinned pressure that affects only existing movement/reload/spread paths, with ammo-aware pressure, cohesion-aware recovery, boss resistance and no bonus damage or permanent stun. |
 | 🎯 **Fire-support counterplay v13.9 — qualified** | Earned F-key command windows combine qualified suppression, cover, cohesion and verified contacts into bounded fire-support intent with class-aware reactions, anti-spam cooldowns and canonical TankGame projectile execution. |
+| 📍 **Counter-battery warfare v14.0 — in development** | Planned enemy fire-control pressure will react to repeated support signatures with readable lock/barrage states while relocation, terrain and sensor information provide direct counterplay without a parallel damage authority. |
 | 🎯 **Dynamic objective warfare** | Objective planning layers mission pressure onto the existing round/spawn loop instead of replacing it. |
 | 👑 **Multi-phase bosses** | Boss behavior escalates through health/component-driven phases while existing movement, projectile and survivability authorities remain canonical. |
 | 🛡️ **Directional armor & modules** | Front/side/rear armor, ricochets and engine/tracks/gun/ammo-rack degradation affect how vehicles move and fight. |
@@ -189,6 +190,10 @@ v13.8 adds a bounded information-and-behavior layer for enemy suppression withou
 
 v13.9 adds a bounded command-and-counterplay layer above the qualified v13.8 suppression system. The intent-only `BattlefieldFireSupportDirector` earns finite READY / ACTIVE / COOLDOWN windows from suppression pressure, v13.4 terrain exposure, v13.3 cohesion and v13.6 verified contacts; the player activates support with **F** while a separate execution bridge forwards strike intent only through canonical `TankGame.SpawnProjectile`. Class-aware Hold / Brace / Disperse / Evade reactions remain bounded and `EnemyTank`, `Rigidbody2D`, `Projectile` and `Health` retain their existing authorities. Exact candidate `30511fb9452dfb47e481ecb57f87ccd51aded1fa` passed Windows qualification run `35462501123`, including production authored-audio preflight, v13.9 fire-support smoke, v13.8/v13.7/v13.6 regressions and rounds 80/90/100 soak on the same packaged executable.
 
+### Counter-Battery & Mobile Fire-Control Warfare v14.0 — in development
+
+v14.0 is being developed as a bounded enemy counter-battery layer above the qualified v13.9 fire-support system. Repeated support use will create readable exposure signatures that eligible enemy observers can turn into finite SEARCHING / LOCKED / BARRAGE pressure, while player relocation, terrain and sensor information provide direct counterplay. The new director remains intent-only; `TankGame`, `Projectile`, `Health`, `EnemyTank` and `Rigidbody2D` keep canonical gameplay authority. The milestone is not qualified until one exact packaged Windows candidate passes its dedicated smoke, historical regressions and rounds 80/90/100 soak.
+
 ### Orzełek escalation
 
 Late-campaign defense can strengthen the flanking shoulders while preserving a destructible center approach. This keeps a visible breach route for standard loadouts instead of turning high-tier defense into an inaccessible objective wall.
@@ -212,7 +217,7 @@ The project intentionally avoids parallel damage, movement and economy authoriti
 
 ## 🗺️ Roadmap & Quality Gates
 
-The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **463 / 463 (100.0%) — V13.9 QUALIFIED**. Release readiness is tracked separately by exact-candidate Windows qualification gates.
+The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **463 / 471 (98.3%) — V14.0 IN DEVELOPMENT**. Release readiness is tracked separately by exact-candidate Windows qualification gates.
 
 Recent qualified milestone layers include v13.0 encounter/boss warfare, v13.1 objective warfare, v13.2 adaptive enemy command and v13.3 battlefield cohesion. The v13.3 exact-candidate gate required source/authority contracts, a clean Unity Windows x64 build, deterministic packaging and one exact packaged EXE running production-audio preflight, v13.3 cohesion smoke, v13.2/v13.1/v13.0/v12.9/v12.8 regressions and late-round soak covering rounds 80 / 90 / 100.
 
@@ -234,7 +239,7 @@ A qualified development branch does **not** automatically replace the public rel
 
 - **Latest public demo:** `v6.3.0-demo` (prerelease)
 - **Latest stable release:** `v2.2.0`
-- **Development milestone:** v13.9 is qualified on `dev-v13-9`; this milestone qualification does not automatically create or replace a public release.
+- **Development milestone:** v14.0 is in development on `dev-v14-0`; v13.9 remains the latest qualified milestone and this development scope does not automatically create or replace a public release.
 
 This separation keeps public downloads distinct from qualified-but-not-yet-published development milestones.
 
