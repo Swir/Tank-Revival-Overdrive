@@ -4,9 +4,9 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v13-8"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.2%25-blue?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-447%2F455-1f6feb?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.8%20IN%20DEVELOPMENT-blue?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-455%2F455-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V13.8%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 
@@ -18,7 +18,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **447** | **8** | **455** | **98.2%** |
+| **455** | **0** | **455** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numeric table, percentage and generated Progress SVG. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -675,12 +675,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Packaged-EXE v13.7 runtime smoke** — run the v13.7 performance probe on one packaged Windows EXE, then rerun v13.6/v13.5/v13.4/v13.3 regressions plus rounds 80/90/100 soak on that same executable.
 - [x] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.7 gate to pass and only then finalize roadmap/checklist/progress SVGs.
 
-## v13.8 — Battlefield Suppression & Morale Warfare — IN DEVELOPMENT
-- [ ] **Deterministic suppression-state model** — add bounded Steady / Suppressed / Pinned pressure states with fixed-cap runtime storage, deterministic decay and no hidden Health, damage or spawn authority.
-- [ ] **Ammo-aware impact and near-miss pressure** — derive suppression only from existing player-owned Projectile damage/impact events, with HE/EMP/Plasma receiving readable bounded pressure profiles and zero bonus damage.
-- [ ] **Canonical enemy-behavior integration** — feed suppression multipliers into existing EnemyTank movement, reload and spread paths while EnemyTank/Rigidbody2D/Projectile remain the only movement/fire authorities and no state can immobilize an actor.
-- [ ] **Cohesion-aware rally and boss resistance** — consume v13.3 cohesion intent plus enemy class to accelerate disciplined recovery, preserve finite boss resistance and avoid permanent crowd control or morale snowballs.
-- [ ] **Readable budgeted suppression feedback** — expose compact fixed-cap telemetry and threshold-change world cues through the existing presentation budget instead of permanent per-enemy UI clutter.
-- [ ] **Performance and authority contracts** — verify fixed actor caps, bounded event fan-out, deterministic pressure/decay/scales, zero scene scans in the hot path and unchanged Health/Projectile/TankGame authority.
-- [ ] **Packaged-EXE v13.8 runtime smoke** — validate direct-hit/near-miss/ammo profiles, suppression transitions, rally/fairness floors and runtime installation, then rerun v13.7/v13.6/v13.5/v13.4 regressions plus rounds 80/90/100 soak on the same executable.
-- [ ] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.8 gate to pass and only then finalize roadmap/checklist/progress SVGs.
+## v13.8 — Battlefield Suppression & Morale Warfare — QUALIFIED
+- [x] **Deterministic suppression-state model** — add bounded Steady / Suppressed / Pinned pressure states with fixed-cap runtime storage, deterministic decay and no hidden Health, damage or spawn authority.
+- [x] **Ammo-aware impact and near-miss pressure** — derive suppression only from existing player-owned Projectile damage/impact events, with HE/EMP/Plasma receiving readable bounded pressure profiles and zero bonus damage.
+- [x] **Canonical enemy-behavior integration** — feed suppression multipliers into existing EnemyTank movement, reload and spread paths while EnemyTank/Rigidbody2D/Projectile remain the only movement/fire authorities and no state can immobilize an actor.
+- [x] **Cohesion-aware rally and boss resistance** — consume v13.3 cohesion intent plus enemy class to accelerate disciplined recovery, preserve finite boss resistance and avoid permanent crowd control or morale snowballs.
+- [x] **Readable budgeted suppression feedback** — expose compact fixed-cap telemetry and threshold-change world cues through the existing presentation budget instead of permanent per-enemy UI clutter.
+- [x] **Performance and authority contracts** — verify fixed actor caps, bounded event fan-out, deterministic pressure/decay/scales, zero scene scans in the hot path and unchanged Health/Projectile/TankGame authority.
+- [x] **Packaged-EXE v13.8 runtime smoke** — validate direct-hit/near-miss/ammo profiles, suppression transitions, rally/fairness floors and runtime installation, then rerun v13.7/v13.6/v13.5/v13.4 regressions plus rounds 80/90/100 soak on the same executable.
+- [x] **Exact-SHA Windows qualification** — deterministically package one Windows x64 candidate with provenance, require the complete v13.8 gate to pass and only then finalize roadmap/checklist/progress SVGs.
