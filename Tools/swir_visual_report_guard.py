@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guard SWIR Visual Report v3 presentation contracts for active docs/SVG assets."""
+"""Guard SWIR Visual Report v3 SVG-only presentation contracts."""
 from __future__ import annotations
 
 import argparse
@@ -17,6 +17,10 @@ LEGACY_PATTERNS = (
     re.compile(r"^[\s>*-]*[█▓▒░]{6,}(?:\s+[0-9]+(?:\.[0-9]+)?%)?\s*$"),
     re.compile(r"^[\s>*-]*\[[=#█▓▒░-]{8,}\](?:\s+[0-9]+(?:\.[0-9]+)?%)?\s*$"),
 )
+TEXTUAL_METER_PATTERNS = (
+    re.compile(r"^\s*<p[^>]*><sub>\s*Roadmap\s+progress:\s*\d+\s*/\s*\d+\s+completed\s*\([0-9.]+%\).*?</sub></p>\s*$", re.I),
+    re.compile(r"^\s*Roadmap\s+progress:\s*\d+\s*/\s*\d+\s+completed\s*\([0-9.]+%\).*$", re.I),
+)
 
 
 def fail(message: str) -> None:
@@ -33,7 +37,10 @@ def strip_legacy_meter_lines(text: str) -> tuple[str, int]:
             output.append(line)
             continue
         probe = line.rstrip("\r\n")
-        if not in_fence and any(p.fullmatch(probe) for p in LEGACY_PATTERNS):
+        if not in_fence and (
+            any(p.fullmatch(probe) for p in LEGACY_PATTERNS)
+            or any(p.fullmatch(probe) for p in TEXTUAL_METER_PATTERNS)
+        ):
             removed += 1
             continue
         output.append(line)
@@ -68,7 +75,7 @@ def verify_doc_contracts(readme: str, roadmap: str) -> None:
     for name, text in (("README", readme), ("ROADMAP", roadmap)):
         _, found = strip_legacy_meter_lines(text)
         if found:
-            fail(f"{name} contains {found} legacy character/ASCII progress meter line(s)")
+            fail(f"{name} contains {found} retired textual/character progress meter line(s)")
 
 
 def verify_svg(path: Path, *, template: bool = False) -> None:
@@ -96,13 +103,31 @@ def verify_svg(path: Path, *, template: bool = False) -> None:
             fail(f"{path} must keep release readiness separate")
 
 
+def self_test() -> None:
+    samples = (
+        "██████████░░ 83.3%\n",
+        "[========----] 66.7%\n",
+        '<p align="center"><sub>Roadmap progress: 447 / 455 completed (98.2%) — V13.8 IN DEVELOPMENT.</sub></p>\n',
+        "Roadmap progress: 447 / 455 completed (98.2%) — V13.8 IN DEVELOPMENT.\n",
+    )
+    for sample in samples:
+        cleaned, removed = strip_legacy_meter_lines(sample)
+        if removed != 1 or cleaned:
+            fail("legacy/textual meter regression self-test failed")
+    preserved = "- [x] verified deliverable\n- [ ] open deliverable\n| **447** | **8** | **455** | **98.2%** |\n"
+    cleaned, removed = strip_legacy_meter_lines(preserved)
+    if removed or cleaned != preserved:
+        fail("guard must preserve checklist/table numeric authority")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--fix", action="store_true", help="remove legacy meter lines outside fenced code")
+    ap.add_argument("--fix", action="store_true", help="remove retired meters outside fenced code")
     ap.add_argument("--check", action="store_true", help="verify final presentation contracts")
     args = ap.parse_args()
     if not (args.fix or args.check):
         args.check = True
+    self_test()
 
     readme = README.read_text(encoding="utf-8")
     roadmap = ROADMAP.read_text(encoding="utf-8")
