@@ -1,0 +1,86 @@
+name: Open v14.0 Counter-Battery Scope
+
+on:
+  push:
+    branches:
+      - dev-v14-0
+    paths:
+      - 'Tools/open_v140_scope.py'
+      - '.github/workflows/v140-scope-open.yml'
+      - 'ROADMAP.md'
+      - 'README.md'
+      - 'Tools/generate_progress_svgs.py'
+      - 'Tools/swir_visual_report_guard.py'
+      - 'assets/readme/progress-*.svg'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v140-scope-open-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  open-scope:
+    name: Open and verify v14.0 scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Open v14.0 scope deterministically
+        run: python Tools/open_v140_scope.py
+
+      - name: Regenerate SWIR progress SVGs
+        run: |
+          python Tools/generate_progress_svgs.py --write
+          python Tools/generate_progress_svgs.py --check
+
+      - name: Verify SVG-only presentation contracts
+        run: |
+          python Tools/swir_visual_report_guard.py --fix --check
+          python Tools/generate_progress_svgs.py --check
+
+      - name: Verify opened roadmap math and protected structure
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          roadmap = Path('ROADMAP.md').read_text(encoding='utf-8')
+          readme = Path('README.md').read_text(encoding='utf-8')
+          completed = len(re.findall(r'^- \[x\] ', roadmap, re.M))
+          opened = len(re.findall(r'^- \[ \] ', roadmap, re.M))
+          assert (completed, opened) == (463, 8), (completed, opened)
+          assert '| **463** | **8** | **471** | **98.3%** |' in roadmap
+          assert 'V14.0%20IN%20DEVELOPMENT' in roadmap
+          assert '<!-- SWIR-ROADMAP-STANDARD:v1 -->' in roadmap
+          assert '<!-- SWIR-README-STANDARD:v2 -->' in readme
+          assert '## 🔎 Search Keywords' in readme
+          assert '463 / 471 completed (98.3%)' in readme
+          print('v14.0 roadmap scope contract: PASS — 463/471 (98.3%)')
+
+      - name: Commit opened scope when changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- README.md ROADMAP.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg; then
+            echo 'Scope already open; no commit required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md ROADMAP.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
+          git commit -m 'roadmap(v14.0): open counter-battery milestone'
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
