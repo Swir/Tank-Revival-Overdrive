@@ -25,9 +25,10 @@ def main() -> None:
         "MaxTrackedEnemies = 24", "MaxHudMarkers = 8",
         "PressedEnter = 20f", "SuppressedEnter = 45f", "BrokenEnter = 72f",
         "MaxBrokenSeconds = 4.5f", "RecoveryFloorSeconds = 1.25f",
+        "RetreatCadenceSeconds = 0.50f", "RetreatPhase(",
+        "public bool Occupied;",
         "Projectile.DamageResolved += OnDamageResolved",
         "Projectile.ShotSpawned3D += OnShotSpawned",
-        "RuntimeBattleRegistry.EnemySnapshot",
         "LateRoundPerformanceDirector.CurrentProfile.Band",
         "BattlefieldCohesionDirector.SpreadScale",
         "AmmoType.ArmorPiercing", "AmmoType.Plasma",
@@ -41,6 +42,27 @@ def main() -> None:
     )
     for token in forbidden:
         require(token not in core, f"director owns forbidden combat authority: {token}")
+
+    # Fixed roster + state-age cadence are deliberate determinism contracts. HashSet snapshot ordering,
+    # Unity instance ids and absolute Time.time must never choose which actors receive suppression.
+    require("RuntimeBattleRegistry.EnemySnapshot" not in core, "HashSet enemy snapshot reintroduced into suppression fanout")
+    require("GetInstanceID()" not in core, "Unity instance-id nondeterminism reintroduced")
+    require("Time.time" not in core, "absolute frame-time retreat phase reintroduced")
+
+    shot_start = core.find("private void OnShotSpawned")
+    shot_end = core.find("private void BroadcastAllyLoss", shot_start)
+    require(shot_start >= 0 and shot_end > shot_start, "OnShotSpawned block missing")
+    shot_block = core[shot_start:shot_end]
+    require("for (int i = 0; i < _entries.Length; i++)" in shot_block, "near-miss fanout must iterate fixed entries")
+    require("if (!e.Occupied || e.Enemy == null) continue;" in shot_block, "near-miss fanout must use occupied fixed slots")
+    require("Register(" not in shot_block and "Find(" not in shot_block, "per-shot register/find churn reintroduced")
+
+    sample_start = core.find("private void Sample(float now)")
+    sample_end = core.find("private void OnDamageResolved", sample_start)
+    require(sample_start >= 0 and sample_end > sample_start, "Sample block missing")
+    sample_block = core[sample_start:sample_end]
+    require("if (!e.Occupied) continue;" in sample_block, "sample occupancy guard missing")
+    require("_count = Mathf.Max(0, _count - 1);" in sample_block, "destroyed-entry count repair missing")
 
     for token in (
         "BattlefieldSuppressionMoraleDirector.EnsureInstalled().Register(this, Kind)",
@@ -59,6 +81,7 @@ def main() -> None:
     for token in (
         "-tr-v138-smoke", "V13_8_SUPPRESSION_MORALE_OK.txt",
         "anti-lock", "AP/Plasma counterplay ordering", "late-round density anti-cheap-pressure budget",
+        "deterministic retreat cadence", "retreat=PASS", "fixed-fanout=PASS", "occupancy=PASS",
         "bounded movement", "bounded reload", "bounded spread",
     ):
         require(token in smoke, f"smoke contract missing: {token}")

@@ -22,7 +22,7 @@ namespace TankRevival
             try
             {
                 RunContracts();
-                WriteMarker(true, "thresholds=PASS hysteresis=PASS anti-permabroken=PASS ammo-counterplay=PASS density=PASS bounds=PASS authority=PASS");
+                WriteMarker(true, "thresholds=PASS hysteresis=PASS anti-permabroken=PASS ammo-counterplay=PASS density=PASS bounds=PASS retreat=PASS fixed-fanout=PASS occupancy=PASS authority=PASS");
                 Application.Quit(0);
             }
             catch (Exception ex)
@@ -61,6 +61,11 @@ namespace TankRevival
             float normalMiss = BattlefieldSuppressionModelV138.NearMissPressure(AmmoType.Basic, EnemyKind.Basic, LateRoundPressureBandV137.Normal);
             float criticalMiss = BattlefieldSuppressionModelV138.NearMissPressure(AmmoType.Basic, EnemyKind.Basic, LateRoundPressureBandV137.Critical);
             Require(criticalMiss < normalMiss, "late-round density anti-cheap-pressure budget");
+
+            int retreat0 = BattlefieldSuppressionModelV138.RetreatPhase(2, -1f);
+            int retreat1 = BattlefieldSuppressionModelV138.RetreatPhase(2, BattlefieldSuppressionModelV138.RetreatCadenceSeconds + .01f);
+            int retreat2 = BattlefieldSuppressionModelV138.RetreatPhase(2, BattlefieldSuppressionModelV138.RetreatCadenceSeconds * 2f + .01f);
+            Require(retreat0 == 2 && retreat1 == 3 && retreat2 == 0, "deterministic retreat cadence");
 
             SuppressionIntentV138 broken = BattlefieldSuppressionModelV138.Intent(BattlefieldMoraleStateV138.Broken, 80f);
             Require(broken.MovementScale >= .80f && broken.MovementScale <= 1f, "bounded movement");

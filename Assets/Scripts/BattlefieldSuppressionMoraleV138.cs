@@ -39,6 +39,7 @@ namespace TankRevival
         public const int MaxTrackedEnemies = 24;
         public const int MaxHudMarkers = 8;
         public const float SampleCadenceSeconds = 0.25f;
+        public const float RetreatCadenceSeconds = 0.50f;
         public const float MaxPressure = 100f;
         public const float PressedEnter = 20f;
         public const float SuppressedEnter = 45f;
@@ -55,6 +56,7 @@ namespace TankRevival
         public static bool ConfigurationValid =>
             MaxTrackedEnemies == 24 && MaxHudMarkers > 0 && MaxHudMarkers <= 8 &&
             SampleCadenceSeconds >= 0.20f && SampleCadenceSeconds <= 0.50f &&
+            RetreatCadenceSeconds >= 0.25f && RetreatCadenceSeconds <= 1f &&
             PressedExit < PressedEnter && PressedEnter < SuppressedExit &&
             SuppressedExit < SuppressedEnter && BrokenExit < BrokenEnter &&
             SuppressedEnter < BrokenExit && BrokenEnter < MaxPressure &&
@@ -103,6 +105,13 @@ namespace TankRevival
         public static float NearMissPressure(AmmoType ammo, EnemyKind kind, LateRoundPressureBandV137 band)
         {
             return Mathf.Clamp(7.5f * AmmoPressure(ammo) * Resistance(kind) * DensityPressureScale(band, true), 2.5f, 14f);
+        }
+
+        public static int RetreatPhase(int slot, float stateAgeSeconds)
+        {
+            int safeSlot = Mathf.Clamp(slot, 0, MaxTrackedEnemies - 1);
+            int cadenceStep = Mathf.FloorToInt(Mathf.Max(0f, stateAgeSeconds) / RetreatCadenceSeconds);
+            return (safeSlot + cadenceStep) & 3;
         }
 
         public static BattlefieldMoraleStateV138 ResolveState(
@@ -161,6 +170,7 @@ namespace TankRevival
     {
         private sealed class Entry
         {
+            public bool Occupied;
             public EnemyTank Enemy;
             public EnemyKind Kind;
             public float Pressure;
@@ -177,6 +187,7 @@ namespace TankRevival
         private float _nextSample;
         private GUIStyle _markerStyle;
         private GUIStyle _globalStyle;
+        private TankGame _game;
         private string _globalLabel = "MORALE  STEADY";
         private float _globalPressure;
         private int _stateTransitions;
@@ -207,6 +218,7 @@ namespace TankRevival
             DontDestroyOnLoad(gameObject);
             for (int i = 0; i < _entries.Length; i++) _entries[i] = new Entry();
             _nextSample = Time.unscaledTime;
+            _game = FindAnyObjectByType<TankGame>();
             Projectile.DamageResolved += OnDamageResolved;
             Projectile.ShotSpawned3D += OnShotSpawned;
         }
@@ -224,6 +236,7 @@ namespace TankRevival
             int slot = FirstFree();
             if (slot < 0) return;
             Entry e = _entries[slot];
+            e.Occupied = true;
             e.Enemy = enemy;
             e.Kind = kind;
             e.Pressure = 0f;
@@ -265,7 +278,11 @@ namespace TankRevival
 
         public static Vector2 AdjustDirection(EnemyTank enemy, Vector2 position, Vector2 playerPosition, Vector2 current)
         {
-            if (!TryIntent(enemy, out SuppressionIntentV138 intent)) return current;
+            if (Instance == null || enemy == null) return current;
+            int slot = Instance.Find(enemy);
+            if (slot < 0) return current;
+            Entry e = Instance._entries[slot];
+            SuppressionIntentV138 intent = BattlefieldSuppressionModelV138.Intent(e.State, e.Pressure);
             if (intent.State != BattlefieldMoraleStateV138.Broken && intent.State != BattlefieldMoraleStateV138.Recovering) return current;
             // Existing cohesion gets first say. If it is already constraining movement, do not compete with it.
             if (BattlefieldCohesionDirector.MovementScale(enemy) < 0.94f) return current;
@@ -274,7 +291,7 @@ namespace TankRevival
             Vector2 fallback = Mathf.Abs(away.x) > Mathf.Abs(away.y)
                 ? new Vector2(Mathf.Sign(away.x), 0f)
                 : new Vector2(0f, Mathf.Sign(away.y));
-            int phase = (enemy.GetInstanceID() ^ Mathf.FloorToInt(Time.time * 2f)) & 3;
+            int phase = BattlefieldSuppressionModelV138.RetreatPhase(slot, Time.unscaledTime - e.StateSince);
             return phase == 0 ? current : fallback;
         }
 
@@ -293,7 +310,13 @@ namespace TankRevival
             for (int i = 0; i < _entries.Length; i++)
             {
                 Entry e = _entries[i];
-                if (e.Enemy == null) { if (e.State != BattlefieldMoraleStateV138.Steady || e.Pressure > 0f) Clear(e); continue; }
+                if (!e.Occupied) continue;
+                if (e.Enemy == null)
+                {
+                    Clear(e);
+                    _count = Mathf.Max(0, _count - 1);
+                    continue;
+                }
 
                 float cohesionStress = Mathf.Clamp(BattlefieldCohesionDirector.SpreadScale(e.Enemy) - 1f, 0f, 0.45f);
                 float decay = (e.Kind == EnemyKind.Boss ? 11f : 8.5f) * (1f - cohesionStress * 0.35f);
@@ -338,21 +361,20 @@ namespace TankRevival
             Vector2 dir = direction.normalized;
             LateRoundPressureBandV137 band = LateRoundPerformanceDirector.CurrentProfile.Band;
             float now = Time.unscaledTime;
-            EnemyTank[] enemies = RuntimeBattleRegistry.EnemySnapshot;
-            int visited = 0;
-            for (int i = 0; i < enemies.Length && visited < BattlefieldSuppressionModelV138.MaxTrackedEnemies; i++)
+
+            // Near-miss pressure only visits the fixed, deterministically slotted v13.8 roster.
+            // This avoids HashSet snapshot ordering and per-shot register/find churn under 100-round density.
+            for (int i = 0; i < _entries.Length; i++)
             {
-                EnemyTank enemy = enemies[i];
-                if (enemy == null) continue;
-                visited++;
+                Entry e = _entries[i];
+                if (!e.Occupied || e.Enemy == null) continue;
+                EnemyTank enemy = e.Enemy;
                 Vector2 delta = (Vector2)enemy.transform.position - origin;
                 float forward = Vector2.Dot(delta, dir);
                 if (forward < BattlefieldSuppressionModelV138.NearMissMinForward || forward > BattlefieldSuppressionModelV138.NearMissMaxForward) continue;
                 float lateral = Mathf.Abs(delta.x * dir.y - delta.y * dir.x);
                 if (lateral > BattlefieldSuppressionModelV138.NearMissRadius || lateral < 0.26f) continue;
-                int slot = Find(enemy);
-                if (slot < 0) { Register(enemy, enemy.Kind); slot = Find(enemy); }
-                if (slot >= 0) AddPressure(_entries[slot], BattlefieldSuppressionModelV138.NearMissPressure(ammo, enemy.Kind, band), now);
+                AddPressure(e, BattlefieldSuppressionModelV138.NearMissPressure(ammo, e.Kind, band), now);
             }
         }
 
@@ -361,7 +383,7 @@ namespace TankRevival
             for (int i = 0; i < _entries.Length; i++)
             {
                 Entry e = _entries[i];
-                if (e.Enemy == null) continue;
+                if (!e.Occupied || e.Enemy == null) continue;
                 float sqr = ((Vector2)e.Enemy.transform.position - position).sqrMagnitude;
                 if (sqr > 49f) continue;
                 AddPressure(e, e.Kind == EnemyKind.Boss ? 2.5f : 5.5f, now);
@@ -377,18 +399,20 @@ namespace TankRevival
         private int Find(EnemyTank enemy)
         {
             if (enemy == null) return -1;
-            for (int i = 0; i < _entries.Length; i++) if (_entries[i].Enemy == enemy) return i;
+            for (int i = 0; i < _entries.Length; i++)
+                if (_entries[i].Occupied && _entries[i].Enemy == enemy) return i;
             return -1;
         }
 
         private int FirstFree()
         {
-            for (int i = 0; i < _entries.Length; i++) if (_entries[i].Enemy == null) return i;
+            for (int i = 0; i < _entries.Length; i++) if (!_entries[i].Occupied) return i;
             return -1;
         }
 
         private static void Clear(Entry e)
         {
+            e.Occupied = false;
             e.Enemy = null;
             e.Kind = EnemyKind.Basic;
             e.Pressure = 0f;
@@ -401,8 +425,8 @@ namespace TankRevival
 
         private void OnGUI()
         {
-            TankGame game = FindAnyObjectByType<TankGame>();
-            if (game == null || !game.IsPlaying) return;
+            if (_game == null) _game = FindAnyObjectByType<TankGame>();
+            if (_game == null || !_game.IsPlaying) return;
             Camera cam = Camera.main;
             if (cam == null) return;
             if (_globalStyle == null)
@@ -419,7 +443,7 @@ namespace TankRevival
             for (int i = 0; i < _entries.Length && shown < cap; i++)
             {
                 Entry e = _entries[i];
-                if (e.Enemy == null || e.State == BattlefieldMoraleStateV138.Steady) continue;
+                if (!e.Occupied || e.Enemy == null || e.State == BattlefieldMoraleStateV138.Steady) continue;
                 Vector3 sp = cam.WorldToScreenPoint(e.Enemy.transform.position + Vector3.up * 0.8f);
                 if (sp.z <= 0f) continue;
                 GUI.Label(new Rect(sp.x - 42f, Screen.height - sp.y - 10f, 84f, 20f), e.Label, _markerStyle);
