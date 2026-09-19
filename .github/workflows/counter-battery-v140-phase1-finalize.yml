@@ -1,4 +1,4 @@
-name: Counter-Battery v14.0 Phase-One Finalizer
+name: Counter-Battery v14.0 Source-Progress Finalizer
 
 on:
   push:
@@ -15,12 +15,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: v140-phase1-finalize-${{ github.ref }}
+  group: v140-source-progress-finalize-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  finalize-phase-one:
-    name: Verify implementation and close only v14.0 phase-one deliverables
+  finalize-source-progress:
+    name: Verify implementation and close source-verified v14.0 counterplay
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -40,7 +40,7 @@ jobs:
           python Tools/verify_v140_counter_battery.py
           python Tools/verify_csharp_type_uniqueness.py
           git diff --check
-      - name: Close only verified phase-one scope
+      - name: Close only source-verified v14.0 counterplay scope
         run: python Tools/finalize_v140_phase1.py
       - name: Regenerate and verify SWIR progress presentation
         shell: bash
@@ -58,24 +58,24 @@ jobs:
           import re
           roadmap = Path('ROADMAP.md').read_text(encoding='utf-8')
           readme = Path('README.md').read_text(encoding='utf-8')
-          assert len(re.findall(r'^- \[x\] ', roadmap, re.M)) == 466
-          assert len(re.findall(r'^- \[ \] ', roadmap, re.M)) == 5
-          assert '| **466** | **5** | **471** | **98.9%** |' in roadmap
+          assert len(re.findall(r'^- \[x\] ', roadmap, re.M)) == 469
+          assert len(re.findall(r'^- \[ \] ', roadmap, re.M)) == 2
+          assert '| **469** | **2** | **471** | **99.6%** |' in roadmap
           assert 'V14.0%20IN%20DEVELOPMENT' in roadmap
-          assert '**466 / 471 completed (98.9%)**' in readme
+          assert '**469 / 471 completed (99.6%)**' in readme
           assert 'Latest qualified milestone | **v13.9**' in readme
-          print('v14.0 phase-one roadmap contract: PASS — 466/471 (98.9%)')
-      - name: Commit verified phase-one progress when changed
+          print('v14.0 source-progress roadmap contract: PASS — 469/471 (99.6%)')
+      - name: Commit verified source progress when changed
         shell: bash
         run: |
           set -euo pipefail
           if git diff --quiet -- README.md ROADMAP.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg; then
-            echo 'Phase one already reflected; no commit required.'
+            echo 'Source progress already reflected; no commit required.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add README.md ROADMAP.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
-          git commit -m 'roadmap(v14.0): close source-verified counter-battery phase one'
+          git commit -m 'roadmap(v14.0): close source-verified counterplay'
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"

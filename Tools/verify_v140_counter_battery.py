@@ -56,9 +56,16 @@ def profile(round_: int, max_shells: int) -> tuple[int, float, float, float]:
 
 
 def item_checked(roadmap: str, label: str) -> bool:
-    m = re.search(rf"^- \[([ x])\] \*\*{re.escape(label)}\*\*", roadmap, re.M)
+    heading = "## v14.0 — Counter-Battery & Mobile Fire-Control Warfare — IN DEVELOPMENT"
+    start = roadmap.find(heading)
+    if start < 0:
+        fail("active v14.0 milestone heading missing")
+    tail = roadmap[start + len(heading):]
+    next_heading = re.search(r"^## ", tail, re.M)
+    section = tail[:next_heading.start()] if next_heading else tail
+    m = re.search(rf"^- \[([ x])\] \*\*{re.escape(label)}\*\*", section, re.M)
     if not m:
-        fail("missing roadmap item: " + label)
+        fail("missing v14.0 roadmap item: " + label)
     return m.group(1) == "x"
 
 
