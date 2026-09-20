@@ -89,7 +89,7 @@ jobs:
           set -euo pipefail
           python -m py_compile Tools/finalize_v140_roadmap.py Tools/generate_progress_svgs.py Tools/swir_visual_report_guard.py
           python Tools/finalize_v140_roadmap.py
-          python Tools/generate_progress_svgs.py
+          python Tools/generate_progress_svgs.py --write --embed
           python Tools/generate_progress_svgs.py --check
           python Tools/swir_visual_report_guard.py --check
           python - <<'PY'
