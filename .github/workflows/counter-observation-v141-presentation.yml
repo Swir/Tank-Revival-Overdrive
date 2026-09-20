@@ -1,0 +1,77 @@
+name: Counter-Observation v14.1 Presentation Finalizer
+
+on:
+  push:
+    branches: ['dev-v14-1']
+    paths:
+      - 'Assets/Scripts/CounterObservationPresentationV141.cs'
+      - 'Tools/verify_v141_presentation.py'
+      - 'Tools/finalize_v141_presentation.py'
+      - '.github/workflows/counter-observation-v141-presentation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-finalize-presentation:
+    name: Verify budgeted observer-hunt presentation and close scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify exact source snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "${GITHUB_REF_NAME}" = 'dev-v14-1'
+          test "$(cat VERSION)" = 'v14.1.0-dev'
+          python -m py_compile \
+            Tools/verify_v141_counter_observation.py \
+            Tools/verify_v141_presentation.py \
+            Tools/verify_csharp_type_uniqueness.py \
+            Tools/finalize_v141_presentation.py \
+            Tools/generate_progress_svgs.py \
+            Tools/swir_visual_report_guard.py
+          python Tools/verify_v141_counter_observation.py
+          python Tools/verify_v141_presentation.py
+          python Tools/verify_csharp_type_uniqueness.py
+      - name: Close only source-verified presentation deliverable
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Tools/finalize_v141_presentation.py
+          python Tools/generate_progress_svgs.py --embed --write
+          python Tools/verify_v141_counter_observation.py
+          python Tools/verify_v141_presentation.py
+          python Tools/verify_csharp_type_uniqueness.py
+          python Tools/generate_progress_svgs.py --check
+          python Tools/swir_visual_report_guard.py --check
+          git diff --check
+          grep -Fq '| **477** | **2** | **479** | **99.6%** |' ROADMAP.md
+          grep -Fq '**477 / 479 completed (99.6%)**' README.md
+          grep -Fq -- '- [x] **Readable budgeted observer-hunt presentation**' ROADMAP.md
+          grep -Fq -- '- [ ] **Deterministic runtime, authority and performance contracts**' ROADMAP.md
+          grep -Fq -- '- [ ] **Exact-SHA Windows qualification**' ROADMAP.md
+      - name: Commit deterministic progress snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin dev-v14-1
+          test "$(git rev-parse origin/dev-v14-1)" = "${GITHUB_SHA}" || { echo 'Branch advanced; refusing stale progress commit.'; exit 1; }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
+          if git diff --cached --quiet; then
+            echo 'Presentation progress already finalized; no commit required.'
+            exit 0
+          fi
+          git commit -m 'docs(v14.1): close verified observer-hunt presentation'
+          git push origin HEAD:dev-v14-1
