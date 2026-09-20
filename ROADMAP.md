@@ -4,8 +4,8 @@
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
   <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v14-1"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-99.4%25-blue?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-476%2F479-1f6feb?style=for-the-badge">
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-99.6%25-blue?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-477%2F479-1f6feb?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/STATUS-V14.1%20IN%20DEVELOPMENT-blue?style=for-the-badge">
 </p>
 
@@ -18,7 +18,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **476** | **3** | **479** | **99.4%** |
+| **477** | **2** | **479** | **99.6%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numeric table, percentage and generated Progress SVG. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -711,7 +711,7 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Counter-battery acquisition suppression bridge** — let verified observer disruption and canonical observer death reduce v14.0 acquisition strength for a short bounded window without deleting shells, granting immunity or bypassing CounterBatteryDirectorV140 authority.
 - [x] **Hunter-killer target handoff and kill confirmation** — publish one bounded high-value observer target to existing HUD/presentation and resolve success only when canonical `Health` / runtime-registry lifecycle removes that actor.
 - [x] **Terrain, cohesion and command resilience** — scale designation time and disruption duration from v13.4 terrain exposure plus v13.3 cohesion / v13.2 command posture so disciplined observers resist but never become immune.
-- [ ] **Readable budgeted observer-hunt presentation** — expose SEARCH / DESIGNATED / NETWORK BROKEN / COOLDOWN cues, target class/range and counter-battery pressure with strict one-target world emphasis and late-round presentation budgets.
+- [x] **Readable budgeted observer-hunt presentation** — expose SEARCH / DESIGNATED / NETWORK BROKEN / COOLDOWN cues, target class/range and counter-battery pressure with strict one-target world emphasis and late-round presentation budgets.
 - [ ] **Deterministic runtime, authority and performance contracts** — verify fixed hostile/observer caps, sensor thresholds, lifecycle cleanup, acquisition floors, no hot-path scene scans and unchanged Health/Projectile/TankGame/EnemyTank ownership.
 - [ ] **Exact-SHA Windows qualification** — package one Windows x64 candidate, pass v14.1 observer-hunt smoke, rerun v14.0/v13.9/v13.8/v13.7 regressions plus rounds 80/90/100 soak on the same executable, then finalize checklist/progress SVGs.
 
