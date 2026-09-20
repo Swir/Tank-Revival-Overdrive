@@ -1,0 +1,70 @@
+name: v14.2 Scope Open
+
+on:
+  push:
+    branches: ['dev-v14-2']
+    paths:
+      - 'Tools/open_v142_scope.py'
+      - '.github/workflows/v142-scope-open.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v142-scope-open-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  open-scope:
+    name: Register v14.2 roadmap scope before implementation progress
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Open scope and regenerate progress
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile Tools/open_v142_scope.py Tools/generate_progress_svgs.py Tools/swir_visual_report_guard.py
+          python Tools/open_v142_scope.py
+          python Tools/generate_progress_svgs.py --write
+          python Tools/generate_progress_svgs.py --check
+          python Tools/swir_visual_report_guard.py --fix --check
+          python Tools/generate_progress_svgs.py --check
+          git diff --check
+      - name: Verify registered truth
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          r=Path('ROADMAP.md').read_text(encoding='utf-8')
+          m=Path('README.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^- \[x\] ',r,re.M))==479
+          assert len(re.findall(r'^- \[ \] ',r,re.M))==8
+          assert '| **479** | **8** | **487** | **98.4%** |' in r
+          assert 'V14.2%20IN%20DEVELOPMENT' in r
+          assert '**479 / 487 completed (98.4%)**' in m
+          assert Path('VERSION').read_text().strip()=='v14.2.0-dev'
+          print('v14.2 scope: PASS — 479/487 (98.4%)')
+      - name: Commit scope snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- README.md ROADMAP.md VERSION assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg; then
+            echo 'Scope already registered.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md ROADMAP.md VERSION assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
+          git commit -m 'roadmap(v14.2): register deception-emcon milestone'
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
