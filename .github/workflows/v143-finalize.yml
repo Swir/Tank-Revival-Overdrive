@@ -40,9 +40,9 @@ jobs:
           test "$conclusion" = "success"
 
           artifacts_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${QUALIFICATION_RUN}/artifacts")"
-          python - <<'PY' <<<"$artifacts_json"
-          import json, os, sys
-          data = json.load(sys.stdin)
+          ARTIFACTS_JSON="$artifacts_json" python - <<'PY'
+          import json, os
+          data = json.loads(os.environ['ARTIFACTS_JSON'])
           expected_id = int(os.environ['QUALIFIED_ARTIFACT_ID'])
           expected_name = os.environ['QUALIFIED_ARTIFACT_NAME']
           expected_digest = os.environ['QUALIFIED_ARTIFACT_DIGEST']
