@@ -6,6 +6,8 @@ probe = Path('Assets/Scripts/BattlefieldSmokeCISmokeProbeV143.cs').read_text(enc
 workflow = Path('.github/workflows/smoke-v143-windows.yml').read_text(encoding='utf-8')
 packager = Path('.github/scripts/package_v143_smoke.py').read_text(encoding='utf-8')
 package_test = Path('.github/scripts/test_package_v143_smoke.py').read_text(encoding='utf-8')
+progress_card = Path('assets/readme/progress-card.svg').read_text(encoding='utf-8')
+progress_mini = Path('assets/readme/progress-mini.svg').read_text(encoding='utf-8')
 
 for token in [
     '-tr-v143-smoke',
@@ -65,6 +67,15 @@ for text, label in [(smoke, 'smoke'), (presentation, 'presentation')]:
     ]:
         assert forbidden not in text, f'forbidden authority/hot-path token in {label}: {forbidden}'
 
+for svg, label, fill in [
+    (progress_card, 'card', 'width="645.40"'),
+    (progress_mini, 'mini', 'width="354.18"'),
+]:
+    assert '98.4%' in svg, f'v14.3 {label} percentage is stale'
+    assert '487 / 495 completed' in svg, f'v14.3 {label} counter is stale'
+    assert 'V14.3 IN DEVELOPMENT' in svg, f'v14.3 {label} status is stale'
+    assert fill in svg, f'v14.3 {label} geometry is stale'
+
 assert 'OnGUI(' not in smoke
 assert 'OnGUI(' not in presentation
-print('v14.3 runtime / authority / performance / Windows qualification contracts PASS')
+print('v14.3 runtime / authority / performance / progress / Windows qualification contracts PASS')
