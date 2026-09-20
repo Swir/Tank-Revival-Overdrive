@@ -86,7 +86,7 @@ def main() -> None:
 
     completed = len(re.findall(r'^- \[x\] ', roadmap, re.M))
     opened = len(re.findall(r'^- \[ \] ', roadmap, re.M))
-    require((completed, opened) in ((471, 8), (474, 5)), f'unexpected roadmap state {completed}/{opened}')
+    require((completed, opened) in ((471, 8), (474, 5), (476, 3)), f'unexpected roadmap state {completed}/{opened}')
     require('## v14.1 — Counter-Observation & Hunter-Killer Warfare — IN DEVELOPMENT' in roadmap, 'active milestone missing')
     require('<!-- SWIR-ROADMAP-STANDARD:v1 -->' in roadmap, 'roadmap marker missing')
     require('<!-- SWIR-README-STANDARD:v2 -->' in readme, 'README v2 marker missing')
