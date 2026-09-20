@@ -502,7 +502,7 @@ namespace TankRevival
                 return;
             }
 
-            float requiredHold = CounterObservationModelV141.EffectiveDesignationHoldSeconds(_profile, _candidateResilience);
+            float requiredHold = CounterObservationModelV141.EffectiveDesignationHoldSeconds(_profile, _candidateResilience) * CounterReconDeceptionDirectorV142.DesignationHoldScale;
             if (now - _candidateSince >= requiredHold)
                 Designate(best, now);
         }

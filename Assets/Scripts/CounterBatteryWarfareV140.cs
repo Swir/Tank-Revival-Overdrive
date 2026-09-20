@@ -222,7 +222,7 @@ namespace TankRevival
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this; DontDestroyOnLoad(gameObject); _game = FindAnyObjectByType<TankGame>();
             BattlefieldFireSupportDirector.EnsureInstalled(); BattlefieldSensorFusionDirector.EnsureInstalled();
-            AdaptiveEnemyCommandDirector.EnsureInstalled(); BattlefieldCohesionDirector.EnsureInstalled(); CounterBatteryExecutionBridgeV140.EnsureInstalled(); CounterObservationDirectorV141.EnsureInstalled();
+            AdaptiveEnemyCommandDirector.EnsureInstalled(); BattlefieldCohesionDirector.EnsureInstalled(); CounterBatteryExecutionBridgeV140.EnsureInstalled(); CounterObservationDirectorV141.EnsureInstalled(); CounterReconDeceptionDirectorV142.EnsureInstalled();
             BattlefieldFireSupportDirector.StrikeIntentPublished += OnPlayerSupportIntent; SceneManager.sceneLoaded += OnSceneLoaded; _nextSample = Time.unscaledTime;
         }
         private void OnDestroy() { BattlefieldFireSupportDirector.StrikeIntentPublished -= OnPlayerSupportIntent; SceneManager.sceneLoaded -= OnSceneLoaded; if (Instance == this) Instance = null; }
@@ -235,8 +235,10 @@ namespace TankRevival
         private void OnPlayerSupportIntent(FireSupportStrikeIntentV139 _)
         {
             PlayerTank player = RuntimeBattleRegistry.Player; if (_game == null || !_game.IsPlaying || player == null) return;
-            Vector2 position = player.transform.position; float relocation = _hasSignature ? Vector2.Distance(position, _lastSignaturePosition) : CounterBatteryModelV140.BreakDistance * 2f;
-            _exposure = CounterBatteryModelV140.AddSupportSignature(_exposure, relocation); _lastSignaturePosition = position; _hasSignature = true; _signaturesObserved++;
+            Vector2 position = player.transform.position; Vector2 reportedPosition = CounterReconDeceptionDirectorV142.ResolveSupportSignaturePosition(position);
+            float relocation = _hasSignature ? Vector2.Distance(reportedPosition, _lastSignaturePosition) : CounterBatteryModelV140.BreakDistance * 2f;
+            _exposure = CounterBatteryModelV140.AddSupportSignature(_exposure, relocation) * CounterReconDeceptionDirectorV142.CounterBatteryExposureScale;
+            _lastSignaturePosition = reportedPosition; _hasSignature = true; _signaturesObserved++;
             if (_state == CounterBatteryStateV140.Quiet && _exposure >= CounterBatteryModelV140.SearchThreshold) BeginSearching();
         }
         private void Update()
@@ -255,8 +257,8 @@ namespace TankRevival
                 case CounterBatteryStateV140.Searching:
                     if (_hasSignature && Vector2.Distance(playerPosition, _lastSignaturePosition) >= breakDistance) { EnterRelocating(now, true); break; }
                     if (_observerStrength <= 0f || _exposure < CounterBatteryModelV140.SearchThreshold * 0.60f) { _state = CounterBatteryStateV140.Quiet; _acquisition = Mathf.Max(0f, _acquisition - 0.15f); break; }
-                    _acquisition = Mathf.Clamp01(_acquisition + CounterBatteryModelV140.AcquisitionGainPerSecond(_exposure * _terrainExposure, _observerStrength, _profile) * dt);
-                    if (_acquisition >= _profile.LockThreshold) { _state = CounterBatteryStateV140.Locked; _lockedPosition = playerPosition; _lockOrigin = playerPosition; _stateUntil = now + CounterBatteryModelV140.LockWarningSeconds; }
+                    _acquisition = Mathf.Clamp01(_acquisition + CounterBatteryModelV140.AcquisitionGainPerSecond(_exposure * _terrainExposure, _observerStrength, _profile) * CounterReconDeceptionDirectorV142.CounterBatteryAcquisitionScale * dt);
+                    if (_acquisition >= _profile.LockThreshold) { _state = CounterBatteryStateV140.Locked; _lockedPosition = CounterReconDeceptionDirectorV142.ResolveLockPosition(playerPosition, _lastSignaturePosition); _lockOrigin = playerPosition; _stateUntil = now + CounterBatteryModelV140.LockWarningSeconds; }
                     break;
                 case CounterBatteryStateV140.Locked:
                     if (Vector2.Distance(playerPosition, _lockOrigin) >= breakDistance) { EnterRelocating(now, true); break; }
