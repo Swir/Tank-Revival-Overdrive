@@ -1,0 +1,41 @@
+name: v14.3 Smoke Source Qualification
+
+on:
+  push:
+    branches: [dev-v14-3]
+    paths:
+      - 'Assets/Scripts/BattlefieldSmokeScreenV143.cs'
+      - 'Assets/Scripts/CounterBatteryWarfareV140.cs'
+      - 'Tools/verify_v143_smoke_screen.py'
+      - '.github/workflows/v143-smoke-source-qualification.yml'
+  pull_request:
+    paths:
+      - 'Assets/Scripts/BattlefieldSmokeScreenV143.cs'
+      - 'Assets/Scripts/CounterBatteryWarfareV140.cs'
+      - 'Tools/verify_v143_smoke_screen.py'
+      - '.github/workflows/v143-smoke-source-qualification.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  source-qualification:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify bounded smoke, weather and authority contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile Tools/verify_v143_smoke_screen.py
+          python Tools/verify_v143_smoke_screen.py
+          grep -q 'MaxActiveSmokeZones = 1' Assets/Scripts/BattlefieldSmokeScreenV143.cs
+          grep -q 'SmokeRadiusWorld = 6.0f' Assets/Scripts/BattlefieldSmokeScreenV143.cs
+          grep -q 'BattlefieldWeatherKindV135.Storm: scale = 0.70f' Assets/Scripts/BattlefieldSmokeScreenV143.cs
+          grep -q 'BattlefieldWeatherKindV135.Snow: scale = 1.20f' Assets/Scripts/BattlefieldSmokeScreenV143.cs
+          grep -q 'PlayerInsideZone' Assets/Scripts/BattlefieldSmokeScreenV143.cs
+          ! grep -q 'OnGUI(' Assets/Scripts/BattlefieldSmokeScreenV143.cs
+          git diff --check
