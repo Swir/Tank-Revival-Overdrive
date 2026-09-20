@@ -12,7 +12,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)](https://github.com/Swir/Tank-Revival-Overdrive/releases)
 [![Unity](https://img.shields.io/badge/Unity-6000.3.17f1-02050A?style=for-the-badge&logo=unity&logoColor=62E5FF)](https://unity.com/)
-[![Roadmap](https://img.shields.io/badge/Roadmap-100.0%25%20V14.0%20Qualified-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
+[![Roadmap](https://img.shields.io/badge/Roadmap-98.3%25%20V14.1%20In%20Development-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
 [![v14.0 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/counter-battery-v140-windows.yml/badge.svg?branch=dev-v14-0)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/counter-battery-v140-windows.yml)
 
 [**Highlights**](#-highlights) · [**Download**](#-quick-start--download) · [**Controls**](#-controls) · [**Roadmap**](#-roadmap--quality-gates) · [**Releases**](#-releases)
@@ -29,8 +29,8 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 | Item | Status |
 |---|---|
-| Development milestone | **V14.0 QUALIFIED** on `dev-v14-0` |
-| Roadmap | **471 / 471 completed (100.0%)** — authoritative `ROADMAP.md` scope |
+| Development milestone | **V14.1 IN DEVELOPMENT** on `dev-v14-1` |
+| Roadmap | **471 / 479 completed (98.3%)** — authoritative `ROADMAP.md` scope |
 | Primary platform | **Windows 10 / 11 x64** |
 | Development engine | **Unity 6000.3.17f1** |
 | Latest qualified milestone | **v14.0** — exact Windows candidate `77213238077e999ed9b880c6e53bad0b0b5b1dfa` qualified in run `35482246072` |
@@ -61,6 +61,7 @@ The campaign combines direct tank combat with directional armor, component damag
 | 💢 **Battlefield suppression v13.8 — qualified** | Player impacts and near misses build bounded Steady/Suppressed/Pinned pressure that affects only existing movement/reload/spread paths, with ammo-aware pressure, cohesion-aware recovery, boss resistance and no bonus damage or permanent stun. |
 | 🎯 **Fire-support counterplay v13.9 — qualified** | Earned F-key command windows combine qualified suppression, cover, cohesion and verified contacts into bounded fire-support intent with class-aware reactions, anti-spam cooldowns and canonical TankGame projectile execution. |
 | 📍 **Counter-battery warfare v14.0 — qualified** | Player fire-support signatures now drive bounded SEARCHING/LOCKED/BARRAGE pressure with terrain/sensor relocation counterplay, capped observer acquisition and canonical enemy projectile execution; one exact Windows candidate passed runtime, historical regression and late-round soak gates. |
+| 🔭 **Counter-observation warfare v14.1 — in development** | Sensor-confirmed observer hunts will let the player identify and break the enemy fire-control network while canonical Health/EnemyTank lifecycle remains authoritative. |
 | 🎯 **Dynamic objective warfare** | Objective planning layers mission pressure onto the existing round/spawn loop instead of replacing it. |
 | 👑 **Multi-phase bosses** | Boss behavior escalates through health/component-driven phases while existing movement, projectile and survivability authorities remain canonical. |
 | 🛡️ **Directional armor & modules** | Front/side/rear armor, ricochets and engine/tracks/gun/ammo-rack degradation affect how vehicles move and fight. |
@@ -248,6 +249,11 @@ This separation keeps public downloads distinct from qualified-but-not-yet-publi
 ## 🎨 Creative Direction
 
 Tank Revival: Orzeł Overdrive is an original project with its own code, project branding and procedural game presentation. It uses broad top-down tank-action conventions but does not depend on ripped maps, sprites, audio or other assets from existing games.
+
+
+### Counter-Observation & Hunter-Killer Warfare v14.1 — in development
+
+v14.1 builds active hunter-killer counterplay above the qualified v14.0 counter-battery system. The player must use existing sensor information to identify real observer-class threats, destroy them through canonical combat, and earn only a short bounded disruption of enemy acquisition. The new layer may publish designation/disruption intent but never deals damage, deletes projectiles, teleports enemies or replaces `Health`, `EnemyTank`, `Projectile`, `TankGame` or `CounterBatteryDirectorV140` authority.
 
 ## 🔎 Search Keywords
 
