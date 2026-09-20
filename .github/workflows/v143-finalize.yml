@@ -107,6 +107,17 @@ jobs:
           evidence = Path('docs/qualification/V14_3_WINDOWS_QUALIFICATION.md')
           evidence.parent.mkdir(parents=True, exist_ok=True)
           evidence.write_text('''# v14.3 Windows Qualification — Smoke Screening & Break-Contact Warfare\n\n- Qualified candidate SHA: `bba28fe3569bf0cbd4cd386103daa8b4e29187ae`\n- Windows qualification run: `35539622497` — SUCCESS\n- Source qualification run: `35539622501` — SUCCESS\n- Artifact: `TankRevivalOverdrive-v14.3-smoke-Windows-x64`\n- Artifact ID: `10613992946`\n- Artifact size: `60304212` bytes\n- Artifact digest: `sha256:56e6ccb138acd0bf60e368e812cfd26914c197221966778c90bfb67c7aa6bb38`\n\nThe same packaged Windows executable passed the v14.3 smoke/break-contact runtime matrix, v14.2/v14.1/v14.0/v13.9 regressions and rounds 80/90/100 soak. The candidate includes bounded weather-coupled smoke, counter-battery/sensor tradeoffs, break-contact integration and finite suppression-aware tactical recovery without parallel Health, Projectile, movement or TankGame authority.\n\nRoadmap qualification does **not** itself authorize a public release. Full-play release readiness remains a separate gate with fullscreen, clean HUD, complete player-flow and public-package verification requirements.\n''', encoding='utf-8')
+
+          runtime_path = Path('Tools/verify_v143_runtime_gate.py')
+          runtime = runtime_path.read_text(encoding='utf-8')
+          if 'import re\n' not in runtime:
+              runtime = runtime.replace('from pathlib import Path\n', 'from pathlib import Path\nimport re\n', 1)
+          old = '''for svg, label, fill in [\n    (progress_card, 'card', 'width="645.40"'),\n    (progress_mini, 'mini', 'width="354.18"'),\n]:\n    assert '98.4%' in svg, f'v14.3 {label} percentage is stale'\n    assert '487 / 495 completed' in svg, f'v14.3 {label} counter is stale'\n    assert 'V14.3 IN DEVELOPMENT' in svg, f'v14.3 {label} status is stale'\n    assert fill in svg, f'v14.3 {label} geometry is stale'\n'''
+          new = '''roadmap = Path('ROADMAP.md').read_text(encoding='utf-8')\nprogress = re.search(r'\\| \\*\\*(\\d+)\\*\\* \\| \\*\\*(\\d+)\\*\\* \\| \\*\\*(\\d+)\\*\\* \\| \\*\\*([0-9.]+)%\\*\\* \\|', roadmap)\nassert progress, 'v14.3 roadmap progress table missing'\ncompleted, remaining, total = map(int, progress.group(1, 2, 3))\npercent = float(progress.group(4))\nstatus = 'V14.3 QUALIFIED' if '## v14.3 — Smoke Screening & Break-Contact Warfare — QUALIFIED' in roadmap else 'V14.3 IN DEVELOPMENT'\nfor svg, label, track in [(progress_card, 'card', 656.0), (progress_mini, 'mini', 360.0)]:\n    assert f'{percent:.1f}%' in svg, f'v14.3 {label} percentage is stale'\n    assert f'{completed} / {total} completed' in svg, f'v14.3 {label} counter is stale'\n    assert status in svg, f'v14.3 {label} status is stale'\n    expected_fill = round(track * completed / total, 2)\n    assert f'width="{expected_fill:.2f}"' in svg, f'v14.3 {label} geometry is stale'\nassert completed + remaining == total\n'''
+          if old not in runtime:
+              raise SystemExit('runtime verifier stale-progress block missing')
+          runtime = runtime.replace(old, new, 1)
+          runtime_path.write_text(runtime, encoding='utf-8')
           PY
 
           python Tools/generate_progress_svgs.py --embed --write --check
@@ -122,6 +133,6 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg docs/qualification/V14_3_WINDOWS_QUALIFICATION.md
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg docs/qualification/V14_3_WINDOWS_QUALIFICATION.md Tools/verify_v143_runtime_gate.py
           git commit -m 'docs(v14.3): finalize exact-qualified roadmap closeout'
           git push origin HEAD:dev-v14-3
