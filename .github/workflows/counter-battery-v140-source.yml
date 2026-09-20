@@ -1,0 +1,75 @@
+name: Counter-Battery v14.0 Source Qualification
+
+on:
+  push:
+    branches: ['dev-v14-0']
+    paths:
+      - 'VERSION'
+      - 'Assets/Scripts/CounterBatteryWarfareV140.cs'
+      - 'Assets/Scripts/CounterBatteryCISmokeProbeV140.cs'
+      - 'Assets/Scripts/BattlefieldFireSupportV139.cs'
+      - 'Assets/Scripts/RuntimeBattleRegistry.cs'
+      - 'Assets/Scripts/BattlefieldCohesionV133.cs'
+      - 'Tools/verify_v140_counter_battery.py'
+      - 'Tools/verify_v140_runtime_gate.py'
+      - 'Tools/verify_csharp_type_uniqueness.py'
+      - 'Tools/generate_progress_svgs.py'
+      - 'Tools/swir_visual_report_guard.py'
+      - '.github/scripts/package_v140_counter_battery.py'
+      - '.github/scripts/test_package_v140_counter_battery.py'
+      - '.github/workflows/counter-battery-v140-source.yml'
+      - '.github/workflows/counter-battery-v140-windows.yml'
+      - 'ROADMAP.md'
+      - 'README.md'
+      - 'assets/readme/progress-card.svg'
+      - 'assets/readme/progress-mini.svg'
+      - 'assets/readme/progress-template.svg'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contracts:
+    name: Verify v14.0 counter-battery authority, runtime-gate and progress contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "${GITHUB_REF_NAME}" = 'dev-v14-0'
+          test "$(cat VERSION)" = 'v14.0.0-dev'
+          python -m py_compile \
+            Tools/verify_v140_counter_battery.py \
+            Tools/verify_v140_runtime_gate.py \
+            Tools/verify_csharp_type_uniqueness.py \
+            Tools/generate_progress_svgs.py \
+            Tools/swir_visual_report_guard.py \
+            .github/scripts/package_v140_counter_battery.py \
+            .github/scripts/test_package_v140_counter_battery.py
+          python .github/scripts/test_package_v140_counter_battery.py
+          python Tools/verify_v140_counter_battery.py
+          python Tools/verify_v140_runtime_gate.py
+          python Tools/verify_csharp_type_uniqueness.py
+          python Tools/generate_progress_svgs.py --check
+          python Tools/swir_visual_report_guard.py --check
+          git diff --check
+      - name: Verify authority split and bounded hot path
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'BattlefieldFireSupportDirector.StrikeIntentPublished += OnPlayerSupportIntent' Assets/Scripts/CounterBatteryWarfareV140.cs
+          grep -Fq 'RuntimeBattleRegistry.EnemySnapshot' Assets/Scripts/CounterBatteryWarfareV140.cs
+          grep -Fq 'Team.Enemy' Assets/Scripts/CounterBatteryWarfareV140.cs
+          test "$(grep -Fc '_game.SpawnProjectile(' Assets/Scripts/CounterBatteryWarfareV140.cs)" -eq 1
+          ! grep -Eq '\.Damage\(|ProjectilePool\.Spawn|FindObjectsByType<EnemyTank>|Physics2D\.Overlap' Assets/Scripts/CounterBatteryWarfareV140.cs
+          ! grep -Eq 'FindObjectsByType<EnemyTank>|Physics2D\.Overlap|\.Damage\(|ProjectilePool\.Spawn' Assets/Scripts/CounterBatteryCISmokeProbeV140.cs
+          echo 'v14.0 source authority split: PASS'

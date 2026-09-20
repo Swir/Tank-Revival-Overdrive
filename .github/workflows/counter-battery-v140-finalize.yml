@@ -1,0 +1,123 @@
+name: Counter-Battery v14.0 Exact-Evidence Finalizer
+
+on:
+  push:
+    branches: ['dev-v14-0']
+    paths:
+      - 'Tools/finalize_v140_roadmap.py'
+      - '.github/workflows/counter-battery-v140-finalize.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  CANDIDATE_SHA: 77213238077e999ed9b880c6e53bad0b0b5b1dfa
+  WINDOWS_RUN: '35482246072'
+  SOURCE_RUN: '35482246038'
+  TYPE_RUN: '35482246036'
+  ARTIFACT_ID: '10596580538'
+  ARTIFACT_NAME: TankRevivalOverdrive-v14.0-counter-battery-Windows-x64
+  ARTIFACT_BYTES: '60278167'
+  ARTIFACT_DIGEST: sha256:2be0f4b745ed85f78be2869cdb56b63ecab05f3213f15754d0675abdbfe31c5d
+
+jobs:
+  finalize:
+    name: Verify exact v14.0 evidence and finalize roadmap truth
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Verify post-candidate change boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "${CANDIDATE_SHA}" HEAD
+          python - <<'PY'
+          import os, subprocess
+          allowed={
+            'Tools/finalize_v140_roadmap.py',
+            '.github/workflows/counter-battery-v140-finalize.yml',
+          }
+          candidate=os.environ['CANDIDATE_SHA']
+          changed=set(subprocess.check_output(['git','diff','--name-only',candidate+'..HEAD'], text=True).splitlines())
+          unexpected=changed-allowed
+          if unexpected:
+              raise SystemExit('Unexpected post-candidate paths: '+', '.join(sorted(unexpected)))
+          print('Post-candidate boundary PASS:', sorted(changed))
+          PY
+      - name: Verify exact GitHub qualification evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, urllib.request
+          repo=os.environ['GITHUB_REPOSITORY']
+          token=os.environ['GH_TOKEN']
+          candidate=os.environ['CANDIDATE_SHA']
+          headers={'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}
+          def get(path):
+              req=urllib.request.Request('https://api.github.com/repos/'+repo+path, headers=headers)
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return json.load(r)
+          for env_name, expected_name in (
+              ('WINDOWS_RUN','Counter-Battery v14.0 Windows Qualification Gate'),
+              ('SOURCE_RUN','Counter-Battery v14.0 Source Qualification'),
+              ('TYPE_RUN','C# Type Uniqueness Guard'),
+          ):
+              run=get('/actions/runs/'+os.environ[env_name])
+              if run.get('conclusion')!='success' or run.get('head_sha')!=candidate or run.get('name')!=expected_name:
+                  raise SystemExit(f'{env_name} exact evidence mismatch: {run.get("name")} {run.get("head_sha")} {run.get("conclusion")}')
+          artifact=get('/actions/artifacts/'+os.environ['ARTIFACT_ID'])
+          expected=(os.environ['ARTIFACT_NAME'], int(os.environ['ARTIFACT_BYTES']), os.environ['ARTIFACT_DIGEST'])
+          actual=(artifact.get('name'), artifact.get('size_in_bytes'), artifact.get('digest'))
+          if actual!=expected or artifact.get('expired'):
+              raise SystemExit(f'artifact evidence mismatch: {actual} expected {expected} expired={artifact.get("expired")}')
+          wr=artifact.get('workflow_run') or {}
+          if str(wr.get('id'))!=os.environ['WINDOWS_RUN'] or wr.get('head_sha')!=candidate:
+              raise SystemExit('artifact provenance does not point to exact Windows run/candidate')
+          print('Exact v14.0 GitHub evidence PASS')
+          PY
+      - name: Finalize roadmap, README and evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile Tools/finalize_v140_roadmap.py Tools/generate_progress_svgs.py Tools/swir_visual_report_guard.py
+          python Tools/finalize_v140_roadmap.py
+          python Tools/generate_progress_svgs.py --write --embed
+          python Tools/generate_progress_svgs.py --check
+          python Tools/swir_visual_report_guard.py --check
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          road=Path('ROADMAP.md').read_text(encoding='utf-8')
+          readme=Path('README.md').read_text(encoding='utf-8')
+          done=len(re.findall(r'^- \[x\] ', road, re.M)); open_=len(re.findall(r'^- \[ \] ', road, re.M))
+          assert (done,open_,done+open_)==(471,0,471)
+          assert '| **471** | **0** | **471** | **100.0%** |' in road
+          assert 'STATUS-V14.0%20QUALIFIED-brightgreen' in road
+          assert '## v14.0 — Counter-Battery & Mobile Fire-Control Warfare — QUALIFIED' in road
+          assert '**471 / 471 completed (100.0%)**' in readme
+          assert 'Counter-Battery & Mobile Fire-Control Warfare v14.0 — qualified' in readme
+          assert '## 🔎 Search Keywords' in readme
+          for text,name in ((road,'ROADMAP'),(readme,'README')):
+              if re.search(r'(?m)^[\s>*-]*[█▓▒░]{6,}', text):
+                  raise SystemExit(name+' contains retired character meter')
+          print('v14.0 closed-state math/presentation PASS')
+          PY
+          git diff --check
+      - name: Commit exact-evidence closeout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg docs/qualification/V14_0_WINDOWS_QUALIFICATION.md
+          git diff --cached --quiet && { echo 'No closeout changes required.'; exit 0; }
+          git commit -m 'roadmap(v14.0): close exact-qualified counter-battery milestone [skip ci]'
+          git push origin HEAD:dev-v14-0
