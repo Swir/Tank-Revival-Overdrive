@@ -54,7 +54,8 @@ def main() -> None:
     ):
         require(token in runtime, 'runtime contract missing: ' + token)
 
-    require('CounterObservationDirectorV141.EnsureInstalled();' in cb, 'v14.0 installation bridge missing')
+    install = 'CounterObservationDirectorV141.EnsureInstalled();'
+    require(cb.count(install) == 1, 'counter-observation installation bridge must exist exactly once')
     bridge = '_observerStrength = Mathf.Clamp01(rawObserverStrength * CounterObservationDirectorV141.CounterBatteryNetworkScale);'
     require(cb.count(bridge) == 1, 'counter-battery acquisition bridge must exist exactly once')
     require(cb.count('float rawObserverStrength = _observerCount > 0 ? Mathf.Clamp01(weight / maxWeight) : 0f;') == 1,
