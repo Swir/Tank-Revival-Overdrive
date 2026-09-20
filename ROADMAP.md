@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v14-1"></a>
-  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-479%2F479-brightgreen?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V14.1%20QUALIFIED-brightgreen?style=for-the-badge">
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v14-2"></a>
+  <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-98.4%25-blue?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-479%2F487-1f6feb?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V14.2%20IN%20DEVELOPMENT-blue?style=for-the-badge">
 </p>
 
 
@@ -18,7 +18,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **479** | **0** | **479** | **100.0%** |
+| **479** | **8** | **487** | **98.4%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numeric table, percentage and generated Progress SVG. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -714,4 +714,14 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Readable budgeted observer-hunt presentation** — expose SEARCH / DESIGNATED / NETWORK BROKEN / COOLDOWN cues, target class/range and counter-battery pressure with strict one-target world emphasis and late-round presentation budgets.
 - [x] **Deterministic runtime, authority and performance contracts** — verify fixed hostile/observer caps, sensor thresholds, lifecycle cleanup, acquisition floors, no hot-path scene scans and unchanged Health/Projectile/TankGame/EnemyTank ownership.
 - [x] **Exact-SHA Windows qualification** — package one Windows x64 candidate, pass v14.1 observer-hunt smoke, rerun v14.0/v13.9/v13.8/v13.7 regressions plus rounds 80/90/100 soak on the same executable, then finalize checklist/progress SVGs.
+
+## v14.2 — Deception, Emission Discipline & Shoot-and-Scoot Warfare — IN DEVELOPMENT
+- [ ] **Bounded decoy and false-emission authority** — add deterministic finite-charge decoy signatures that can enter enemy hunter-killer evaluation without spawning actors, applying damage or replacing canonical observer targeting.
+- [ ] **Emission-control silent-relocation state** — let the player trade sensor/designation throughput for a finite low-emission relocation window with explicit cooldown, exposure floors and no scripted immunity.
+- [ ] **Shoot-and-scoot reacquisition timing bridge** — connect verified observer disruption, handoff and relocation to a bounded counter-battery reacquisition delay while `CounterBatteryDirectorV140` remains fire-control authority.
+- [ ] **Enemy deception-break adaptation counterplay** — repeated decoy use builds bounded deterministic suspicion that reduces false-signature value and prevents permanent AI lockout.
+- [ ] **Terrain, cohesion and command resilience integration** — scale decoy credibility, silent-move exposure and reacquisition timing from qualified terrain, cohesion and command posture without parallel movement/AI authority.
+- [ ] **Readable budgeted deception presentation** — expose DECOY / EMCON / RELOCATING / REACQUIRING cues through fixed-cap HUD/world/audio feedback under existing mass-battle FX budgets.
+- [ ] **Deterministic runtime, authority and performance contracts** — verify fixed decoy caps, finite cooldowns, deterministic adaptation, no hot-path scene scans and unchanged Health/Projectile/TankGame/EnemyTank ownership.
+- [ ] **Exact-SHA Windows qualification** — package one Windows x64 candidate, pass v14.2 deception/EMCON smoke, rerun v14.1/v14.0/v13.9/v13.8 regressions plus rounds 80/90/100 soak on the same executable, then finalize checklist/progress SVGs.
 
