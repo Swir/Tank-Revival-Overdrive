@@ -48,7 +48,8 @@ jobs:
           text=Path('ROADMAP.md').read_text(encoding='utf-8')
           done=len(re.findall(r'^- \[x\] ',text,re.M)); open_=len(re.findall(r'^- \[ \] ',text,re.M))
           if (done,open_) != (487,0): raise SystemExit(f'expected frozen 487/487, got {done}/{done+open_}')
-          if 'V14.2 QUALIFIED' not in text: raise SystemExit('v14.2 qualified status missing')
+          if '## v14.2 — Deception, Emission Discipline & Shoot-and-Scoot Warfare — QUALIFIED' not in text:
+              raise SystemExit('v14.2 qualified milestone heading missing')
           print('frozen v14.2 roadmap PASS: 487/487')
           PY
 
