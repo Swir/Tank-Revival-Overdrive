@@ -1,0 +1,61 @@
+name: Counter-Observation v14.1 Source Qualification
+
+on:
+  push:
+    branches: ['dev-v14-1']
+    paths:
+      - 'Assets/Scripts/CounterObservationWarfareV141.cs'
+      - 'Assets/Scripts/CounterObservationCISmokeProbeV141.cs'
+      - 'Assets/Scripts/CounterBatteryWarfareV140.cs'
+      - 'Tools/verify_v141_counter_observation.py'
+      - 'Tools/apply_v141_counter_observation_integration.py'
+      - 'Tools/finalize_v141_phase1.py'
+      - '.github/workflows/counter-observation-v141-source.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contracts:
+    name: Verify v14.1 observer-hunt authority, integration and roadmap contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify exact source snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "${GITHUB_REF_NAME}" = 'dev-v14-1'
+          test "$(cat VERSION)" = 'v14.1.0-dev'
+          python -m py_compile \
+            Tools/verify_v141_counter_observation.py \
+            Tools/apply_v141_counter_observation_integration.py \
+            Tools/finalize_v141_phase1.py \
+            Tools/verify_csharp_type_uniqueness.py \
+            Tools/generate_progress_svgs.py \
+            Tools/swir_visual_report_guard.py
+          python Tools/verify_v141_counter_observation.py
+          python Tools/verify_csharp_type_uniqueness.py
+          python Tools/generate_progress_svgs.py --check
+          python Tools/swir_visual_report_guard.py --check
+          git diff --check
+      - name: Verify bounded authority split
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'RuntimeBattleRegistry.EnemySnapshot' Assets/Scripts/CounterObservationWarfareV141.cs
+          grep -Fq 'sensor.TryGetContact(' Assets/Scripts/CounterObservationWarfareV141.cs
+          grep -Fq '_designatedHealth.Died += OnDesignatedObserverDied' Assets/Scripts/CounterObservationWarfareV141.cs
+          grep -Fq 'CounterObservationDirectorV141.CounterBatteryNetworkScale' Assets/Scripts/CounterBatteryWarfareV140.cs
+          ! grep -Eq '\.Damage\(|SpawnProjectile\(|ProjectilePool\.Spawn|FindObjectsByType<EnemyTank>|Physics2D\.Overlap|Rigidbody2D\.MovePosition' Assets/Scripts/CounterObservationWarfareV141.cs
+          echo 'v14.1 source authority split: PASS'

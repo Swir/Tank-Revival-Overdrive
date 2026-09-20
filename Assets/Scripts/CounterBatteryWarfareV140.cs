@@ -222,7 +222,7 @@ namespace TankRevival
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this; DontDestroyOnLoad(gameObject); _game = FindAnyObjectByType<TankGame>();
             BattlefieldFireSupportDirector.EnsureInstalled(); BattlefieldSensorFusionDirector.EnsureInstalled();
-            AdaptiveEnemyCommandDirector.EnsureInstalled(); BattlefieldCohesionDirector.EnsureInstalled(); CounterBatteryExecutionBridgeV140.EnsureInstalled();
+            AdaptiveEnemyCommandDirector.EnsureInstalled(); BattlefieldCohesionDirector.EnsureInstalled(); CounterBatteryExecutionBridgeV140.EnsureInstalled(); CounterObservationDirectorV141.EnsureInstalled();
             BattlefieldFireSupportDirector.StrikeIntentPublished += OnPlayerSupportIntent; SceneManager.sceneLoaded += OnSceneLoaded; _nextSample = Time.unscaledTime;
         }
         private void OnDestroy() { BattlefieldFireSupportDirector.StrikeIntentPublished -= OnPlayerSupportIntent; SceneManager.sceneLoaded -= OnSceneLoaded; if (Instance == this) Instance = null; }
@@ -305,7 +305,8 @@ namespace TankRevival
                 weight += observer * cohesionScale * commandScale * sensorScale; eligible++;
             }
             _observerCount = eligible; float maxWeight = CounterBatteryModelV140.MaxObservers * CounterBatteryModelV140.MaxObserverCompositeWeight;
-            _observerStrength = _observerCount > 0 ? Mathf.Clamp01(weight / maxWeight) : 0f;
+            float rawObserverStrength = _observerCount > 0 ? Mathf.Clamp01(weight / maxWeight) : 0f;
+            _observerStrength = Mathf.Clamp01(rawObserverStrength * CounterObservationDirectorV141.CounterBatteryNetworkScale);
         }
         private void PublishStrikeIntent(int ordinal) { CounterBatteryStrikeIntentV140 intent = CounterBatteryModelV140.BuildIntent(_lockedPosition, ordinal, _profile); StrikeIntentPublished?.Invoke(intent); }
         private static string WarningTextFor(CounterBatteryStateV140 state)
