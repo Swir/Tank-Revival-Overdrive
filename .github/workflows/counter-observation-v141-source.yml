@@ -4,7 +4,13 @@ on:
   push:
     branches: ['dev-v14-1']
     paths:
+      - 'Assets/Scripts/CounterObservationWarfareV141.cs'
+      - 'Assets/Scripts/CounterObservationCISmokeProbeV141.cs'
       - 'Assets/Scripts/CounterBatteryWarfareV140.cs'
+      - 'Tools/verify_v141_counter_observation.py'
+      - 'Tools/apply_v141_counter_observation_integration.py'
+      - 'Tools/finalize_v141_phase1.py'
+      - '.github/workflows/counter-observation-v141-source.yml'
   workflow_dispatch:
 
 permissions:
