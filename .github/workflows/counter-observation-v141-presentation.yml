@@ -33,28 +33,34 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           test "${GITHUB_REF_NAME}" = 'dev-v14-1'
           test "$(cat VERSION)" = 'v14.1.0-dev'
-          python -m py_compile \
-            Tools/verify_v141_counter_observation.py \
-            Tools/verify_v141_presentation.py \
-            Tools/verify_csharp_type_uniqueness.py \
-            Tools/finalize_v141_presentation.py \
-            Tools/generate_progress_svgs.py \
-            Tools/swir_visual_report_guard.py
+          python -m py_compile Tools/verify_v141_counter_observation.py Tools/verify_v141_presentation.py Tools/verify_csharp_type_uniqueness.py Tools/finalize_v141_presentation.py Tools/generate_progress_svgs.py Tools/swir_visual_report_guard.py
           python Tools/verify_v141_counter_observation.py
           python Tools/verify_v141_presentation.py
           python Tools/verify_csharp_type_uniqueness.py
-      - name: Close only source-verified presentation deliverable
+      - name: Finalize presentation checklist state
         shell: bash
         run: |
           set -euo pipefail
           python Tools/finalize_v141_presentation.py
+      - name: Regenerate protected progress SVGs
+        shell: bash
+        run: |
+          set -euo pipefail
           python Tools/generate_progress_svgs.py --embed --write
+      - name: Revalidate source and progress contracts
+        shell: bash
+        run: |
+          set -euo pipefail
           python Tools/verify_v141_counter_observation.py
           python Tools/verify_v141_presentation.py
           python Tools/verify_csharp_type_uniqueness.py
           python Tools/generate_progress_svgs.py --check
           python Tools/swir_visual_report_guard.py --check
           git diff --check
+      - name: Verify exact presentation closeout scope
+        shell: bash
+        run: |
+          set -euo pipefail
           grep -Fq '| **477** | **2** | **479** | **99.6%** |' ROADMAP.md
           grep -Fq '**477 / 479 completed (99.6%)**' README.md
           grep -Fq -- '- [x] **Readable budgeted observer-hunt presentation**' ROADMAP.md
