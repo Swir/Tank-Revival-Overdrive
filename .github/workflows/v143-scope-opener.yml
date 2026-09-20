@@ -1,0 +1,73 @@
+name: v14.3 Scope Opener
+
+on:
+  push:
+    branches: [dev-v14-3]
+    paths:
+      - '.github/workflows/v143-scope-opener.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  open-scope:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Open v14.3 roadmap scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          road = Path('ROADMAP.md')
+          text = road.read_text(encoding='utf-8')
+          assert '## v14.3 — Smoke Screening & Break-Contact Warfare' not in text
+          replacements = {
+              'badge.svg?branch=dev-v14-2': 'badge.svg?branch=dev-v14-3',
+              'ROADMAP-100.0%25-brightgreen': 'ROADMAP-98.4%25-blue',
+              'DONE-487%2F487-brightgreen': 'DONE-487%2F495-1f6feb',
+              'STATUS-V14.2%20QUALIFIED-brightgreen': 'STATUS-V14.3%20IN%20DEVELOPMENT-blue',
+              '| **487** | **0** | **487** | **100.0%** |': '| **487** | **8** | **495** | **98.4%** |',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'missing roadmap opener token: {old}')
+              text = text.replace(old, new, 1)
+
+          text = text.rstrip() + '''\n\n## v14.3 — Smoke Screening & Break-Contact Warfare — IN DEVELOPMENT
+          - [ ] **Bounded finite smoke-screen authority** — add deterministic finite-charge smoke screens with fixed lifetime/cooldown/cap that never apply direct damage, spawn/despawn actors or replace Health, Projectile, movement or TankGame authority.
+          - [ ] **Weather-coupled smoke dispersion and duration** — consume qualified battlefield-weather state as a read-only input that deterministically scales screen lifetime, spread and strength within hard fairness floors/ceilings.
+          - [ ] **Sensor / counter-battery tradeoff bridge** — let smoke reduce observer/reacquisition pressure while also reducing player sensor/designation throughput, with explicit non-zero floors and no scripted immunity.
+          - [ ] **Terrain, cohesion and command break-contact integration** — combine qualified cover/exposure plus cohesion/command posture into bounded break-contact timing without parallel movement, targeting or AI authority.
+          - [ ] **Suppression-aware tactical recovery** — permit finite regroup/recovery opportunities under smoke from existing suppression state while forbidding invulnerability, scripted stun, free healing or permanent crowd-control loops.
+          - [ ] **Readable budgeted smoke presentation** — expose SCREENING / DISPERSE / BREAK CONTACT / COOLDOWN cues through fixed-cap HUD/world/audio feedback under existing mass-battle FX budgets.
+          - [ ] **Deterministic runtime, authority and performance contracts** — verify fixed screen caps, deterministic timing/floors, bounded fan-out, zero hot-path scene scans and unchanged Health/Projectile/TankGame/EnemyTank ownership.
+          - [ ] **Exact-SHA Windows qualification** — package one Windows x64 candidate, pass v14.3 smoke/break-contact smoke, rerun v14.2/v14.1/v14.0/v13.9 regressions plus rounds 80/90/100 soak on the same executable, then finalize checklist/progress SVGs.
+          '''.lstrip()
+          road.write_text(text, encoding='utf-8')
+
+          svg = Path('assets/readme/progress-mini.svg')
+          if svg.exists():
+              s = svg.read_text(encoding='utf-8')
+              for old, new in [
+                  ('100.0%', '98.4%'),
+                  ('487 / 487', '487 / 495'),
+                  ('487/487', '487/495'),
+                  ('V14.2 QUALIFIED', 'V14.3 IN DEVELOPMENT'),
+                  ('v14.2 qualified', 'v14.3 in development'),
+                  ('V14.2', 'V14.3'),
+              ]:
+                  s = s.replace(old, new)
+              svg.write_text(s, encoding='utf-8')
+          PY
+          rm .github/workflows/v143-scope-opener.yml
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md assets/readme/progress-mini.svg .github/workflows/v143-scope-opener.yml
+          git commit -m 'roadmap(v14.3): open smoke-screen warfare scope [skip ci]'
+          git push origin HEAD:dev-v14-3
