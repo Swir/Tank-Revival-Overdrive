@@ -1,0 +1,34 @@
+name: v14.2 Deception Presentation Qualification
+
+on:
+  push:
+    branches: ['dev-v14-2']
+    paths:
+      - 'Assets/Scripts/CounterReconPresentationV142.cs'
+      - 'Assets/Scripts/CounterReconDeceptionV142.cs'
+      - 'Tools/verify_v142_presentation.py'
+      - '.github/workflows/v142-deception-presentation.yml'
+  pull_request:
+    branches: ['dev-v14-1']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  presentation:
+    name: Verify fixed-cap deception / EMCON presentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify presentation budgets and authority bounds
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile Tools/verify_v142_presentation.py
+          python Tools/verify_v142_presentation.py
+          git diff --check
