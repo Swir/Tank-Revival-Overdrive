@@ -12,7 +12,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)](https://github.com/Swir/Tank-Revival-Overdrive/releases)
 [![Unity](https://img.shields.io/badge/Unity-6000.3.17f1-02050A?style=for-the-badge&logo=unity&logoColor=62E5FF)](https://unity.com/)
-[![Roadmap](https://img.shields.io/badge/Roadmap-98.3%25%20V14.1%20In%20Development-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
+[![Roadmap](https://img.shields.io/badge/Roadmap-99.0%25%20V14.1%20In%20Development-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
 [![v14.0 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/counter-battery-v140-windows.yml/badge.svg?branch=dev-v14-0)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/counter-battery-v140-windows.yml)
 
 [**Highlights**](#-highlights) · [**Download**](#-quick-start--download) · [**Controls**](#-controls) · [**Roadmap**](#-roadmap--quality-gates) · [**Releases**](#-releases)
@@ -30,7 +30,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 | Item | Status |
 |---|---|
 | Development milestone | **V14.1 IN DEVELOPMENT** on `dev-v14-1` |
-| Roadmap | **471 / 479 completed (98.3%)** — authoritative `ROADMAP.md` scope |
+| Roadmap | **474 / 479 completed (99.0%)** — authoritative `ROADMAP.md` scope |
 | Primary platform | **Windows 10 / 11 x64** |
 | Development engine | **Unity 6000.3.17f1** |
 | Latest qualified milestone | **v14.0** — exact Windows candidate `77213238077e999ed9b880c6e53bad0b0b5b1dfa` qualified in run `35482246072` |
@@ -61,7 +61,7 @@ The campaign combines direct tank combat with directional armor, component damag
 | 💢 **Battlefield suppression v13.8 — qualified** | Player impacts and near misses build bounded Steady/Suppressed/Pinned pressure that affects only existing movement/reload/spread paths, with ammo-aware pressure, cohesion-aware recovery, boss resistance and no bonus damage or permanent stun. |
 | 🎯 **Fire-support counterplay v13.9 — qualified** | Earned F-key command windows combine qualified suppression, cover, cohesion and verified contacts into bounded fire-support intent with class-aware reactions, anti-spam cooldowns and canonical TankGame projectile execution. |
 | 📍 **Counter-battery warfare v14.0 — qualified** | Player fire-support signatures now drive bounded SEARCHING/LOCKED/BARRAGE pressure with terrain/sensor relocation counterplay, capped observer acquisition and canonical enemy projectile execution; one exact Windows candidate passed runtime, historical regression and late-round soak gates. |
-| 🔭 **Counter-observation warfare v14.1 — in development** | Sensor-confirmed observer hunts will let the player identify and break the enemy fire-control network while canonical Health/EnemyTank lifecycle remains authoritative. |
+| 🔭 **Counter-observation warfare v14.1 — in development** | Source-verified observer hunts use tracked/verified sensor evidence, canonical Health kill confirmation and a bounded network-break multiplier that reduces v14.0 acquisition without deleting shells or granting immunity. |
 | 🎯 **Dynamic objective warfare** | Objective planning layers mission pressure onto the existing round/spawn loop instead of replacing it. |
 | 👑 **Multi-phase bosses** | Boss behavior escalates through health/component-driven phases while existing movement, projectile and survivability authorities remain canonical. |
 | 🛡️ **Directional armor & modules** | Front/side/rear armor, ricochets and engine/tracks/gun/ammo-rack degradation affect how vehicles move and fight. |
@@ -218,7 +218,7 @@ The project intentionally avoids parallel damage, movement and economy authoriti
 
 ## 🗺️ Roadmap & Quality Gates
 
-The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **471 / 471 (100.0%) — V14.0 QUALIFIED**. Release readiness is tracked separately by exact-candidate Windows qualification gates.
+The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **474 / 479 (99.0%) — V14.1 IN DEVELOPMENT**. Release readiness is tracked separately by exact-candidate Windows qualification gates.
 
 Recent qualified milestone layers include v13.0 encounter/boss warfare, v13.1 objective warfare, v13.2 adaptive enemy command and v13.3 battlefield cohesion. The v13.3 exact-candidate gate required source/authority contracts, a clean Unity Windows x64 build, deterministic packaging and one exact packaged EXE running production-audio preflight, v13.3 cohesion smoke, v13.2/v13.1/v13.0/v12.9/v12.8 regressions and late-round soak covering rounds 80 / 90 / 100.
 
@@ -242,7 +242,7 @@ A qualified development branch does **not** automatically replace the public rel
 
 - **Latest public demo:** `v6.3.0-demo` (prerelease)
 - **Latest stable release:** `v2.2.0`
-- **Development milestone:** v14.0 is qualified on `dev-v14-0`; this qualified development scope does not automatically create or replace a public release.
+- **Development milestone:** v14.1 is in development on `dev-v14-1`; v14.0 remains the latest qualified milestone and this development scope does not automatically create or replace a public release.
 
 This separation keeps public downloads distinct from qualified-but-not-yet-published development milestones.
 
