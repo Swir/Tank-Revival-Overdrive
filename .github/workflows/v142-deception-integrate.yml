@@ -1,0 +1,56 @@
+name: v14.2 Deception Integration
+
+on:
+  push:
+    branches: ['dev-v14-2']
+    paths:
+      - 'Assets/Scripts/CounterReconDeceptionV142.cs'
+      - 'Tools/integrate_v142_deception.py'
+      - 'Tools/verify_v142_deception.py'
+      - '.github/workflows/v142-deception-integrate.yml'
+      - '.github/workflows/v142-deception-source.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v142-deception-integrate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    name: Integrate deception/EMCON into qualified authority paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Integrate and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile Tools/integrate_v142_deception.py Tools/verify_v142_deception.py
+          python Tools/integrate_v142_deception.py
+          python Tools/verify_v142_deception.py
+          git diff --check
+      - name: Commit authority bridges
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- Assets/Scripts/CounterBatteryWarfareV140.cs Assets/Scripts/CounterObservationWarfareV141.cs; then
+            echo 'Authority bridges already integrated.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Assets/Scripts/CounterBatteryWarfareV140.cs Assets/Scripts/CounterObservationWarfareV141.cs
+          git commit -m 'feat(v14.2): integrate deception and emcon authority bridges'
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
