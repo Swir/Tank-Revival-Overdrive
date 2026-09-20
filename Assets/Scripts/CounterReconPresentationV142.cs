@@ -101,19 +101,19 @@ namespace TankRevival
             PlayerTank player = RuntimeBattleRegistry.Player;
             Vector2 playerPosition = player != null ? (Vector2)player.transform.position : Vector2.zero;
 
-            if (_director.DecoyActive && MassBattleFxBudget.TryConsumeTacticalCue(false))
+            if (state == CounterReconStateV142.DecoyActive && _director.DecoyActive && MassBattleFxBudget.TryConsumeTacticalCue(false))
             {
                 _slots[0].Show(_director.DecoyPosition, ReconCueMode.Decoy,
                     _director.DecoyCredibility01, CueHoldSeconds);
                 _visibleCueCount++;
             }
-            else if (_director.EmconActive && player != null && MassBattleFxBudget.TryConsumeTacticalCue(true))
+            else if (state == CounterReconStateV142.EmconRelocating && _director.EmconActive && player != null && MassBattleFxBudget.TryConsumeTacticalCue(true))
             {
                 _slots[0].Show(playerPosition, ReconCueMode.Emcon,
                     1f - _director.ObserverResilience01 * 0.35f, CueHoldSeconds);
                 _visibleCueCount++;
             }
-            else if (_director.ReacquisitionBlocked && player != null && MassBattleFxBudget.TryConsumeTacticalCue(true))
+            else if (state == CounterReconStateV142.Reacquiring && _director.ReacquisitionBlocked && player != null && MassBattleFxBudget.TryConsumeTacticalCue(true))
             {
                 _slots[0].Show(playerPosition, ReconCueMode.Reacquiring,
                     1f - _director.ObserverResilience01 * 0.25f, CueHoldSeconds);
@@ -159,8 +159,10 @@ namespace TankRevival
             Rect panel = new Rect(Screen.width - width - 18f, 18f, width, height);
             GUI.Box(panel, GUIContent.none);
 
-            string state = _director.State == CounterReconStateV142.DecoyActive ? "DECOY ACTIVE" :
-                _director.State == CounterReconStateV142.EmconRelocating ? "EMCON / RELOCATE" : "REACQUIRING";
+            CounterReconStateV142 currentState = _director.State;
+            string state = currentState == CounterReconStateV142.DecoyActive ? "DECOY ACTIVE" :
+                currentState == CounterReconStateV142.EmconRelocating ? "EMCON / RELOCATE" :
+                currentState == CounterReconStateV142.Reacquiring ? "REACQUIRING" : "READY";
             GUI.Label(new Rect(panel.x + 10f, panel.y + 7f, width - 20f, 20f), "COUNTER-RECON: " + state);
 
             int suspicionPct = Mathf.RoundToInt(Mathf.Clamp01(_director.Suspicion01 / CounterReconDeceptionModelV142.MaxSuspicion01) * 100f);
