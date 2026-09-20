@@ -40,6 +40,17 @@ def main() -> None:
         '_designatedHealth.Died += OnDesignatedObserverDied',
         'CounterBatteryNetworkScale',
         'CounterBatteryDirectorV140.Instance',
+        'CounterObservationTargetSnapshotV141',
+        'TargetSnapshot => _targetSnapshot',
+        'RuntimeBattleRegistry.Revision',
+        'IsDesignatedStillRegistered()',
+        'TacticalTerrainDirector.Instance',
+        'terrain.ActiveCoverCount',
+        'BattlefieldCohesionDirector.IntentFor(actor)',
+        'AdaptiveEnemyCommandDirector.Instance',
+        'EffectiveDesignationHoldSeconds(',
+        'EffectiveNetworkBreakSeconds(',
+        'KILL CONFIRMED',
     ):
         require(token in runtime, 'runtime contract missing: ' + token)
 
@@ -64,6 +75,10 @@ def main() -> None:
         'for (int round = 1; round <= 100; round++)',
         'tracked requires finite sweep',
         'finite acquisition suppression',
+        'disciplined observers take longer to designate',
+        'disciplined observers recover network faster',
+        'observer network is never immune',
+        'bounded target handoff snapshot',
         'CounterObservationDirectorV141.EnsureInstalled()',
     ):
         require(token in smoke, 'smoke contract missing: ' + token)
@@ -79,7 +94,7 @@ def main() -> None:
     require(not re.search(r'(?m)^[\s>*-]*[█▓▒░]{6,}', roadmap), 'legacy character meter found')
     require(not re.search(r'(?m)^[\s>*-]*\[[=#█▓▒░-]{8,}\]', roadmap), 'legacy bracket meter found')
 
-    print(f'v14.1 counter-observation verifier: PASS — roadmap {completed}/{completed + opened}, intent-only observer hunt integrated')
+    print(f'v14.1 counter-observation verifier: PASS — roadmap {completed}/{completed + opened}, hunter-killer handoff/resilience integrated')
 
 
 if __name__ == '__main__':
