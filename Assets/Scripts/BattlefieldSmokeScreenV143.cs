@@ -1,0 +1,289 @@
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+namespace TankRevival
+{
+    public enum SmokeScreenStateV143
+    {
+        Ready = 0,
+        Screening = 1,
+        Dissipating = 2,
+        Cooldown = 3
+    }
+
+    public static class BattlefieldSmokeScreenModelV143
+    {
+        public const int PlannedRounds = 100;
+        public const int MaxActiveSmokeZones = 1;
+        public const int MaxSmokeChargesPerRound = 2;
+        public const float SmokeRadiusWorld = 6.0f;
+        public const float ScreenLifetimeSeconds = 5.5f;
+        public const float DissipationSeconds = 2.0f;
+        public const float CooldownSeconds = 14.0f;
+        public const float MinWeatherPersistenceScale = 0.70f;
+        public const float MaxWeatherPersistenceScale = 1.20f;
+        public const float MinCounterBatteryExposureScale = 0.58f;
+        public const float MinObserverAcquisitionScale = 0.62f;
+        public const float MinPlayerSensorThroughputScale = 0.72f;
+        public const float MinBreakContactDistanceScale = 0.70f;
+        public const float MaxBreakContactDistanceScale = 0.90f;
+        public const float MinContextStrength01 = 0.42f;
+        public const float MaxContextStrength01 = 0.88f;
+
+        public static bool ConfigurationValid =>
+            PlannedRounds == CounterBatteryModelV140.PlannedRounds &&
+            PlannedRounds == BattlefieldWeatherPlannerV135.PlannedRounds &&
+            MaxActiveSmokeZones == 1 &&
+            MaxSmokeChargesPerRound >= 1 && MaxSmokeChargesPerRound <= 3 &&
+            SmokeRadiusWorld >= 4f && SmokeRadiusWorld <= 8f &&
+            ScreenLifetimeSeconds >= 4f && ScreenLifetimeSeconds <= 8f &&
+            DissipationSeconds >= 1f && DissipationSeconds <= 4f &&
+            CooldownSeconds >= ScreenLifetimeSeconds + DissipationSeconds && CooldownSeconds <= 20f &&
+            MinWeatherPersistenceScale >= 0.65f && MaxWeatherPersistenceScale <= 1.25f &&
+            MinWeatherPersistenceScale < 1f && MaxWeatherPersistenceScale > 1f &&
+            MinCounterBatteryExposureScale >= 0.50f && MinCounterBatteryExposureScale < 1f &&
+            MinObserverAcquisitionScale >= 0.55f && MinObserverAcquisitionScale < 1f &&
+            MinPlayerSensorThroughputScale >= 0.65f && MinPlayerSensorThroughputScale < 1f &&
+            MinBreakContactDistanceScale >= 0.65f && MaxBreakContactDistanceScale <= 0.95f &&
+            MinBreakContactDistanceScale < MaxBreakContactDistanceScale &&
+            MinContextStrength01 > 0f && MaxContextStrength01 < 1f && MinContextStrength01 < MaxContextStrength01;
+
+        public static float WeatherPersistenceScale(BattlefieldWeatherKindV135 kind)
+        {
+            float scale;
+            switch (kind)
+            {
+                case BattlefieldWeatherKindV135.Mist: scale = 1.14f; break;
+                case BattlefieldWeatherKindV135.Rain: scale = 0.82f; break;
+                case BattlefieldWeatherKindV135.Storm: scale = 0.70f; break;
+                case BattlefieldWeatherKindV135.Snow: scale = 1.20f; break;
+                default: scale = 1.00f; break;
+            }
+            return Mathf.Clamp(scale, MinWeatherPersistenceScale, MaxWeatherPersistenceScale);
+        }
+
+        public static float ContextStrength01(TacticalTerrainKind terrain, float observerResilience01)
+        {
+            float exposure = CounterBatteryModelV140.TerrainExposureScale(terrain);
+            float shelter01 = 1f - Mathf.InverseLerp(0.62f, 1.06f, exposure);
+            float resilience = Mathf.Clamp01(observerResilience01);
+            float strength = 0.52f + shelter01 * 0.24f - resilience * 0.14f;
+            return Mathf.Clamp(strength, MinContextStrength01, MaxContextStrength01);
+        }
+
+        public static float ExposureScale(float strength01)
+        {
+            return Mathf.Clamp(Mathf.Lerp(1f, MinCounterBatteryExposureScale, Mathf.Clamp01(strength01)), MinCounterBatteryExposureScale, 1f);
+        }
+
+        public static float AcquisitionScale(float strength01)
+        {
+            return Mathf.Clamp(Mathf.Lerp(1f, MinObserverAcquisitionScale, Mathf.Clamp01(strength01)), MinObserverAcquisitionScale, 1f);
+        }
+
+        public static float SensorThroughputScale(float strength01)
+        {
+            return Mathf.Clamp(Mathf.Lerp(1f, MinPlayerSensorThroughputScale, Mathf.Clamp01(strength01)), MinPlayerSensorThroughputScale, 1f);
+        }
+
+        public static float BreakContactScale(float strength01)
+        {
+            return Mathf.Clamp(
+                Mathf.Lerp(MaxBreakContactDistanceScale, MinBreakContactDistanceScale, Mathf.Clamp01(strength01)),
+                MinBreakContactDistanceScale,
+                MaxBreakContactDistanceScale);
+        }
+    }
+
+    [DefaultExecutionOrder(-8800)]
+    public sealed class BattlefieldSmokeScreenDirectorV143 : MonoBehaviour
+    {
+        public static BattlefieldSmokeScreenDirectorV143 Instance { get; private set; }
+
+        private TankGame _game;
+        private int _round = -1;
+        private int _charges;
+        private int _screensDeployed;
+        private float _screenUntil;
+        private float _dissipateUntil;
+        private float _cooldownUntil;
+        private float _contextStrength01;
+        private float _observerResilience01;
+        private float _weatherPersistenceScale = 1f;
+        private Vector2 _origin;
+        private TacticalTerrainKind _terrain;
+        private BattlefieldWeatherKindV135 _weather;
+
+        public int Charges => _charges;
+        public int ScreensDeployed => _screensDeployed;
+        public int ActiveZoneCount => ScreenActive || Dissipating ? 1 : 0;
+        public Vector2 Origin => _origin;
+        public float RadiusWorld => BattlefieldSmokeScreenModelV143.SmokeRadiusWorld;
+        public TacticalTerrainKind Terrain => _terrain;
+        public BattlefieldWeatherKindV135 Weather => _weather;
+        public float WeatherPersistenceScale => _weatherPersistenceScale;
+        public float ContextStrength01 => _contextStrength01;
+        public float ObserverResilience01 => _observerResilience01;
+        public bool ScreenActive => Time.unscaledTime < _screenUntil;
+        public bool Dissipating => !ScreenActive && Time.unscaledTime < _dissipateUntil;
+        public float RemainingSeconds => Mathf.Max(0f, _dissipateUntil - Time.unscaledTime);
+        public SmokeScreenStateV143 State => ScreenActive
+            ? SmokeScreenStateV143.Screening
+            : Dissipating
+                ? SmokeScreenStateV143.Dissipating
+                : Time.unscaledTime < _cooldownUntil
+                    ? SmokeScreenStateV143.Cooldown
+                    : SmokeScreenStateV143.Ready;
+
+        public bool PlayerInsideZone
+        {
+            get
+            {
+                PlayerTank player = RuntimeBattleRegistry.Player;
+                if (player == null || (!ScreenActive && !Dissipating)) return false;
+                Vector2 playerPosition = player.transform.position;
+                float radius = BattlefieldSmokeScreenModelV143.SmokeRadiusWorld;
+                return (playerPosition - _origin).sqrMagnitude <= radius * radius;
+            }
+        }
+
+        private float EffectiveStrength01
+        {
+            get
+            {
+                if (!PlayerInsideZone) return 0f;
+                if (ScreenActive) return _contextStrength01;
+                if (!Dissipating) return 0f;
+                float dissipated01 = Mathf.InverseLerp(_screenUntil, _dissipateUntil, Time.unscaledTime);
+                return Mathf.Clamp01(_contextStrength01 * (1f - dissipated01) * 0.70f);
+            }
+        }
+
+        public static float CounterBatteryExposureScale => Instance == null
+            ? 1f
+            : BattlefieldSmokeScreenModelV143.ExposureScale(Instance.EffectiveStrength01);
+        public static float ObserverAcquisitionScale => Instance == null
+            ? 1f
+            : BattlefieldSmokeScreenModelV143.AcquisitionScale(Instance.EffectiveStrength01);
+        public static float PlayerSensorThroughputScale => Instance == null
+            ? 1f
+            : BattlefieldSmokeScreenModelV143.SensorThroughputScale(Instance.EffectiveStrength01);
+        public static float BreakContactDistanceScale => Instance == null || !Instance.PlayerInsideZone
+            ? 1f
+            : BattlefieldSmokeScreenModelV143.BreakContactScale(Instance.EffectiveStrength01);
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void Install() => EnsureInstalled();
+
+        public static BattlefieldSmokeScreenDirectorV143 EnsureInstalled()
+        {
+            if (Instance != null) return Instance;
+            BattlefieldSmokeScreenDirectorV143 existing = FindAnyObjectByType<BattlefieldSmokeScreenDirectorV143>();
+            if (existing != null)
+            {
+                Instance = existing;
+                return existing;
+            }
+
+            GameObject go = new GameObject("BattlefieldSmokeScreenDirector_v14_3");
+            DontDestroyOnLoad(go);
+            return go.AddComponent<BattlefieldSmokeScreenDirectorV143>();
+        }
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+            _game = FindAnyObjectByType<TankGame>();
+            BattlefieldWeatherDirector.EnsureInstalled();
+            CounterBatteryDirectorV140.EnsureInstalled();
+            CounterObservationDirectorV141.EnsureInstalled();
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            if (Instance == this) Instance = null;
+        }
+
+        private void OnSceneLoaded(Scene _, LoadSceneMode __)
+        {
+            _game = FindAnyObjectByType<TankGame>();
+            ResetRuntime();
+        }
+
+        private void ResetRuntime()
+        {
+            _round = -1;
+            _charges = 0;
+            _screensDeployed = 0;
+            _screenUntil = 0f;
+            _dissipateUntil = 0f;
+            _cooldownUntil = 0f;
+            _contextStrength01 = 0f;
+            _observerResilience01 = 0f;
+            _weatherPersistenceScale = 1f;
+            _origin = Vector2.zero;
+            _terrain = default;
+            _weather = BattlefieldWeatherKindV135.Clear;
+        }
+
+        private void Update()
+        {
+            if (_game == null || !_game.IsPlaying) return;
+            EnsureRound(_game.CurrentRound);
+            PlayerTank player = RuntimeBattleRegistry.Player;
+            if (player == null) return;
+            if (Input.GetKeyDown(KeyCode.B)) TryDeploy(player.transform.position);
+        }
+
+        private void EnsureRound(int requestedRound)
+        {
+            int round = Mathf.Clamp(requestedRound, 1, BattlefieldSmokeScreenModelV143.PlannedRounds);
+            if (_round == round) return;
+            _round = round;
+            _charges = BattlefieldSmokeScreenModelV143.MaxSmokeChargesPerRound;
+            _screensDeployed = 0;
+            _screenUntil = 0f;
+            _dissipateUntil = 0f;
+            _cooldownUntil = 0f;
+        }
+
+        public bool TryDeploy(Vector2 playerPosition)
+        {
+            float now = Time.unscaledTime;
+            if (_charges <= 0 || now < _cooldownUntil || ScreenActive || Dissipating) return false;
+
+            _terrain = TacticalTerrainMap.TerrainAt(playerPosition);
+            BattlefieldWeatherDirector weather = BattlefieldWeatherDirector.Instance;
+            _weather = weather != null ? weather.CurrentKind : BattlefieldWeatherKindV135.Clear;
+            _weatherPersistenceScale = BattlefieldSmokeScreenModelV143.WeatherPersistenceScale(_weather);
+            _observerResilience01 = ResolveObserverResilience01();
+            _contextStrength01 = BattlefieldSmokeScreenModelV143.ContextStrength01(_terrain, _observerResilience01);
+            _origin = playerPosition;
+            _charges--;
+            _screensDeployed++;
+            _screenUntil = now + BattlefieldSmokeScreenModelV143.ScreenLifetimeSeconds * _weatherPersistenceScale;
+            _dissipateUntil = _screenUntil + BattlefieldSmokeScreenModelV143.DissipationSeconds * _weatherPersistenceScale;
+            _cooldownUntil = now + BattlefieldSmokeScreenModelV143.CooldownSeconds;
+            return true;
+        }
+
+        private static float ResolveObserverResilience01()
+        {
+            CounterObservationDirectorV141 observation = CounterObservationDirectorV141.Instance;
+            if (observation == null) return 0f;
+            CounterObservationTargetSnapshotV141 snapshot = observation.TargetSnapshot;
+            return snapshot.Valid
+                ? Mathf.Clamp01(snapshot.Resilience01)
+                : Mathf.Clamp01(observation.CandidateResilience01);
+        }
+    }
+}
