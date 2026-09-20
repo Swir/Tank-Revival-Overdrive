@@ -22,7 +22,7 @@ namespace TankRevival
             try
             {
                 RunContracts();
-                WriteMarker(true, "profiles=PASS evidence=PASS ranking=PASS disruption=PASS caps=PASS authority=PASS installation=PASS");
+                WriteMarker(true, "profiles=PASS evidence=PASS ranking=PASS resilience=PASS handoff=PASS disruption=PASS caps=PASS authority=PASS installation=PASS");
                 Application.Quit(0);
             }
             catch (Exception ex)
@@ -87,6 +87,29 @@ namespace TankRevival
             Require(early.AcquisitionScale < 1f && late.AcquisitionScale < 1f, "finite acquisition suppression");
             Require(early.AcquisitionScale >= 0.40f && late.AcquisitionScale >= 0.40f, "no counter-battery immunity");
             Require(early.NetworkBreakSeconds <= 8f && late.NetworkBreakSeconds >= 5f, "bounded disruption duration");
+
+            float lowResilienceHold = CounterObservationModelV141.EffectiveDesignationHoldSeconds(late, 0f);
+            float highResilienceHold = CounterObservationModelV141.EffectiveDesignationHoldSeconds(late, 1f);
+            float lowResilienceBreak = CounterObservationModelV141.EffectiveNetworkBreakSeconds(late, 0f);
+            float highResilienceBreak = CounterObservationModelV141.EffectiveNetworkBreakSeconds(late, 1f);
+            Require(highResilienceHold > lowResilienceHold, "disciplined observers take longer to designate");
+            Require(highResilienceBreak < lowResilienceBreak, "disciplined observers recover network faster");
+            Require(highResilienceBreak >= CounterObservationModelV141.MinimumEffectiveNetworkBreakSeconds, "observer network is never immune");
+            Require(lowResilienceHold <= late.DesignationHoldSeconds * CounterObservationModelV141.MaxEffectiveDesignationHoldScale + 0.001f,
+                    "designation hold remains bounded");
+
+            CounterObservationTargetSnapshotV141 handoff = new CounterObservationTargetSnapshotV141
+            {
+                Valid = true,
+                ConfirmedKill = false,
+                Kind = EnemyKind.Sniper,
+                Range = 7.5f,
+                Confidence = 0.9f,
+                Resilience01 = 0.55f,
+                ContactSignature = 141,
+                RegistryRevision = 1
+            };
+            Require(handoff.Valid && !handoff.ConfirmedKill && handoff.CompactLabel.Contains("SNIPER"), "bounded target handoff snapshot");
 
             Require(CounterObservationDirectorV141.EnsureInstalled() != null, "director installation");
             Require(CounterBatteryDirectorV140.EnsureInstalled() != null, "counter-battery installation");
