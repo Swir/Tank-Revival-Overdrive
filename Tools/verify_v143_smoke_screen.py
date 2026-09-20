@@ -31,6 +31,8 @@ required_smoke = [
     'BossSuppressionRecoveryScale = 1.15f',
     'SuppressionRecoveryScale(float strength01, EnemyKind kind)',
     'SuppressionRecoveryScaleAt(Vector2 worldPosition, EnemyKind kind)',
+    'if (Instance == null || !Instance.ScreenActive) return 1f;',
+    'return Mathf.Clamp(Mathf.Lerp(1f, cap, Mathf.Clamp01(strength01)), 1f, cap);',
 ]
 for token in required_smoke:
     assert token in smoke, f'missing smoke contract: {token}'
@@ -72,4 +74,5 @@ required_recovery = [
 for token in required_recovery:
     assert token in morale, f'missing suppression recovery bridge: {token}'
 assert morale.count('BattlefieldSmokeScreenDirectorV143.SuppressionRecoveryScaleAt(e.Enemy.transform.position, e.Kind)') == 1
-print('v14.3 bounded weather-coupled smoke-screen + suppression recovery qualification PASS')
+assert 'e.Pressure = Mathf.Max(0f, e.Pressure - decay * BattlefieldSuppressionModelV138.SampleCadenceSeconds);' in morale
+print('v14.3 bounded weather-coupled smoke-screen + finite suppression recovery qualification PASS')
