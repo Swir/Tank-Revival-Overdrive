@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q '## v14.3 — Smoke-screen Break Contact & Counter-Pursuit Warfare — IN DEVELOPMENT' ROADMAP.md
+          grep -q '## v14.3 — Smoke Screening & Break-Contact Warfare — IN DEVELOPMENT' ROADMAP.md
 
           cat > Assets/Scripts/BattlefieldSmokeScreenV143.cs <<'CS'
           using UnityEngine;
@@ -39,10 +39,14 @@ jobs:
               public static class BattlefieldSmokeScreenModelV143
               {
                   public const int PlannedRounds = 100;
+                  public const int MaxActiveSmokeZones = 1;
                   public const int MaxSmokeChargesPerRound = 2;
+                  public const float SmokeRadiusWorld = 6.0f;
                   public const float ScreenLifetimeSeconds = 5.5f;
                   public const float DissipationSeconds = 2.0f;
                   public const float CooldownSeconds = 14.0f;
+                  public const float MinWeatherPersistenceScale = 0.70f;
+                  public const float MaxWeatherPersistenceScale = 1.20f;
                   public const float MinCounterBatteryExposureScale = 0.58f;
                   public const float MinObserverAcquisitionScale = 0.62f;
                   public const float MinPlayerSensorThroughputScale = 0.72f;
@@ -53,16 +57,35 @@ jobs:
 
                   public static bool ConfigurationValid =>
                       PlannedRounds == CounterBatteryModelV140.PlannedRounds &&
+                      PlannedRounds == BattlefieldWeatherPlannerV135.PlannedRounds &&
+                      MaxActiveSmokeZones == 1 &&
                       MaxSmokeChargesPerRound >= 1 && MaxSmokeChargesPerRound <= 3 &&
+                      SmokeRadiusWorld >= 4f && SmokeRadiusWorld <= 8f &&
                       ScreenLifetimeSeconds >= 4f && ScreenLifetimeSeconds <= 8f &&
                       DissipationSeconds >= 1f && DissipationSeconds <= 4f &&
                       CooldownSeconds >= ScreenLifetimeSeconds + DissipationSeconds && CooldownSeconds <= 20f &&
+                      MinWeatherPersistenceScale >= 0.65f && MaxWeatherPersistenceScale <= 1.25f &&
+                      MinWeatherPersistenceScale < 1f && MaxWeatherPersistenceScale > 1f &&
                       MinCounterBatteryExposureScale >= 0.50f && MinCounterBatteryExposureScale < 1f &&
                       MinObserverAcquisitionScale >= 0.55f && MinObserverAcquisitionScale < 1f &&
                       MinPlayerSensorThroughputScale >= 0.65f && MinPlayerSensorThroughputScale < 1f &&
                       MinBreakContactDistanceScale >= 0.65f && MaxBreakContactDistanceScale <= 0.95f &&
                       MinBreakContactDistanceScale < MaxBreakContactDistanceScale &&
                       MinContextStrength01 > 0f && MaxContextStrength01 < 1f && MinContextStrength01 < MaxContextStrength01;
+
+                  public static float WeatherPersistenceScale(BattlefieldWeatherKindV135 kind)
+                  {
+                      float scale;
+                      switch (kind)
+                      {
+                          case BattlefieldWeatherKindV135.Mist: scale = 1.14f; break;
+                          case BattlefieldWeatherKindV135.Rain: scale = 0.82f; break;
+                          case BattlefieldWeatherKindV135.Storm: scale = 0.70f; break;
+                          case BattlefieldWeatherKindV135.Snow: scale = 1.20f; break;
+                          default: scale = 1.00f; break;
+                      }
+                      return Mathf.Clamp(scale, MinWeatherPersistenceScale, MaxWeatherPersistenceScale);
+                  }
 
                   public static float ContextStrength01(TacticalTerrainKind terrain, float observerResilience01)
                   {
@@ -111,13 +134,19 @@ jobs:
                   private float _cooldownUntil;
                   private float _contextStrength01;
                   private float _observerResilience01;
+                  private float _weatherPersistenceScale = 1f;
                   private Vector2 _origin;
                   private TacticalTerrainKind _terrain;
+                  private BattlefieldWeatherKindV135 _weather;
 
                   public int Charges => _charges;
                   public int ScreensDeployed => _screensDeployed;
+                  public int ActiveZoneCount => ScreenActive || Dissipating ? 1 : 0;
                   public Vector2 Origin => _origin;
+                  public float RadiusWorld => BattlefieldSmokeScreenModelV143.SmokeRadiusWorld;
                   public TacticalTerrainKind Terrain => _terrain;
+                  public BattlefieldWeatherKindV135 Weather => _weather;
+                  public float WeatherPersistenceScale => _weatherPersistenceScale;
                   public float ContextStrength01 => _contextStrength01;
                   public float ObserverResilience01 => _observerResilience01;
                   public bool ScreenActive => Time.unscaledTime < _screenUntil;
@@ -131,10 +160,23 @@ jobs:
                               ? SmokeScreenStateV143.Cooldown
                               : SmokeScreenStateV143.Ready;
 
+                  public bool PlayerInsideZone
+                  {
+                      get
+                      {
+                          PlayerTank player = RuntimeBattleRegistry.Player;
+                          if (player == null || (!ScreenActive && !Dissipating)) return false;
+                          Vector2 playerPosition = player.transform.position;
+                          float radius = BattlefieldSmokeScreenModelV143.SmokeRadiusWorld;
+                          return (playerPosition - _origin).sqrMagnitude <= radius * radius;
+                      }
+                  }
+
                   private float EffectiveStrength01
                   {
                       get
                       {
+                          if (!PlayerInsideZone) return 0f;
                           if (ScreenActive) return _contextStrength01;
                           if (!Dissipating) return 0f;
                           float dissipated01 = Mathf.InverseLerp(_screenUntil, _dissipateUntil, Time.unscaledTime);
@@ -151,7 +193,7 @@ jobs:
                   public static float PlayerSensorThroughputScale => Instance == null
                       ? 1f
                       : BattlefieldSmokeScreenModelV143.SensorThroughputScale(Instance.EffectiveStrength01);
-                  public static float BreakContactDistanceScale => Instance == null || (!Instance.ScreenActive && !Instance.Dissipating)
+                  public static float BreakContactDistanceScale => Instance == null || !Instance.PlayerInsideZone
                       ? 1f
                       : BattlefieldSmokeScreenModelV143.BreakContactScale(Instance.EffectiveStrength01);
 
@@ -184,6 +226,7 @@ jobs:
                       Instance = this;
                       DontDestroyOnLoad(gameObject);
                       _game = FindAnyObjectByType<TankGame>();
+                      BattlefieldWeatherDirector.EnsureInstalled();
                       CounterBatteryDirectorV140.EnsureInstalled();
                       CounterObservationDirectorV141.EnsureInstalled();
                       SceneManager.sceneLoaded += OnSceneLoaded;
@@ -211,8 +254,10 @@ jobs:
                       _cooldownUntil = 0f;
                       _contextStrength01 = 0f;
                       _observerResilience01 = 0f;
+                      _weatherPersistenceScale = 1f;
                       _origin = Vector2.zero;
                       _terrain = default;
+                      _weather = BattlefieldWeatherKindV135.Clear;
                   }
 
                   private void Update()
@@ -242,13 +287,16 @@ jobs:
                       if (_charges <= 0 || now < _cooldownUntil || ScreenActive || Dissipating) return false;
 
                       _terrain = TacticalTerrainMap.TerrainAt(playerPosition);
+                      BattlefieldWeatherDirector weather = BattlefieldWeatherDirector.Instance;
+                      _weather = weather != null ? weather.CurrentKind : BattlefieldWeatherKindV135.Clear;
+                      _weatherPersistenceScale = BattlefieldSmokeScreenModelV143.WeatherPersistenceScale(_weather);
                       _observerResilience01 = ResolveObserverResilience01();
                       _contextStrength01 = BattlefieldSmokeScreenModelV143.ContextStrength01(_terrain, _observerResilience01);
                       _origin = playerPosition;
                       _charges--;
                       _screensDeployed++;
-                      _screenUntil = now + BattlefieldSmokeScreenModelV143.ScreenLifetimeSeconds;
-                      _dissipateUntil = _screenUntil + BattlefieldSmokeScreenModelV143.DissipationSeconds;
+                      _screenUntil = now + BattlefieldSmokeScreenModelV143.ScreenLifetimeSeconds * _weatherPersistenceScale;
+                      _dissipateUntil = _screenUntil + BattlefieldSmokeScreenModelV143.DissipationSeconds * _weatherPersistenceScale;
                       _cooldownUntil = now + BattlefieldSmokeScreenModelV143.CooldownSeconds;
                       return true;
                   }
@@ -321,18 +369,25 @@ jobs:
           counter = Path('Assets/Scripts/CounterBatteryWarfareV140.cs').read_text(encoding='utf-8')
 
           required_smoke = [
+              'MaxActiveSmokeZones = 1',
               'MaxSmokeChargesPerRound = 2',
+              'SmokeRadiusWorld = 6.0f',
               'ScreenLifetimeSeconds = 5.5f',
               'DissipationSeconds = 2.0f',
               'CooldownSeconds = 14.0f',
-              'MinCounterBatteryExposureScale = 0.58f',
-              'MinObserverAcquisitionScale = 0.62f',
-              'MinPlayerSensorThroughputScale = 0.72f',
-              'MinBreakContactDistanceScale = 0.70f',
+              'MinWeatherPersistenceScale = 0.70f',
+              'MaxWeatherPersistenceScale = 1.20f',
+              'BattlefieldWeatherKindV135.Mist: scale = 1.14f',
+              'BattlefieldWeatherKindV135.Rain: scale = 0.82f',
+              'BattlefieldWeatherKindV135.Storm: scale = 0.70f',
+              'BattlefieldWeatherKindV135.Snow: scale = 1.20f',
+              'BattlefieldWeatherDirector.Instance',
+              'weather.CurrentKind',
               'TacticalTerrainMap.TerrainAt(playerPosition)',
               'CounterObservationTargetSnapshotV141',
               'snapshot.Resilience01',
               'RuntimeBattleRegistry.Player',
+              'PlayerInsideZone',
               'Input.GetKeyDown(KeyCode.B)',
               'TryDeploy(Vector2 playerPosition)',
               'ConfigurationValid',
@@ -350,9 +405,10 @@ jobs:
               '.Damage(',
               'Instantiate(',
               'Destroy(enemy',
+              'OnGUI(',
           ]
           for token in forbidden_smoke:
-              assert token not in smoke, f'forbidden authority/hot-path token: {token}'
+              assert token not in smoke, f'forbidden authority/hot-path/presentation token: {token}'
 
           required_bridge = [
               'BattlefieldSmokeScreenDirectorV143.EnsureInstalled()',
@@ -366,7 +422,7 @@ jobs:
           assert counter.count('BattlefieldSmokeScreenDirectorV143.CounterBatteryExposureScale') == 1
           assert counter.count('BattlefieldSmokeScreenDirectorV143.ObserverAcquisitionScale') == 1
           assert counter.count('BattlefieldSmokeScreenDirectorV143.BreakContactDistanceScale') == 1
-          print('v14.3 smoke-screen and break-contact source qualification PASS')
+          print('v14.3 bounded weather-coupled smoke-screen qualification PASS')
           PY
 
           python -m py_compile Tools/verify_v143_smoke_screen.py
@@ -380,5 +436,5 @@ jobs:
             echo 'v14.3 gameplay package already staged; no changes required.'
             exit 0
           fi
-          git commit -m 'feat(v14.3): add smoke-screen break-contact warfare'
+          git commit -m 'feat(v14.3): add weather-coupled smoke break-contact warfare'
           git push origin HEAD:dev-v14-3
