@@ -1,0 +1,94 @@
+name: Counter-Observation v14.1 Source Integration Finalizer
+
+on:
+  push:
+    branches: ['dev-v14-1']
+    paths:
+      - 'Assets/Scripts/CounterObservationWarfareV141.cs'
+      - 'Assets/Scripts/CounterObservationCISmokeProbeV141.cs'
+      - 'Tools/apply_v141_counter_observation_integration.py'
+      - 'Tools/verify_v141_counter_observation.py'
+      - 'Tools/finalize_v141_phase1.py'
+      - '.github/workflows/counter-observation-v141-integrate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v141-counter-observation-integrate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    name: Integrate observer hunt and close only source-verified v14.1 scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply bounded v14.1 bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            Tools/apply_v141_counter_observation_integration.py \
+            Tools/verify_v141_counter_observation.py \
+            Tools/finalize_v141_phase1.py \
+            Tools/verify_csharp_type_uniqueness.py \
+            Tools/generate_progress_svgs.py \
+            Tools/swir_visual_report_guard.py
+          python Tools/apply_v141_counter_observation_integration.py
+          python Tools/verify_v141_counter_observation.py
+          python Tools/verify_csharp_type_uniqueness.py
+          git diff --check
+      - name: Close only verified first v14.1 gameplay slice
+        run: python Tools/finalize_v141_phase1.py
+      - name: Regenerate and verify SWIR progress presentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Tools/generate_progress_svgs.py --write
+          python Tools/generate_progress_svgs.py --check
+          python Tools/swir_visual_report_guard.py --fix --check
+          python Tools/generate_progress_svgs.py --check
+          python Tools/verify_v141_counter_observation.py
+          python Tools/verify_csharp_type_uniqueness.py
+          git diff --check
+      - name: Verify truthful partial milestone state
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          roadmap=Path('ROADMAP.md').read_text(encoding='utf-8')
+          readme=Path('README.md').read_text(encoding='utf-8')
+          assert len(re.findall(r'^- \[x\] ',roadmap,re.M))==474
+          assert len(re.findall(r'^- \[ \] ',roadmap,re.M))==5
+          assert '| **474** | **5** | **479** | **99.0%** |' in roadmap
+          assert 'V14.1%20IN%20DEVELOPMENT' in roadmap
+          assert '**474 / 479 completed (99.0%)**' in readme
+          assert 'Latest qualified milestone | **v14.0**' in readme
+          print('v14.1 source progress: PASS — 474/479 (99.0%)')
+      - name: Commit coherent v14.1 gameplay slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'v14.1 observer-hunt slice already integrated.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            Assets/Scripts/CounterBatteryWarfareV140.cs \
+            README.md ROADMAP.md \
+            assets/readme/progress-card.svg assets/readme/progress-mini.svg assets/readme/progress-template.svg
+          git commit -m 'feat(v14.1): integrate counter-observation hunter-killer slice'
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
