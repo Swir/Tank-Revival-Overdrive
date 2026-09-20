@@ -86,8 +86,13 @@ def main() -> None:
 
     completed = len(re.findall(r'^- \[x\] ', roadmap, re.M))
     opened = len(re.findall(r'^- \[ \] ', roadmap, re.M))
-    require((completed, opened) in ((471, 8), (474, 5), (476, 3)), f'unexpected roadmap state {completed}/{opened}')
-    require('## v14.1 — Counter-Observation & Hunter-Killer Warfare — IN DEVELOPMENT' in roadmap, 'active milestone missing')
+    # Accept every verified v14.1 closeout checkpoint. This verifier guards gameplay/source
+    # authority across the whole milestone and must not reject later progress states.
+    allowed_progress_states = ((471, 8), (474, 5), (476, 3), (477, 2), (478, 1), (479, 0))
+    require((completed, opened) in allowed_progress_states, f'unexpected roadmap state {completed}/{opened}')
+    require('## v14.1 — Counter-Observation & Hunter-Killer Warfare — IN DEVELOPMENT' in roadmap or
+            '## v14.1 — Counter-Observation & Hunter-Killer Warfare — QUALIFIED' in roadmap,
+            'v14.1 milestone heading missing')
     require('<!-- SWIR-ROADMAP-STANDARD:v1 -->' in roadmap, 'roadmap marker missing')
     require('<!-- SWIR-README-STANDARD:v2 -->' in readme, 'README v2 marker missing')
     require('assets/readme/progress-card.svg' in readme and 'assets/readme/progress-mini.svg' in roadmap, 'progress SVG embedding missing')

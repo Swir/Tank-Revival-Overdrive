@@ -5,6 +5,7 @@ on:
     branches: ['dev-v14-1']
     paths:
       - 'Assets/Scripts/CounterObservationPresentationV141.cs'
+      - 'Tools/verify_v141_counter_observation.py'
       - 'Tools/verify_v141_presentation.py'
       - 'Tools/finalize_v141_presentation.py'
       - '.github/workflows/counter-observation-v141-presentation.yml'
@@ -47,15 +48,35 @@ jobs:
         run: |
           set -euo pipefail
           python Tools/generate_progress_svgs.py --embed --write
-      - name: Revalidate source and progress contracts
+      - name: Revalidate v14.1 source contract
         shell: bash
         run: |
           set -euo pipefail
           python Tools/verify_v141_counter_observation.py
+      - name: Revalidate presentation contract
+        shell: bash
+        run: |
+          set -euo pipefail
           python Tools/verify_v141_presentation.py
+      - name: Revalidate type uniqueness
+        shell: bash
+        run: |
+          set -euo pipefail
           python Tools/verify_csharp_type_uniqueness.py
+      - name: Revalidate generated progress assets
+        shell: bash
+        run: |
+          set -euo pipefail
           python Tools/generate_progress_svgs.py --check
+      - name: Revalidate visual-report standard
+        shell: bash
+        run: |
+          set -euo pipefail
           python Tools/swir_visual_report_guard.py --check
+      - name: Verify clean patch formatting
+        shell: bash
+        run: |
+          set -euo pipefail
           git diff --check
       - name: Verify exact presentation closeout scope
         shell: bash
