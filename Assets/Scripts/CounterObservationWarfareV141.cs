@@ -42,9 +42,26 @@ namespace TankRevival
         }
     }
 
+    public struct CounterObservationTargetSnapshotV141
+    {
+        public bool Valid;
+        public bool ConfirmedKill;
+        public EnemyKind Kind;
+        public Vector2 Position;
+        public float Range;
+        public float Confidence;
+        public float Resilience01;
+        public int ContactSignature;
+        public int RegistryRevision;
+
+        public string CompactLabel => !Valid
+            ? "NO DESIGNATION"
+            : Kind.ToString().ToUpperInvariant() + " " + Range.ToString("0.0") + "m R" + Mathf.RoundToInt(Resilience01 * 100f).ToString("00");
+    }
+
     /// <summary>
     /// Pure v14.1 counter-observation math. It ranks only already-existing observer actors and
-    /// publishes bounded counter-battery disruption after canonical Health confirms a kill.
+    /// publishes bounded counter-battery disruption after canonical Health/runtime-registry lifecycle confirms removal.
     /// </summary>
     public static class CounterObservationModelV141
     {
@@ -63,6 +80,11 @@ namespace TankRevival
         public const float MinAcquisitionScale = 0.46f;
         public const float MaxAcquisitionScale = 0.62f;
         public const float MaxDesignationRange = BattlefieldSensorFusionPlannerV136.SweepRadius + 4.0f;
+        public const float MinEffectiveDesignationHoldScale = 0.90f;
+        public const float MaxEffectiveDesignationHoldScale = 1.35f;
+        public const float MinEffectiveNetworkBreakScale = 0.68f;
+        public const float MaxEffectiveNetworkBreakScale = 1.05f;
+        public const float MinimumEffectiveNetworkBreakSeconds = 3.40f;
 
         public static bool ConfigurationValid =>
             PlannedRounds == CounterBatteryModelV140.PlannedRounds &&
@@ -74,7 +96,9 @@ namespace TankRevival
             MinNetworkBreakSeconds >= 4f && MaxNetworkBreakSeconds <= 10f && MinNetworkBreakSeconds < MaxNetworkBreakSeconds &&
             MinCooldownSeconds >= 8f && MaxCooldownSeconds <= 18f && MinCooldownSeconds < MaxCooldownSeconds &&
             MinAcquisitionScale >= 0.40f && MaxAcquisitionScale <= 0.70f && MinAcquisitionScale < MaxAcquisitionScale &&
-            MaxDesignationRange > BattlefieldSensorFusionPlannerV136.SweepRadius;
+            MinEffectiveDesignationHoldScale >= 0.85f && MaxEffectiveDesignationHoldScale <= 1.40f &&
+            MinEffectiveNetworkBreakScale >= 0.60f && MaxEffectiveNetworkBreakScale <= 1.10f &&
+            MinimumEffectiveNetworkBreakSeconds >= 3.0f && MaxDesignationRange > BattlefieldSensorFusionPlannerV136.SweepRadius;
 
         public static CounterObservationProfileV141 ProfileForRound(int requestedRound)
         {
@@ -104,12 +128,76 @@ namespace TankRevival
             float range = Mathf.Clamp01(1f - Mathf.Max(0f, distance) / Mathf.Max(1f, MaxDesignationRange));
             return Mathf.Clamp01(sensor * 0.62f + observer * 0.26f + range * 0.12f);
         }
+
+        public static float TerrainExposure01(EnemyTank actor)
+        {
+            if (actor == null) return 1f;
+            TacticalTerrainDirector terrain = TacticalTerrainDirector.Instance;
+            if (terrain == null || terrain.CurrentPlan.Round < 1) return 0.70f;
+
+            TacticalTerrainPlanV134 plan = terrain.CurrentPlan;
+            float doctrineExposure;
+            switch (plan.Doctrine)
+            {
+                case TacticalTerrainDoctrineV134.FortifiedCorridor: doctrineExposure = 0.34f; break;
+                case TacticalTerrainDoctrineV134.SiegeApproach: doctrineExposure = 0.31f; break;
+                case TacticalTerrainDoctrineV134.BreachBelt: doctrineExposure = 0.48f; break;
+                case TacticalTerrainDoctrineV134.RiverCuts: doctrineExposure = 0.52f; break;
+                case TacticalTerrainDoctrineV134.CrossfireGrid: doctrineExposure = 0.60f; break;
+                case TacticalTerrainDoctrineV134.CounterattackLanes: doctrineExposure = 0.68f; break;
+                default: doctrineExposure = 0.82f; break;
+            }
+
+            float coverRatio = plan.CoverCount > 0
+                ? Mathf.Clamp01(terrain.ActiveCoverCount / (float)plan.CoverCount)
+                : 0f;
+            float x = Mathf.Abs(actor.transform.position.x);
+            float laneExposure = 1f - Mathf.Clamp01((x - plan.SafeLaneHalfWidth) / 4.5f);
+            return Mathf.Clamp01(doctrineExposure * 0.50f + laneExposure * 0.22f + (1f - coverRatio) * 0.28f);
+        }
+
+        public static float Cohesion01(EnemyTank actor)
+        {
+            if (actor == null) return 0.48f;
+            return Mathf.Clamp01(BattlefieldCohesionDirector.IntentFor(actor).Cohesion01);
+        }
+
+        public static float CommandDiscipline01(EnemyTank actor)
+        {
+            if (actor == null) return 0.35f;
+            AdaptiveEnemyCommandDirector command = AdaptiveEnemyCommandDirector.Instance;
+            EnemyCommandPostureV132 posture = AdaptiveEnemyCommandDirector.PostureFor(actor.Kind);
+            float confidence = command != null ? Mathf.Clamp01(command.CurrentPlan.Confidence01) : 0.35f;
+            float precision = Mathf.Clamp01((AdaptiveEnemyCommandPlannerV132.MaxSpreadScale - posture.SpreadScale) /
+                                            Mathf.Max(0.001f, AdaptiveEnemyCommandPlannerV132.MaxSpreadScale - AdaptiveEnemyCommandPlannerV132.MinSpreadScale));
+            return Mathf.Clamp01(confidence * 0.72f + precision * 0.28f);
+        }
+
+        public static float ObserverResilience01(EnemyTank actor)
+        {
+            float exposure = TerrainExposure01(actor);
+            float terrainResilience = 1f - exposure;
+            float cohesion = Cohesion01(actor);
+            float command = CommandDiscipline01(actor);
+            return Mathf.Clamp01(terrainResilience * 0.38f + cohesion * 0.36f + command * 0.26f);
+        }
+
+        public static float EffectiveDesignationHoldSeconds(CounterObservationProfileV141 profile, float resilience01)
+        {
+            float scale = Mathf.Lerp(MinEffectiveDesignationHoldScale, MaxEffectiveDesignationHoldScale, Mathf.Clamp01(resilience01));
+            return Mathf.Max(0.25f, profile.DesignationHoldSeconds * scale);
+        }
+
+        public static float EffectiveNetworkBreakSeconds(CounterObservationProfileV141 profile, float resilience01)
+        {
+            float scale = Mathf.Lerp(MaxEffectiveNetworkBreakScale, MinEffectiveNetworkBreakScale, Mathf.Clamp01(resilience01));
+            return Mathf.Max(MinimumEffectiveNetworkBreakSeconds, profile.NetworkBreakSeconds * scale);
+        }
     }
 
     /// <summary>
     /// v14.1 hunter-killer layer. It never deals damage, moves actors, spawns/despawns units or
-    /// owns projectiles. A successful disruption exists only after canonical Health reports that
-    /// the currently designated observer has died.
+    /// owns projectiles. Success is confirmed only by canonical Health or runtime-registry lifecycle.
     /// </summary>
     [DefaultExecutionOrder(-8820)]
     public sealed class CounterObservationDirectorV141 : MonoBehaviour
@@ -127,10 +215,16 @@ namespace TankRevival
         private float _stateUntil;
         private float _nextEvaluation;
         private float _candidateConfidence;
+        private float _candidateResilience;
+        private float _designatedResilience;
+        private float _candidateRange;
+        private int _candidateSignature;
+        private int _designationRegistryRevision;
         private int _round = -1;
         private int _candidateCount;
         private int _designations;
         private int _confirmedKills;
+        private CounterObservationTargetSnapshotV141 _targetSnapshot;
         private GUIStyle _header;
         private GUIStyle _body;
         private GUIStyle _stateStyle;
@@ -138,10 +232,12 @@ namespace TankRevival
         public CounterObservationStateV141 State => _state;
         public CounterObservationProfileV141 CurrentProfile => _profile;
         public EnemyTank DesignatedObserver => _designated;
+        public CounterObservationTargetSnapshotV141 TargetSnapshot => _targetSnapshot;
         public int CandidateCount => _candidateCount;
         public int Designations => _designations;
         public int ConfirmedKills => _confirmedKills;
         public float CandidateConfidence => _candidateConfidence;
+        public float CandidateResilience01 => _candidateResilience;
         public float CounterBatteryAcquisitionScale => _state == CounterObservationStateV141.NetworkBroken ? _profile.AcquisitionScale : 1f;
         public static float CounterBatteryNetworkScale => Instance != null ? Instance.CounterBatteryAcquisitionScale : 1f;
 
@@ -202,6 +298,12 @@ namespace TankRevival
             _designationUntil = 0f;
             _stateUntil = 0f;
             _candidateConfidence = 0f;
+            _candidateResilience = 0f;
+            _designatedResilience = 0f;
+            _candidateRange = 0f;
+            _candidateSignature = 0;
+            _designationRegistryRevision = 0;
+            _targetSnapshot = default;
             _candidateCount = 0;
             _round = -1;
             _nextEvaluation = Time.unscaledTime;
@@ -229,7 +331,11 @@ namespace TankRevival
             }
             if (_state == CounterObservationStateV141.Cooldown)
             {
-                if (now >= _stateUntil) _state = CounterObservationStateV141.Idle;
+                if (now >= _stateUntil)
+                {
+                    _state = CounterObservationStateV141.Idle;
+                    _targetSnapshot = default;
+                }
                 return;
             }
 
@@ -240,10 +346,19 @@ namespace TankRevival
                     EnterNetworkBroken(now);
                     return;
                 }
+
+                bool registryChanged = RuntimeBattleRegistry.Revision != _designationRegistryRevision;
+                if (registryChanged && !IsDesignatedStillRegistered())
+                {
+                    EnterNetworkBroken(now);
+                    return;
+                }
+
                 if (_designated == null || _designatedHealth == null)
                 {
                     ClearDesignationSubscription();
                     _designated = null;
+                    _targetSnapshot = default;
                     _state = CounterObservationStateV141.Searching;
                     _candidateSince = now;
                 }
@@ -251,8 +366,13 @@ namespace TankRevival
                 {
                     ClearDesignationSubscription();
                     _designated = null;
+                    _targetSnapshot = default;
                     _state = CounterObservationStateV141.Searching;
                     _candidateSince = now;
+                }
+                else
+                {
+                    RefreshTargetSnapshot(false);
                 }
             }
 
@@ -266,6 +386,7 @@ namespace TankRevival
                     _state = CounterObservationStateV141.Idle;
                     _candidate = null;
                     _candidateConfidence = 0f;
+                    _candidateResilience = 0f;
                     _candidateCount = 0;
                 }
                 return;
@@ -295,6 +416,12 @@ namespace TankRevival
             _designationUntil = 0f;
             _stateUntil = 0f;
             _candidateConfidence = 0f;
+            _candidateResilience = 0f;
+            _designatedResilience = 0f;
+            _candidateRange = 0f;
+            _candidateSignature = 0;
+            _designationRegistryRevision = 0;
+            _targetSnapshot = default;
             _candidateCount = 0;
         }
 
@@ -322,6 +449,9 @@ namespace TankRevival
             EnemyTank best = null;
             float bestScore = -1f;
             float bestConfidence = 0f;
+            float bestResilience = 0f;
+            float bestRange = 0f;
+            int bestSignature = 0;
             int eligible = 0;
             int count = Mathf.Min(enemies.Length, CounterObservationModelV141.MaxTrackedHostiles);
             bool sweepActive = sensor.SweepActive;
@@ -343,15 +473,22 @@ namespace TankRevival
 
                 float distance = Vector2.Distance(playerPosition, enemy.transform.position);
                 if (distance > CounterObservationModelV141.MaxDesignationRange) continue;
-                float score = CounterObservationModelV141.CandidateScore(enemy.Kind, confidence, distance);
+                float resilience = CounterObservationModelV141.ObserverResilience01(enemy);
+                float score = CounterObservationModelV141.CandidateScore(enemy.Kind, confidence, distance) * Mathf.Lerp(1.04f, 0.90f, resilience);
                 if (score <= bestScore) continue;
                 best = enemy;
                 bestScore = score;
                 bestConfidence = confidence;
+                bestResilience = resilience;
+                bestRange = distance;
+                bestSignature = signature;
             }
 
             _candidateCount = eligible;
             _candidateConfidence = bestConfidence;
+            _candidateResilience = bestResilience;
+            _candidateRange = bestRange;
+            _candidateSignature = bestSignature;
             if (best == null)
             {
                 ResetCandidate(now);
@@ -365,7 +502,8 @@ namespace TankRevival
                 return;
             }
 
-            if (now - _candidateSince >= _profile.DesignationHoldSeconds)
+            float requiredHold = CounterObservationModelV141.EffectiveDesignationHoldSeconds(_profile, _candidateResilience);
+            if (now - _candidateSince >= requiredHold)
                 Designate(best, now);
         }
 
@@ -373,6 +511,9 @@ namespace TankRevival
         {
             _candidate = null;
             _candidateConfidence = 0f;
+            _candidateResilience = 0f;
+            _candidateRange = 0f;
+            _candidateSignature = 0;
             _candidateSince = now;
         }
 
@@ -383,11 +524,28 @@ namespace TankRevival
             _designated = target;
             _designatedHealth = target.Health;
             _designatedHealth.Died += OnDesignatedObserverDied;
+            _designatedResilience = _candidateResilience;
+            _designationRegistryRevision = RuntimeBattleRegistry.Revision;
             _designationUntil = now + _profile.DesignationLeaseSeconds;
             _state = CounterObservationStateV141.Designated;
+            _designations++;
+            _targetSnapshot = new CounterObservationTargetSnapshotV141
+            {
+                Valid = true,
+                ConfirmedKill = false,
+                Kind = target.Kind,
+                Position = target.transform.position,
+                Range = _candidateRange,
+                Confidence = _candidateConfidence,
+                Resilience01 = _designatedResilience,
+                ContactSignature = _candidateSignature,
+                RegistryRevision = _designationRegistryRevision
+            };
             _candidate = null;
             _candidateConfidence = 0f;
-            _designations++;
+            _candidateResilience = 0f;
+            _candidateRange = 0f;
+            _candidateSignature = 0;
             VisualFactory.RingPulse(target.transform.position, new Color(0.16f, 0.92f, 1f), 0.72f);
         }
 
@@ -397,14 +555,40 @@ namespace TankRevival
             EnterNetworkBroken(Time.unscaledTime);
         }
 
+        private bool IsDesignatedStillRegistered()
+        {
+            EnemyTank[] enemies = RuntimeBattleRegistry.EnemySnapshot;
+            if (enemies == null || _designated == null) return false;
+            int count = Mathf.Min(enemies.Length, CounterObservationModelV141.MaxTrackedHostiles);
+            for (int i = 0; i < count; i++)
+                if (enemies[i] == _designated) return true;
+            return false;
+        }
+
+        private void RefreshTargetSnapshot(bool confirmedKill)
+        {
+            if (!_targetSnapshot.Valid) return;
+            if (_designated != null)
+            {
+                _targetSnapshot.Position = _designated.transform.position;
+                PlayerTank player = RuntimeBattleRegistry.Player;
+                if (player != null)
+                    _targetSnapshot.Range = Vector2.Distance(player.transform.position, _designated.transform.position);
+            }
+            _targetSnapshot.ConfirmedKill = confirmedKill;
+            _targetSnapshot.RegistryRevision = RuntimeBattleRegistry.Revision;
+        }
+
         private void EnterNetworkBroken(float now)
         {
+            RefreshTargetSnapshot(true);
             ClearDesignationSubscription();
             _designated = null;
             _candidate = null;
             _candidateConfidence = 0f;
+            _candidateResilience = 0f;
             _state = CounterObservationStateV141.NetworkBroken;
-            _stateUntil = now + _profile.NetworkBreakSeconds;
+            _stateUntil = now + CounterObservationModelV141.EffectiveNetworkBreakSeconds(_profile, _designatedResilience);
             _confirmedKills++;
         }
 
@@ -444,16 +628,29 @@ namespace TankRevival
             GUI.Label(new Rect(x + 10f, y + 7f, 185f, 18f), "COUNTER-OBSERVATION", _header);
             GUI.Label(new Rect(x + 190f, y + 7f, 94f, 18f), StateLabel(), _stateStyle);
 
-            string target = _designated != null
-                ? _designated.Kind.ToString().ToUpperInvariant() + "  " + Vector2.Distance(RuntimeBattleRegistry.Player != null ? RuntimeBattleRegistry.Player.transform.position : Vector3.zero, _designated.transform.position).ToString("0.0") + "m"
-                : _candidate != null ? "CONTACT " + _candidate.Kind.ToString().ToUpperInvariant() : "NO DESIGNATION";
+            string target;
+            if (_targetSnapshot.Valid)
+            {
+                target = (_targetSnapshot.ConfirmedKill ? "KILL CONFIRMED  " : "TARGET  ") + _targetSnapshot.CompactLabel;
+            }
+            else if (_candidate != null)
+            {
+                target = "CONTACT " + _candidate.Kind.ToString().ToUpperInvariant() + "  " + _candidateRange.ToString("0.0") + "m R" +
+                         Mathf.RoundToInt(_candidateResilience * 100f).ToString("00");
+            }
+            else
+            {
+                target = "NO DESIGNATION";
+            }
+
             GUI.Label(new Rect(x + 10f, y + 30f, 270f, 18f), target, _body);
             GUI.Label(new Rect(x + 10f, y + 49f, 270f, 18f),
                 "Observers " + _candidateCount + "/" + CounterObservationModelV141.MaxObserverCandidates +
                 "  ·  CB scale " + CounterBatteryAcquisitionScale.ToString("0.00"), _body);
-            string hint = _state == CounterObservationStateV141.Searching ? "C sweep + tracked/verified contact to designate" :
-                _state == CounterObservationStateV141.NetworkBroken ? "Observer network disrupted" :
-                _state == CounterObservationStateV141.Designated ? "Destroy designated observer through normal combat" : "Counter-observation standing by";
+            string hint = _state == CounterObservationStateV141.Searching ? "SEARCH · sensor evidence + terrain/cohesion/command" :
+                _state == CounterObservationStateV141.NetworkBroken ? "NETWORK BROKEN · canonical kill confirmed" :
+                _state == CounterObservationStateV141.Designated ? "DESIGNATED · destroy target through normal combat" :
+                _state == CounterObservationStateV141.Cooldown ? "COOLDOWN · network reacquiring" : "Counter-observation standing by";
             GUI.Label(new Rect(x + 10f, y + 68f, 274f, 18f), hint, _body);
         }
 
