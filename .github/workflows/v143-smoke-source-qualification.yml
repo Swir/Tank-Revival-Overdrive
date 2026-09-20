@@ -5,15 +5,31 @@ on:
     branches: [dev-v14-3]
     paths:
       - 'Assets/Scripts/BattlefieldSmokeScreenV143.cs'
+      - 'Assets/Scripts/BattlefieldSmokePresentationV143.cs'
+      - 'Assets/Scripts/BattlefieldSmokeCISmokeProbeV143.cs'
       - 'Assets/Scripts/CounterBatteryWarfareV140.cs'
       - 'Tools/verify_v143_smoke_screen.py'
+      - 'Tools/verify_v143_presentation.py'
+      - 'Tools/verify_v143_runtime_gate.py'
+      - '.github/scripts/package_v143_smoke.py'
+      - '.github/scripts/test_package_v143_smoke.py'
       - '.github/workflows/v143-smoke-source-qualification.yml'
+      - '.github/workflows/smoke-v143-windows.yml'
+      - 'VERSION'
   pull_request:
     paths:
       - 'Assets/Scripts/BattlefieldSmokeScreenV143.cs'
+      - 'Assets/Scripts/BattlefieldSmokePresentationV143.cs'
+      - 'Assets/Scripts/BattlefieldSmokeCISmokeProbeV143.cs'
       - 'Assets/Scripts/CounterBatteryWarfareV140.cs'
       - 'Tools/verify_v143_smoke_screen.py'
+      - 'Tools/verify_v143_presentation.py'
+      - 'Tools/verify_v143_runtime_gate.py'
+      - '.github/scripts/package_v143_smoke.py'
+      - '.github/scripts/test_package_v143_smoke.py'
       - '.github/workflows/v143-smoke-source-qualification.yml'
+      - '.github/workflows/smoke-v143-windows.yml'
+      - 'VERSION'
 
 permissions:
   contents: read
@@ -26,16 +42,27 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Verify bounded smoke, weather and authority contracts
+      - name: Verify bounded smoke, presentation, runtime and authority contracts
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile Tools/verify_v143_smoke_screen.py
+          python -m py_compile \
+            Tools/verify_v143_smoke_screen.py \
+            Tools/verify_v143_presentation.py \
+            Tools/verify_v143_runtime_gate.py \
+            .github/scripts/package_v143_smoke.py \
+            .github/scripts/test_package_v143_smoke.py
+          python .github/scripts/test_package_v143_smoke.py
           python Tools/verify_v143_smoke_screen.py
+          python Tools/verify_v143_presentation.py
+          python Tools/verify_v143_runtime_gate.py
           grep -q 'MaxActiveSmokeZones = 1' Assets/Scripts/BattlefieldSmokeScreenV143.cs
           grep -q 'SmokeRadiusWorld = 6.0f' Assets/Scripts/BattlefieldSmokeScreenV143.cs
           grep -q 'BattlefieldWeatherKindV135.Storm: scale = 0.70f' Assets/Scripts/BattlefieldSmokeScreenV143.cs
           grep -q 'BattlefieldWeatherKindV135.Snow: scale = 1.20f' Assets/Scripts/BattlefieldSmokeScreenV143.cs
           grep -q 'PlayerInsideZone' Assets/Scripts/BattlefieldSmokeScreenV143.cs
+          grep -q 'MaxPresentationCues = 2' Assets/Scripts/BattlefieldSmokePresentationV143.cs
+          grep -q 'V14_3_SMOKE_OK.txt' Assets/Scripts/BattlefieldSmokeCISmokeProbeV143.cs
           ! grep -q 'OnGUI(' Assets/Scripts/BattlefieldSmokeScreenV143.cs
+          ! grep -q 'OnGUI(' Assets/Scripts/BattlefieldSmokePresentationV143.cs
           git diff --check
