@@ -12,7 +12,7 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)](https://github.com/Swir/Tank-Revival-Overdrive/releases)
 [![Unity](https://img.shields.io/badge/Unity-6000.3.17f1-02050A?style=for-the-badge&logo=unity&logoColor=62E5FF)](https://unity.com/)
-[![Roadmap](https://img.shields.io/badge/Roadmap-98.4%25%20V14.3%20In%20Development-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
+[![Roadmap](https://img.shields.io/badge/Roadmap-100.0%25%20V14.3%20Qualified-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
 [![v14.3 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/smoke-v143-windows.yml/badge.svg?branch=dev-v14-3)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/smoke-v143-windows.yml)
 
 [**Highlights**](#-highlights) · [**Download**](#-quick-start--download) · [**Controls**](#-controls) · [**Roadmap**](#-roadmap--quality-gates) · [**Releases**](#-releases)
@@ -29,11 +29,11 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 | Item | Status |
 |---|---|
-| Development milestone | **V14.3 IN DEVELOPMENT** on `dev-v14-3` |
-| Roadmap | **487 / 495 completed (98.4%)** — authoritative `ROADMAP.md` scope |
+| Development milestone | **V14.3 QUALIFIED** on `dev-v14-3` |
+| Roadmap | **495 / 495 completed (100.0%)** — authoritative `ROADMAP.md` scope |
 | Primary platform | **Windows 10 / 11 x64** |
 | Development engine | **Unity 6000.3.17f1** |
-| Latest qualified milestone | **v14.2** — exact Windows candidate `1c846c02f7867170e52593cf9d7ddc9a0b842b08` qualified in run `35517709576` |
+| Latest qualified milestone | **v14.3** — exact Windows candidate `bba28fe3569bf0cbd4cd386103daa8b4e29187ae` qualified in run `35539622497` |
 | Latest public demo | **v6.3.0-demo** — prerelease |
 | Latest stable release | **v2.2.0** |
 | Public release readiness | Tracked separately from roadmap completion by packaged Windows gates |
@@ -221,7 +221,7 @@ The project intentionally avoids parallel damage, movement and economy authoriti
 
 ## 🗺️ Roadmap & Quality Gates
 
-The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **487 / 495 (98.4%) — V14.3 IN DEVELOPMENT**. v14.2 remains the latest qualified milestone; release readiness is tracked separately by exact-candidate Windows qualification gates.
+The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **495 / 495 (100.0%) — V14.3 QUALIFIED**. Release readiness is now frozen for full-play Windows finalization and remains separate from roadmap completion until the public release gate passes.
 
 Recent qualified milestone layers include v13.0 encounter/boss warfare, v13.1 objective warfare, v13.2 adaptive enemy command and v13.3 battlefield cohesion. The v13.3 exact-candidate gate required source/authority contracts, a clean Unity Windows x64 build, deterministic packaging and one exact packaged EXE running production-audio preflight, v13.3 cohesion smoke, v13.2/v13.1/v13.0/v12.9/v12.8 regressions and late-round soak covering rounds 80 / 90 / 100.
 
@@ -249,7 +249,7 @@ A qualified development branch does **not** automatically replace the public rel
 
 - **Latest public demo:** `v6.3.0-demo` (prerelease)
 - **Latest stable release:** `v2.2.0`
-- **Development milestone:** v14.3 is in development on `dev-v14-3`; v14.2 remains the latest qualified milestone and no development scope automatically creates or replaces a public release.
+- **Development milestone:** v14.3 is qualified on `dev-v14-3`; full-play release finalization is the next gate and no new milestone may open before that release gate is resolved.
 
 This separation keeps public downloads distinct from qualified-but-not-yet-published development milestones.
 

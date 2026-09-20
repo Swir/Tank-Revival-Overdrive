@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 smoke = Path('Assets/Scripts/BattlefieldSmokeScreenV143.cs').read_text(encoding='utf-8')
 presentation = Path('Assets/Scripts/BattlefieldSmokePresentationV143.cs').read_text(encoding='utf-8')
@@ -67,14 +68,19 @@ for text, label in [(smoke, 'smoke'), (presentation, 'presentation')]:
     ]:
         assert forbidden not in text, f'forbidden authority/hot-path token in {label}: {forbidden}'
 
-for svg, label, fill in [
-    (progress_card, 'card', 'width="645.40"'),
-    (progress_mini, 'mini', 'width="354.18"'),
-]:
-    assert '98.4%' in svg, f'v14.3 {label} percentage is stale'
-    assert '487 / 495 completed' in svg, f'v14.3 {label} counter is stale'
-    assert 'V14.3 IN DEVELOPMENT' in svg, f'v14.3 {label} status is stale'
-    assert fill in svg, f'v14.3 {label} geometry is stale'
+roadmap = Path('ROADMAP.md').read_text(encoding='utf-8')
+progress = re.search(r'\| \*\*(\d+)\*\* \| \*\*(\d+)\*\* \| \*\*(\d+)\*\* \| \*\*([0-9.]+)%\*\* \|', roadmap)
+assert progress, 'v14.3 roadmap progress table missing'
+completed, remaining, total = map(int, progress.group(1, 2, 3))
+percent = float(progress.group(4))
+status = 'V14.3 QUALIFIED' if '## v14.3 — Smoke Screening & Break-Contact Warfare — QUALIFIED' in roadmap else 'V14.3 IN DEVELOPMENT'
+for svg, label, track in [(progress_card, 'card', 656.0), (progress_mini, 'mini', 360.0)]:
+    assert f'{percent:.1f}%' in svg, f'v14.3 {label} percentage is stale'
+    assert f'{completed} / {total} completed' in svg, f'v14.3 {label} counter is stale'
+    assert status in svg, f'v14.3 {label} status is stale'
+    expected_fill = round(track * completed / total, 2)
+    assert f'width="{expected_fill:.2f}"' in svg, f'v14.3 {label} geometry is stale'
+assert completed + remaining == total
 
 assert 'OnGUI(' not in smoke
 assert 'OnGUI(' not in presentation
