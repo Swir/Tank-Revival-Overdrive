@@ -25,6 +25,9 @@ namespace TankRevival
         private Vector2 _gunDirection = Vector2.up;
         private float _nextShot;
         private readonly int[] _ammo = new int[AmmoDatabase.AmmoTypeCount];
+        private bool _hasGamepad;
+        private bool _gamepadMoveActive;
+        private float _nextGamepadPresencePoll;
 
         private int _commanderCannonLevel;
         private int _commanderLoaderLevel;
@@ -57,6 +60,7 @@ namespace TankRevival
 
             _armor = gameObject.AddComponent<ArmorSystem>();
             _armor.InitializePlayer();
+            RefreshGamepadPresence(true);
         }
 
         private void Update()
@@ -67,6 +71,7 @@ namespace TankRevival
                 return;
             }
 
+            RefreshGamepadPresence(false);
             float x = 0f;
             float y = 0f;
 
@@ -74,6 +79,19 @@ namespace TankRevival
             if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) x += 1f;
             if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) y -= 1f;
             if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) y += 1f;
+
+            _gamepadMoveActive = false;
+            if (_hasGamepad)
+            {
+                float padX = ReadLegacyAxis("Horizontal");
+                float padY = ReadLegacyAxis("Vertical");
+                if (Mathf.Abs(padX) >= 0.28f || Mathf.Abs(padY) >= 0.28f)
+                {
+                    x = Mathf.Abs(padX) >= 0.28f ? padX : 0f;
+                    y = Mathf.Abs(padY) >= 0.28f ? padY : 0f;
+                    _gamepadMoveActive = true;
+                }
+            }
 
             if (Mathf.Abs(x) > 0.01f)
                 _move = new Vector2(Mathf.Sign(x), 0f);
@@ -94,15 +112,46 @@ namespace TankRevival
             BattleAudio.Instance?.SetEngineMoving(_move.sqrMagnitude > 0.01f, (EffectiveMoveSpeed * moduleMobility) / 9.2f);
             HandleAmmoSelection();
 
-            if ((Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.LeftControl) || Input.GetMouseButton(0)) && Time.time >= _nextShot)
+            bool gamepadFire = _hasGamepad && Input.GetKey(KeyCode.JoystickButton0);
+            if ((Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.LeftControl) || Input.GetMouseButton(0) || gamepadFire) && Time.time >= _nextShot)
                 Fire();
+        }
+
+        private void RefreshGamepadPresence(bool force)
+        {
+            if (!force && Time.unscaledTime < _nextGamepadPresencePoll) return;
+            _nextGamepadPresencePoll = Time.unscaledTime + 2f;
+            string[] names = Input.GetJoystickNames();
+            _hasGamepad = false;
+            if (names == null) return;
+            for (int i = 0; i < names.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(names[i]))
+                {
+                    _hasGamepad = true;
+                    return;
+                }
+            }
+        }
+
+        private static float ReadLegacyAxis(string axis)
+        {
+            try
+            {
+                return Input.GetAxisRaw(axis);
+            }
+            catch (UnityException)
+            {
+                return 0f;
+            }
         }
 
         private void UpdateTurretAim()
         {
             Vector2 desired = _facing;
+            bool controllerAimingByFacing = _hasGamepad && (_gamepadMoveActive || Input.GetKey(KeyCode.JoystickButton0));
             Camera cam = Camera.main;
-            if (cam != null)
+            if (!controllerAimingByFacing && cam != null)
             {
                 Vector3 mouse;
                 bool projected = cam.orthographic
@@ -144,8 +193,8 @@ namespace TankRevival
 
         private void HandleAmmoSelection()
         {
-            if (Input.GetKeyDown(KeyCode.Q)) CycleAmmo(-1);
-            if (Input.GetKeyDown(KeyCode.E)) CycleAmmo(1);
+            if (Input.GetKeyDown(KeyCode.Q) || (_hasGamepad && Input.GetKeyDown(KeyCode.JoystickButton4))) CycleAmmo(-1);
+            if (Input.GetKeyDown(KeyCode.E) || (_hasGamepad && Input.GetKeyDown(KeyCode.JoystickButton5))) CycleAmmo(1);
 
             if (Input.GetKeyDown(KeyCode.Alpha1)) SelectAmmo(AmmoType.Basic);
             if (Input.GetKeyDown(KeyCode.Alpha2)) SelectAmmo(AmmoType.ArmorPiercing);
