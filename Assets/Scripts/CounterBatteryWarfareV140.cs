@@ -222,7 +222,7 @@ namespace TankRevival
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this; DontDestroyOnLoad(gameObject); _game = FindAnyObjectByType<TankGame>();
             BattlefieldFireSupportDirector.EnsureInstalled(); BattlefieldSensorFusionDirector.EnsureInstalled();
-            AdaptiveEnemyCommandDirector.EnsureInstalled(); BattlefieldCohesionDirector.EnsureInstalled(); CounterBatteryExecutionBridgeV140.EnsureInstalled(); CounterObservationDirectorV141.EnsureInstalled();
+            AdaptiveEnemyCommandDirector.EnsureInstalled(); BattlefieldCohesionDirector.EnsureInstalled(); CounterBatteryExecutionBridgeV140.EnsureInstalled(); CounterObservationDirectorV141.EnsureInstalled(); CounterObservationDirectorV141.EnsureInstalled();
             BattlefieldFireSupportDirector.StrikeIntentPublished += OnPlayerSupportIntent; SceneManager.sceneLoaded += OnSceneLoaded; _nextSample = Time.unscaledTime;
         }
         private void OnDestroy() { BattlefieldFireSupportDirector.StrikeIntentPublished -= OnPlayerSupportIntent; SceneManager.sceneLoaded -= OnSceneLoaded; if (Instance == this) Instance = null; }
