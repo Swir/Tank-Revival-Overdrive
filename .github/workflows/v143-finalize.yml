@@ -1,0 +1,127 @@
+name: v14.3 Exact-Evidence Finalizer
+
+on:
+  push:
+    branches: [dev-v14-3]
+    paths:
+      - '.github/workflows/v143-finalize.yml'
+
+permissions:
+  actions: read
+  contents: write
+
+env:
+  QUALIFIED_SHA: bba28fe3569bf0cbd4cd386103daa8b4e29187ae
+  QUALIFICATION_RUN: '35539622497'
+  QUALIFIED_ARTIFACT_ID: '10613992946'
+  QUALIFIED_ARTIFACT_NAME: TankRevivalOverdrive-v14.3-smoke-Windows-x64
+  QUALIFIED_ARTIFACT_DIGEST: sha256:56e6ccb138acd0bf60e368e812cfd26914c197221966778c90bfb67c7aa6bb38
+
+jobs:
+  finalize:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify pinned exact-head Windows evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${QUALIFICATION_RUN}")"
+          actual_sha="$(python -c 'import json,sys; print(json.load(sys.stdin)["head_sha"])' <<<"$run_json")"
+          conclusion="$(python -c 'import json,sys; print(json.load(sys.stdin)["conclusion"])' <<<"$run_json")"
+          status="$(python -c 'import json,sys; print(json.load(sys.stdin)["status"])' <<<"$run_json")"
+          test "$actual_sha" = "$QUALIFIED_SHA"
+          test "$status" = "completed"
+          test "$conclusion" = "success"
+
+          artifacts_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${QUALIFICATION_RUN}/artifacts")"
+          python - <<'PY' <<<"$artifacts_json"
+          import json, os, sys
+          data = json.load(sys.stdin)
+          expected_id = int(os.environ['QUALIFIED_ARTIFACT_ID'])
+          expected_name = os.environ['QUALIFIED_ARTIFACT_NAME']
+          expected_digest = os.environ['QUALIFIED_ARTIFACT_DIGEST']
+          matches = [a for a in data.get('artifacts', []) if a.get('id') == expected_id]
+          if len(matches) != 1:
+              raise SystemExit(f'qualified artifact id {expected_id} missing or duplicated')
+          artifact = matches[0]
+          if artifact.get('name') != expected_name:
+              raise SystemExit(f'artifact name mismatch: {artifact.get("name")}')
+          if artifact.get('digest') != expected_digest:
+              raise SystemExit(f'artifact digest mismatch: {artifact.get("digest")}')
+          if artifact.get('expired'):
+              raise SystemExit('qualified artifact is already expired')
+          print('Pinned v14.3 Windows qualification evidence: PASS')
+          PY
+
+      - name: Finalize v14.3 roadmap and qualification evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          roadmap_path = Path('ROADMAP.md')
+          roadmap = roadmap_path.read_text(encoding='utf-8')
+          start = roadmap.index('## v14.3 — Smoke Screening & Break-Contact Warfare — IN DEVELOPMENT')
+          section = roadmap[start:]
+          if section.count('- [ ] ') != 8:
+              raise SystemExit(f'expected exactly 8 open v14.3 deliverables, found {section.count("- [ ] ")}')
+          section = section.replace('## v14.3 — Smoke Screening & Break-Contact Warfare — IN DEVELOPMENT',
+                                    '## v14.3 — Smoke Screening & Break-Contact Warfare — QUALIFIED', 1)
+          section = section.replace('- [ ] ', '- [x] ')
+          roadmap = roadmap[:start] + section
+          replacements = [
+              ('ROADMAP-98.4%25-blue', 'ROADMAP-100.0%25-brightgreen'),
+              ('DONE-487%2F495-1f6feb', 'DONE-495%2F495-brightgreen'),
+              ('STATUS-V14.3%20IN%20DEVELOPMENT-blue', 'STATUS-V14.3%20QUALIFIED-brightgreen'),
+              ('| **487** | **8** | **495** | **98.4%** |', '| **495** | **0** | **495** | **100.0%** |'),
+          ]
+          for old, new in replacements:
+              if roadmap.count(old) != 1:
+                  raise SystemExit(f'roadmap dashboard token missing/duplicated: {old}')
+              roadmap = roadmap.replace(old, new, 1)
+          roadmap_path.write_text(roadmap, encoding='utf-8')
+
+          readme_path = Path('README.md')
+          readme = readme_path.read_text(encoding='utf-8')
+          replacements = [
+              ('Roadmap-98.4%25%20V14.3%20In%20Development', 'Roadmap-100.0%25%20V14.3%20Qualified'),
+              ('| Development milestone | **V14.3 IN DEVELOPMENT** on `dev-v14-3` |', '| Development milestone | **V14.3 QUALIFIED** on `dev-v14-3` |'),
+              ('| Roadmap | **487 / 495 completed (98.4%)** — authoritative `ROADMAP.md` scope |', '| Roadmap | **495 / 495 completed (100.0%)** — authoritative `ROADMAP.md` scope |'),
+              ('| Latest qualified milestone | **v14.2** — exact Windows candidate `1c846c02f7867170e52593cf9d7ddc9a0b842b08` qualified in run `35517709576` |', '| Latest qualified milestone | **v14.3** — exact Windows candidate `bba28fe3569bf0cbd4cd386103daa8b4e29187ae` qualified in run `35539622497` |'),
+              ('The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **487 / 495 (98.4%) — V14.3 IN DEVELOPMENT**. v14.2 remains the latest qualified milestone; release readiness is tracked separately by exact-candidate Windows qualification gates.', 'The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **495 / 495 (100.0%) — V14.3 QUALIFIED**. Release readiness is now frozen for full-play Windows finalization and remains separate from roadmap completion until the public release gate passes.'),
+              ('- **Development milestone:** v14.3 is in development on `dev-v14-3`; v14.2 remains the latest qualified milestone and no development scope automatically creates or replaces a public release.', '- **Development milestone:** v14.3 is qualified on `dev-v14-3`; full-play release finalization is the next gate and no new milestone may open before that release gate is resolved.'),
+          ]
+          for old, new in replacements:
+              if old not in readme:
+                  raise SystemExit(f'README closeout token missing: {old[:60]}')
+              readme = readme.replace(old, new, 1)
+          readme_path.write_text(readme, encoding='utf-8')
+
+          evidence = Path('docs/qualification/V14_3_WINDOWS_QUALIFICATION.md')
+          evidence.parent.mkdir(parents=True, exist_ok=True)
+          evidence.write_text('''# v14.3 Windows Qualification — Smoke Screening & Break-Contact Warfare\n\n- Qualified candidate SHA: `bba28fe3569bf0cbd4cd386103daa8b4e29187ae`\n- Windows qualification run: `35539622497` — SUCCESS\n- Source qualification run: `35539622501` — SUCCESS\n- Artifact: `TankRevivalOverdrive-v14.3-smoke-Windows-x64`\n- Artifact ID: `10613992946`\n- Artifact size: `60304212` bytes\n- Artifact digest: `sha256:56e6ccb138acd0bf60e368e812cfd26914c197221966778c90bfb67c7aa6bb38`\n\nThe same packaged Windows executable passed the v14.3 smoke/break-contact runtime matrix, v14.2/v14.1/v14.0/v13.9 regressions and rounds 80/90/100 soak. The candidate includes bounded weather-coupled smoke, counter-battery/sensor tradeoffs, break-contact integration and finite suppression-aware tactical recovery without parallel Health, Projectile, movement or TankGame authority.\n\nRoadmap qualification does **not** itself authorize a public release. Full-play release readiness remains a separate gate with fullscreen, clean HUD, complete player-flow and public-package verification requirements.\n''', encoding='utf-8')
+          PY
+
+          python Tools/generate_progress_svgs.py --embed --write --check
+          python Tools/swir_visual_report_guard.py --check
+          python Tools/verify_v143_smoke_screen.py
+          python Tools/verify_v143_presentation.py
+          python Tools/verify_v143_runtime_gate.py
+          git diff --check
+
+      - name: Commit qualified closeout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md README.md assets/readme/progress-card.svg assets/readme/progress-mini.svg docs/qualification/V14_3_WINDOWS_QUALIFICATION.md
+          git commit -m 'docs(v14.3): finalize exact-qualified roadmap closeout'
+          git push origin HEAD:dev-v14-3
