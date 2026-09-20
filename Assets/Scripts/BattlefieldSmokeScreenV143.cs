@@ -29,6 +29,8 @@ namespace TankRevival
         public const float MaxBreakContactDistanceScale = 0.90f;
         public const float MinContextStrength01 = 0.42f;
         public const float MaxContextStrength01 = 0.88f;
+        public const float MaxSuppressionRecoveryScale = 1.30f;
+        public const float BossSuppressionRecoveryScale = 1.15f;
 
         public static bool ConfigurationValid =>
             PlannedRounds == CounterBatteryModelV140.PlannedRounds &&
@@ -46,7 +48,9 @@ namespace TankRevival
             MinPlayerSensorThroughputScale >= 0.65f && MinPlayerSensorThroughputScale < 1f &&
             MinBreakContactDistanceScale >= 0.65f && MaxBreakContactDistanceScale <= 0.95f &&
             MinBreakContactDistanceScale < MaxBreakContactDistanceScale &&
-            MinContextStrength01 > 0f && MaxContextStrength01 < 1f && MinContextStrength01 < MaxContextStrength01;
+            MinContextStrength01 > 0f && MaxContextStrength01 < 1f && MinContextStrength01 < MaxContextStrength01 &&
+            MaxSuppressionRecoveryScale >= 1.10f && MaxSuppressionRecoveryScale <= 1.35f &&
+            BossSuppressionRecoveryScale >= 1.05f && BossSuppressionRecoveryScale <= MaxSuppressionRecoveryScale;
 
         public static float WeatherPersistenceScale(BattlefieldWeatherKindV135 kind)
         {
@@ -92,6 +96,12 @@ namespace TankRevival
                 Mathf.Lerp(MaxBreakContactDistanceScale, MinBreakContactDistanceScale, Mathf.Clamp01(strength01)),
                 MinBreakContactDistanceScale,
                 MaxBreakContactDistanceScale);
+        }
+
+        public static float SuppressionRecoveryScale(float strength01, EnemyKind kind)
+        {
+            float cap = kind == EnemyKind.Boss ? BossSuppressionRecoveryScale : MaxSuppressionRecoveryScale;
+            return Mathf.Clamp(Mathf.Lerp(1f, cap, Mathf.Clamp01(strength01)), 1f, cap);
         }
     }
 
@@ -171,6 +181,14 @@ namespace TankRevival
         public static float BreakContactDistanceScale => Instance == null || !Instance.PlayerInsideZone
             ? 1f
             : BattlefieldSmokeScreenModelV143.BreakContactScale(Instance.EffectiveStrength01);
+
+        public static float SuppressionRecoveryScaleAt(Vector2 worldPosition, EnemyKind kind)
+        {
+            if (Instance == null || !Instance.ScreenActive) return 1f;
+            float radius = BattlefieldSmokeScreenModelV143.SmokeRadiusWorld;
+            if ((worldPosition - Instance._origin).sqrMagnitude > radius * radius) return 1f;
+            return BattlefieldSmokeScreenModelV143.SuppressionRecoveryScale(Instance._contextStrength01, kind);
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install() => EnsureInstalled();

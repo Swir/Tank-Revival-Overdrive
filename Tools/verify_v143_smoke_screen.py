@@ -2,6 +2,7 @@ from pathlib import Path
 
 smoke = Path('Assets/Scripts/BattlefieldSmokeScreenV143.cs').read_text(encoding='utf-8')
 counter = Path('Assets/Scripts/CounterBatteryWarfareV140.cs').read_text(encoding='utf-8')
+morale = Path('Assets/Scripts/BattlefieldSuppressionMoraleV138.cs').read_text(encoding='utf-8')
 
 required_smoke = [
     'MaxActiveSmokeZones = 1',
@@ -26,6 +27,10 @@ required_smoke = [
     'Input.GetKeyDown(KeyCode.B)',
     'TryDeploy(Vector2 playerPosition)',
     'ConfigurationValid',
+    'MaxSuppressionRecoveryScale = 1.30f',
+    'BossSuppressionRecoveryScale = 1.15f',
+    'SuppressionRecoveryScale(float strength01, EnemyKind kind)',
+    'SuppressionRecoveryScaleAt(Vector2 worldPosition, EnemyKind kind)',
 ]
 for token in required_smoke:
     assert token in smoke, f'missing smoke contract: {token}'
@@ -57,4 +62,14 @@ for token in required_bridge:
 assert counter.count('BattlefieldSmokeScreenDirectorV143.CounterBatteryExposureScale') == 1
 assert counter.count('BattlefieldSmokeScreenDirectorV143.ObserverAcquisitionScale') == 1
 assert counter.count('BattlefieldSmokeScreenDirectorV143.BreakContactDistanceScale') == 1
-print('v14.3 bounded weather-coupled smoke-screen qualification PASS')
+
+required_recovery = [
+    'BattlefieldMoraleStateV138.Suppressed',
+    'BattlefieldMoraleStateV138.Broken',
+    'BattlefieldMoraleStateV138.Recovering',
+    'BattlefieldSmokeScreenDirectorV143.SuppressionRecoveryScaleAt(e.Enemy.transform.position, e.Kind)',
+]
+for token in required_recovery:
+    assert token in morale, f'missing suppression recovery bridge: {token}'
+assert morale.count('BattlefieldSmokeScreenDirectorV143.SuppressionRecoveryScaleAt(e.Enemy.transform.position, e.Kind)') == 1
+print('v14.3 bounded weather-coupled smoke-screen + suppression recovery qualification PASS')

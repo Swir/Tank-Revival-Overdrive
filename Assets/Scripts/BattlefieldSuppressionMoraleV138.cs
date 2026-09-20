@@ -320,6 +320,12 @@ namespace TankRevival
 
                 float cohesionStress = Mathf.Clamp(BattlefieldCohesionDirector.SpreadScale(e.Enemy) - 1f, 0f, 0.45f);
                 float decay = (e.Kind == EnemyKind.Boss ? 11f : 8.5f) * (1f - cohesionStress * 0.35f);
+                if (e.State == BattlefieldMoraleStateV138.Suppressed ||
+                    e.State == BattlefieldMoraleStateV138.Broken ||
+                    e.State == BattlefieldMoraleStateV138.Recovering)
+                {
+                    decay *= BattlefieldSmokeScreenDirectorV143.SuppressionRecoveryScaleAt(e.Enemy.transform.position, e.Kind);
+                }
                 e.Pressure = Mathf.Max(0f, e.Pressure - decay * BattlefieldSuppressionModelV138.SampleCadenceSeconds);
                 BattlefieldMoraleStateV138 next = BattlefieldSuppressionModelV138.ResolveState(e.State, e.Pressure, now - e.StateSince);
                 if (next != e.State)
