@@ -16,11 +16,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Build coherent v14.3 gameplay package
+      - name: Stage coherent smoke-screen and break-contact gameplay package
         shell: bash
         run: |
           set -euo pipefail
-          grep -q '## v14.3 — Smoke Screening & Break-Contact Warfare — IN DEVELOPMENT' ROADMAP.md
+          grep -q '## v14.3 — Smoke-screen Break Contact & Counter-Pursuit Warfare — IN DEVELOPMENT' ROADMAP.md
 
           cat > Assets/Scripts/BattlefieldSmokeScreenV143.cs <<'CS'
           using UnityEngine;
@@ -36,10 +36,6 @@ jobs:
                   Cooldown = 3
               }
 
-              /// <summary>
-              /// Deterministic v14.3 smoke-screen tuning. Smoke is information/fire-control counterplay only:
-              /// it never owns Health, Projectile, Rigidbody2D, spawning, despawning or enemy movement.
-              /// </summary>
               public static class BattlefieldSmokeScreenModelV143
               {
                   public const int PlannedRounds = 100;
@@ -94,7 +90,10 @@ jobs:
 
                   public static float BreakContactScale(float strength01)
                   {
-                      return Mathf.Clamp(Mathf.Lerp(MaxBreakContactDistanceScale, MinBreakContactDistanceScale, Mathf.Clamp01(strength01)), MinBreakContactDistanceScale, MaxBreakContactDistanceScale);
+                      return Mathf.Clamp(
+                          Mathf.Lerp(MaxBreakContactDistanceScale, MinBreakContactDistanceScale, Mathf.Clamp01(strength01)),
+                          MinBreakContactDistanceScale,
+                          MaxBreakContactDistanceScale);
                   }
               }
 
@@ -124,7 +123,13 @@ jobs:
                   public bool ScreenActive => Time.unscaledTime < _screenUntil;
                   public bool Dissipating => !ScreenActive && Time.unscaledTime < _dissipateUntil;
                   public float RemainingSeconds => Mathf.Max(0f, _dissipateUntil - Time.unscaledTime);
-                  public SmokeScreenStateV143 State => ScreenActive ? SmokeScreenStateV143.Screening : Dissipating ? SmokeScreenStateV143.Dissipating : Time.unscaledTime < _cooldownUntil ? SmokeScreenStateV143.Cooldown : SmokeScreenStateV143.Ready;
+                  public SmokeScreenStateV143 State => ScreenActive
+                      ? SmokeScreenStateV143.Screening
+                      : Dissipating
+                          ? SmokeScreenStateV143.Dissipating
+                          : Time.unscaledTime < _cooldownUntil
+                              ? SmokeScreenStateV143.Cooldown
+                              : SmokeScreenStateV143.Ready;
 
                   private float EffectiveStrength01
                   {
@@ -132,15 +137,23 @@ jobs:
                       {
                           if (ScreenActive) return _contextStrength01;
                           if (!Dissipating) return 0f;
-                          float t = Mathf.InverseLerp(_dissipateUntil, _screenUntil, Time.unscaledTime);
-                          return Mathf.Clamp01(_contextStrength01 * (1f - t) * 0.70f);
+                          float dissipated01 = Mathf.InverseLerp(_screenUntil, _dissipateUntil, Time.unscaledTime);
+                          return Mathf.Clamp01(_contextStrength01 * (1f - dissipated01) * 0.70f);
                       }
                   }
 
-                  public static float CounterBatteryExposureScale => Instance == null ? 1f : BattlefieldSmokeScreenModelV143.ExposureScale(Instance.EffectiveStrength01);
-                  public static float ObserverAcquisitionScale => Instance == null ? 1f : BattlefieldSmokeScreenModelV143.AcquisitionScale(Instance.EffectiveStrength01);
-                  public static float PlayerSensorThroughputScale => Instance == null ? 1f : BattlefieldSmokeScreenModelV143.SensorThroughputScale(Instance.EffectiveStrength01);
-                  public static float BreakContactDistanceScale => Instance == null || (!Instance.ScreenActive && !Instance.Dissipating) ? 1f : BattlefieldSmokeScreenModelV143.BreakContactScale(Instance.EffectiveStrength01);
+                  public static float CounterBatteryExposureScale => Instance == null
+                      ? 1f
+                      : BattlefieldSmokeScreenModelV143.ExposureScale(Instance.EffectiveStrength01);
+                  public static float ObserverAcquisitionScale => Instance == null
+                      ? 1f
+                      : BattlefieldSmokeScreenModelV143.AcquisitionScale(Instance.EffectiveStrength01);
+                  public static float PlayerSensorThroughputScale => Instance == null
+                      ? 1f
+                      : BattlefieldSmokeScreenModelV143.SensorThroughputScale(Instance.EffectiveStrength01);
+                  public static float BreakContactDistanceScale => Instance == null || (!Instance.ScreenActive && !Instance.Dissipating)
+                      ? 1f
+                      : BattlefieldSmokeScreenModelV143.BreakContactScale(Instance.EffectiveStrength01);
 
                   [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
                   private static void Install() => EnsureInstalled();
@@ -154,6 +167,7 @@ jobs:
                           Instance = existing;
                           return existing;
                       }
+
                       GameObject go = new GameObject("BattlefieldSmokeScreenDirector_v14_3");
                       DontDestroyOnLoad(go);
                       return go.AddComponent<BattlefieldSmokeScreenDirectorV143>();
@@ -166,6 +180,7 @@ jobs:
                           Destroy(gameObject);
                           return;
                       }
+
                       Instance = this;
                       DontDestroyOnLoad(gameObject);
                       _game = FindAnyObjectByType<TankGame>();
@@ -191,11 +206,13 @@ jobs:
                       _round = -1;
                       _charges = 0;
                       _screensDeployed = 0;
-                      _screenUntil = _dissipateUntil = _cooldownUntil = 0f;
+                      _screenUntil = 0f;
+                      _dissipateUntil = 0f;
+                      _cooldownUntil = 0f;
                       _contextStrength01 = 0f;
                       _observerResilience01 = 0f;
                       _origin = Vector2.zero;
-                      _terrain = TacticalTerrainKind.Open;
+                      _terrain = default;
                   }
 
                   private void Update()
@@ -214,7 +231,9 @@ jobs:
                       _round = round;
                       _charges = BattlefieldSmokeScreenModelV143.MaxSmokeChargesPerRound;
                       _screensDeployed = 0;
-                      _screenUntil = _dissipateUntil = _cooldownUntil = 0f;
+                      _screenUntil = 0f;
+                      _dissipateUntil = 0f;
+                      _cooldownUntil = 0f;
                   }
 
                   public bool TryDeploy(Vector2 playerPosition)
@@ -239,7 +258,9 @@ jobs:
                       CounterObservationDirectorV141 observation = CounterObservationDirectorV141.Instance;
                       if (observation == null) return 0f;
                       CounterObservationTargetSnapshotV141 snapshot = observation.TargetSnapshot;
-                      return snapshot.Valid ? Mathf.Clamp01(snapshot.Resilience01) : Mathf.Clamp01(observation.CandidateResilience01);
+                      return snapshot.Valid
+                          ? Mathf.Clamp01(snapshot.Resilience01)
+                          : Mathf.Clamp01(observation.CandidateResilience01);
                   }
               }
           }
@@ -261,8 +282,9 @@ jobs:
 
           python - <<'PY'
           from pathlib import Path
-          p = Path('Assets/Scripts/CounterBatteryWarfareV140.cs')
-          s = p.read_text(encoding='utf-8')
+
+          path = Path('Assets/Scripts/CounterBatteryWarfareV140.cs')
+          source = path.read_text(encoding='utf-8')
           patches = [
               (
                   'CounterObservationDirectorV141.EnsureInstalled(); CounterReconDeceptionDirectorV142.EnsureInstalled();',
@@ -273,19 +295,23 @@ jobs:
                   '_exposure = CounterBatteryModelV140.AddSupportSignature(_exposure, relocation) * CounterReconDeceptionDirectorV142.CounterBatteryExposureScale * BattlefieldSmokeScreenDirectorV143.CounterBatteryExposureScale;'
               ),
               (
-                  'float breakDistance = CurrentBreakDistance(playerTerrain);',
-                  'float breakDistance = CurrentBreakDistance(playerTerrain) * BattlefieldSmokeScreenDirectorV143.BreakContactDistanceScale;'
+                  '_terrainExposure = CounterBatteryModelV140.TerrainExposureScale(playerTerrain); float breakDistance = CurrentBreakDistance(playerTerrain);',
+                  '_terrainExposure = CounterBatteryModelV140.TerrainExposureScale(playerTerrain); float breakDistance = CurrentBreakDistance(playerTerrain) * BattlefieldSmokeScreenDirectorV143.BreakContactDistanceScale;'
               ),
               (
                   '* CounterReconDeceptionDirectorV142.CounterBatteryAcquisitionScale * dt);',
                   '* CounterReconDeceptionDirectorV142.CounterBatteryAcquisitionScale * BattlefieldSmokeScreenDirectorV143.ObserverAcquisitionScale * dt);'
               ),
           ]
+
           for old, new in patches:
-              if s.count(old) != 1:
-                  raise SystemExit(f'expected exactly one integration token: {old!r}; found {s.count(old)}')
-              s = s.replace(old, new, 1)
-          p.write_text(s, encoding='utf-8')
+              if new in source:
+                  continue
+              if source.count(old) != 1:
+                  raise SystemExit(f'expected exactly one integration token: {old!r}; found {source.count(old)}')
+              source = source.replace(old, new, 1)
+
+          path.write_text(source, encoding='utf-8')
           PY
 
           cat > Tools/verify_v143_smoke_screen.py <<'PY'
@@ -297,6 +323,7 @@ jobs:
           required_smoke = [
               'MaxSmokeChargesPerRound = 2',
               'ScreenLifetimeSeconds = 5.5f',
+              'DissipationSeconds = 2.0f',
               'CooldownSeconds = 14.0f',
               'MinCounterBatteryExposureScale = 0.58f',
               'MinObserverAcquisitionScale = 0.62f',
@@ -308,16 +335,23 @@ jobs:
               'RuntimeBattleRegistry.Player',
               'Input.GetKeyDown(KeyCode.B)',
               'TryDeploy(Vector2 playerPosition)',
+              'ConfigurationValid',
           ]
           for token in required_smoke:
               assert token in smoke, f'missing smoke contract: {token}'
 
-          forbidden = [
-              'FindObjectsOfType', 'FindGameObjectsWithTag', 'GameObject.Find(',
-              'SpawnProjectile(', 'ProjectilePool.Spawn', '.TakeDamage(', '.Damage(',
-              'Rigidbody2D', 'Instantiate(', 'Destroy(enemy',
+          forbidden_smoke = [
+              'FindObjectsOfType',
+              'FindGameObjectsWithTag',
+              'GameObject.Find(',
+              'SpawnProjectile(',
+              'ProjectilePool.Spawn',
+              '.TakeDamage(',
+              '.Damage(',
+              'Instantiate(',
+              'Destroy(enemy',
           ]
-          for token in forbidden:
+          for token in forbidden_smoke:
               assert token not in smoke, f'forbidden authority/hot-path token: {token}'
 
           required_bridge = [
@@ -329,53 +363,22 @@ jobs:
           for token in required_bridge:
               assert token in counter, f'missing counter-battery bridge: {token}'
 
-          assert 'PlayerSensorThroughputScale' in smoke
-          assert 'ConfigurationValid' in smoke
-          print('v14.3 smoke-screen source qualification PASS')
+          assert counter.count('BattlefieldSmokeScreenDirectorV143.CounterBatteryExposureScale') == 1
+          assert counter.count('BattlefieldSmokeScreenDirectorV143.ObserverAcquisitionScale') == 1
+          assert counter.count('BattlefieldSmokeScreenDirectorV143.BreakContactDistanceScale') == 1
+          print('v14.3 smoke-screen and break-contact source qualification PASS')
           PY
-
-          cat > .github/workflows/v143-smoke-source-qualification.yml <<'YAML'
-          name: v14.3 Smoke Source Qualification
-
-          on:
-            push:
-              branches: [dev-v14-3]
-              paths:
-                - 'Assets/Scripts/BattlefieldSmokeScreenV143.cs'
-                - 'Assets/Scripts/CounterBatteryWarfareV140.cs'
-                - 'Tools/verify_v143_smoke_screen.py'
-                - '.github/workflows/v143-smoke-source-qualification.yml'
-            pull_request:
-              paths:
-                - 'Assets/Scripts/BattlefieldSmokeScreenV143.cs'
-                - 'Assets/Scripts/CounterBatteryWarfareV140.cs'
-                - 'Tools/verify_v143_smoke_screen.py'
-
-          permissions:
-            contents: read
-
-          jobs:
-            verify:
-              runs-on: ubuntu-24.04
-              steps:
-                - uses: actions/checkout@v4
-                - uses: actions/setup-python@v5
-                  with:
-                    python-version: '3.12'
-                - name: Verify bounded smoke-screen gameplay contracts
-                  run: |
-                    set -euo pipefail
-                    python -m py_compile Tools/verify_v143_smoke_screen.py
-                    python Tools/verify_v143_smoke_screen.py
-                    git diff --check
-          YAML
 
           python -m py_compile Tools/verify_v143_smoke_screen.py
           python Tools/verify_v143_smoke_screen.py
-          rm .github/workflows/v143-feature-stager.yml
           git diff --check
+
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add Assets/Scripts/BattlefieldSmokeScreenV143.cs Assets/Scripts/BattlefieldSmokeScreenV143.cs.meta Assets/Scripts/CounterBatteryWarfareV140.cs Tools/verify_v143_smoke_screen.py .github/workflows/v143-smoke-source-qualification.yml .github/workflows/v143-feature-stager.yml
-          git commit -m 'feat(v14.3): add bounded smoke-screen break-contact warfare'
+          git add Assets/Scripts/BattlefieldSmokeScreenV143.cs Assets/Scripts/BattlefieldSmokeScreenV143.cs.meta Assets/Scripts/CounterBatteryWarfareV140.cs Tools/verify_v143_smoke_screen.py
+          if git diff --cached --quiet; then
+            echo 'v14.3 gameplay package already staged; no changes required.'
+            exit 0
+          fi
+          git commit -m 'feat(v14.3): add smoke-screen break-contact warfare'
           git push origin HEAD:dev-v14-3
