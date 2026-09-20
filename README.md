@@ -12,8 +12,8 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)](https://github.com/Swir/Tank-Revival-Overdrive/releases)
 [![Unity](https://img.shields.io/badge/Unity-6000.3.17f1-02050A?style=for-the-badge&logo=unity&logoColor=62E5FF)](https://unity.com/)
-[![Roadmap](https://img.shields.io/badge/Roadmap-98.4%25%20V14.2%20In%20Development-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
-[![v14.1 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/counter-observation-v141-windows.yml/badge.svg?branch=dev-v14-1)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/counter-observation-v141-windows.yml)
+[![Roadmap](https://img.shields.io/badge/Roadmap-100.0%25%20V14.2%20Qualified-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)
+[![v14.2 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/deception-v142-windows.yml/badge.svg?branch=dev-v14-2)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/deception-v142-windows.yml)
 
 [**Highlights**](#-highlights) · [**Download**](#-quick-start--download) · [**Controls**](#-controls) · [**Roadmap**](#-roadmap--quality-gates) · [**Releases**](#-releases)
 
@@ -29,11 +29,11 @@ Defend the **Orzełek stronghold** through a 100-round campaign of armored assau
 
 | Item | Status |
 |---|---|
-| Development milestone | **V14.2 IN DEVELOPMENT** on `dev-v14-2` |
-| Roadmap | **479 / 487 completed (98.4%)** — authoritative `ROADMAP.md` scope |
+| Development milestone | **V14.2 QUALIFIED** on `dev-v14-2` |
+| Roadmap | **487 / 487 completed (100.0%)** — authoritative `ROADMAP.md` scope |
 | Primary platform | **Windows 10 / 11 x64** |
 | Development engine | **Unity 6000.3.17f1** |
-| Latest qualified milestone | **v14.1** — exact Windows candidate `897e42ba0b02b90bc6b7de678b1b78761bd899fc` qualified in run `35497720665` |
+| Latest qualified milestone | **v14.2** — exact Windows candidate `1c846c02f7867170e52593cf9d7ddc9a0b842b08` qualified in run `35517709576` |
 | Latest public demo | **v6.3.0-demo** — prerelease |
 | Latest stable release | **v2.2.0** |
 | Public release readiness | Tracked separately from roadmap completion by packaged Windows gates |
@@ -62,7 +62,7 @@ The campaign combines direct tank combat with directional armor, component damag
 | 🎯 **Fire-support counterplay v13.9 — qualified** | Earned F-key command windows combine qualified suppression, cover, cohesion and verified contacts into bounded fire-support intent with class-aware reactions, anti-spam cooldowns and canonical TankGame projectile execution. |
 | 📍 **Counter-battery warfare v14.0 — qualified** | Player fire-support signatures now drive bounded SEARCHING/LOCKED/BARRAGE pressure with terrain/sensor relocation counterplay, capped observer acquisition and canonical enemy projectile execution; one exact Windows candidate passed runtime, historical regression and late-round soak gates. |
 | 🔭 **Counter-observation warfare v14.1 — qualified** | Verified sensor contact can expose one bounded observer-class hunter-killer target; canonical kill confirmation creates only a short counter-battery disruption window, while terrain/cohesion/command resilience and fixed-cap presentation preserve combat authority and late-round budgets. |
-| 🥷 **Counter-recon deception v14.2 — in development** | Finite decoys, emission discipline and shoot-and-scoot timing will let the player misdirect hostile observation without hidden immunity or parallel combat authority. |
+| 🥷 **Counter-recon deception v14.2 — qualified** | Finite false-emission decoys, bounded EMCON relocation and shoot-and-scoot reacquisition timing now misdirect hostile observation with deterministic adaptation, explicit exposure floors and no parallel combat authority. |
 | 🎯 **Dynamic objective warfare** | Objective planning layers mission pressure onto the existing round/spawn loop instead of replacing it. |
 | 👑 **Multi-phase bosses** | Boss behavior escalates through health/component-driven phases while existing movement, projectile and survivability authorities remain canonical. |
 | 🛡️ **Directional armor & modules** | Front/side/rear armor, ricochets and engine/tracks/gun/ammo-rack degradation affect how vehicles move and fight. |
@@ -72,7 +72,7 @@ The campaign combines direct tank combat with directional armor, component damag
 | 📡 **Operational warfare stack** | Combined Arms, sustainment, route intelligence, Recon/EW, Mobile Signal and SIGINT feed bounded encounter decisions. |
 | 🎯 **Independent hull and turret control** | Drive, aim and fire independently instead of locking the cannon to chassis direction. |
 | ✨ **Procedural 2.5D presentation** | Animated tracks, recoil, muzzle flashes, trails, smoke, sparks, explosions, tactical telegraphs and pooled combat feedback. |
-| 🧪 **Exact-candidate qualification** | v14.1 passed one packaged Windows EXE through production-audio preflight, v14.1 observer-hunt smoke, v14.0/v13.9/v13.8/v13.7 regressions and late-round 80/90/100 soak. |
+| 🧪 **Exact-candidate qualification** | v14.2 passed one packaged Windows EXE through production-audio preflight, v14.2 deception/EMCON smoke, v14.1/v14.0/v13.9/v13.8 regressions and late-round 80/90/100 soak. |
 
 ## 🔫 Ammunition
 
@@ -219,7 +219,7 @@ The project intentionally avoids parallel damage, movement and economy authoriti
 
 ## 🗺️ Roadmap & Quality Gates
 
-The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **479 / 487 (98.4%) — V14.2 IN DEVELOPMENT**. Release readiness is tracked separately by exact-candidate Windows qualification gates.
+The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **487 / 487 (100.0%) — V14.2 QUALIFIED**. Release readiness is tracked separately by exact-candidate Windows qualification gates.
 
 Recent qualified milestone layers include v13.0 encounter/boss warfare, v13.1 objective warfare, v13.2 adaptive enemy command and v13.3 battlefield cohesion. The v13.3 exact-candidate gate required source/authority contracts, a clean Unity Windows x64 build, deterministic packaging and one exact packaged EXE running production-audio preflight, v13.3 cohesion smoke, v13.2/v13.1/v13.0/v12.9/v12.8 regressions and late-round soak covering rounds 80 / 90 / 100.
 
@@ -239,13 +239,15 @@ The qualified v14.0 candidate is `77213238077e999ed9b880c6e53bad0b0b5b1dfa`; Win
 
 The qualified v14.1 candidate is `897e42ba0b02b90bc6b7de678b1b78761bd899fc`; Windows qualification run `35497720665` completed successfully. The same packaged EXE passed production authored-audio preflight, v14.1 counter-observation smoke, v14.0/v13.9/v13.8/v13.7 regressions and rounds 80/90/100 soak. The retained Windows artifact `TankRevivalOverdrive-v14.1-counter-observation-Windows-x64` (artifact `10601617216`, 60289129 bytes) has GitHub artifact digest `sha256:807bfc2bfd1b4d5b8b557d93ea085e0e33d89d5d24b4480adf87e8764491346c`.
 
+The qualified v14.2 candidate is `1c846c02f7867170e52593cf9d7ddc9a0b842b08`; Windows qualification run `35517709576` completed successfully. The same packaged EXE passed production authored-audio preflight, v14.2 deception/EMCON smoke, v14.1/v14.0/v13.9/v13.8 regressions and rounds 80/90/100 soak. The retained Windows artifact `TankRevivalOverdrive-v14.2-deception-Windows-x64` (artifact `10607850989`, 60295014 bytes) has GitHub artifact digest `sha256:a4947d769645c8213098066a09cb823009b4cb422776f0422262f23c6718c5c6`.
+
 ## 📦 Releases
 
 A qualified development branch does **not** automatically replace the public release line.
 
 - **Latest public demo:** `v6.3.0-demo` (prerelease)
 - **Latest stable release:** `v2.2.0`
-- **Development milestone:** v14.2 is in development on `dev-v14-2`; v14.1 remains the latest qualified milestone and this development scope does not automatically create or replace a public release.
+- **Development milestone:** v14.2 is qualified on `dev-v14-2`; this qualified development scope does not automatically create or replace a public release.
 
 This separation keeps public downloads distinct from qualified-but-not-yet-published development milestones.
 
@@ -259,9 +261,9 @@ Tank Revival: Orzeł Overdrive is an original project with its own code, project
 v14.1 is qualified above the v14.0 counter-battery system. Verified sensor information can designate one real observer-class threat, canonical `Health` / runtime-registry lifecycle confirms the kill, and success grants only a short bounded disruption of enemy acquisition. Terrain, cohesion and command resilience remain bounded and observer-hunt presentation stays fixed-cap. Exact candidate `897e42ba0b02b90bc6b7de678b1b78761bd899fc` passed Windows run `35497720665` with v14.1 smoke, v14.0/v13.9/v13.8/v13.7 regressions and rounds 80/90/100 soak; the layer never deals direct damage, deletes projectiles, teleports enemies or replaces `Health`, `EnemyTank`, `Projectile`, `TankGame` or `CounterBatteryDirectorV140` authority.
 
 
-### Deception, Emission Discipline & Shoot-and-Scoot Warfare v14.2 — in development
+### Deception, Emission Discipline & Shoot-and-Scoot Warfare v14.2 — qualified
 
-v14.2 adds finite counter-recon deception above the qualified v14.1 observer-hunt layer. Decoys and emission-control windows may alter only exposure, designation quality and reacquisition timing; canonical `Health`, `EnemyTank`, `Projectile`, `TankGame`, `CounterBatteryDirectorV140` and `CounterObservationDirectorV141` remain authoritative for combat outcomes.
+v14.2 is qualified above the v14.1 observer-hunt layer. Finite-charge false-emission decoys, bounded EMCON relocation and shoot-and-scoot reacquisition timing create deliberate counter-recon play, while deterministic suspicion reduces repeated decoy credibility and terrain/cohesion/command resilience prevents permanent lockout. Exact candidate `1c846c02f7867170e52593cf9d7ddc9a0b842b08` passed Windows run `35517709576` with v14.2 smoke, v14.1/v14.0/v13.9/v13.8 regressions and rounds 80/90/100 soak. Canonical `Health`, `EnemyTank`, `Projectile`, `TankGame`, `CounterBatteryDirectorV140` and `CounterObservationDirectorV141` remain authoritative for combat outcomes.
 
 ## 🔎 Search Keywords
 
