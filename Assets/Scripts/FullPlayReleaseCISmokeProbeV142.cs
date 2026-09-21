@@ -9,6 +9,7 @@ namespace TankRevival
     public sealed class FullPlayReleaseCISmokeProbeV142 : MonoBehaviour
     {
         private const float TimeoutSeconds = 24f;
+        private const string ScreenshotName = "V14_2_FULL_PLAY_SCREENSHOT.png";
         private float _startedAt;
         private float _stageAt;
         private int _stage;
@@ -98,7 +99,13 @@ namespace TankRevival
                         Fail("visual release probe did not reach fullscreen mode");
                         return;
                     }
-                    ScreenCapture.CaptureScreenshot("V14_2_FULL_PLAY_SCREENSHOT.png");
+
+                    string screenshotPath = Path.Combine(Directory.GetCurrentDirectory(), ScreenshotName);
+                    if (!TryCaptureScreenshot(screenshotPath, out string captureFailure))
+                    {
+                        Fail("fullscreen screenshot capture unavailable: " + captureFailure);
+                        return;
+                    }
                     Advance();
                     return;
                 }
@@ -110,7 +117,7 @@ namespace TankRevival
             if (_visual && _stage == 2)
             {
                 if (Time.realtimeSinceStartup - _stageAt < 1.5f) return;
-                if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "V14_2_FULL_PLAY_SCREENSHOT.png"))) return;
+                if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), ScreenshotName))) return;
                 Pass("visual fullscreen gameplay screenshot captured with legacy shell suppressed");
                 return;
             }
@@ -136,6 +143,48 @@ namespace TankRevival
                     return;
                 }
                 Pass("menu->play->pause->resume flow; fullscreen default; clean gameplay shell policy");
+            }
+        }
+
+        private static bool TryCaptureScreenshot(string absolutePath, out string failure)
+        {
+            // Keep the release probe compilable even when the Unity screenshot module is not
+            // referenced by the player assembly. If the module is present at runtime, invoke it
+            // dynamically so the visual gate still produces real packaged-build evidence.
+            Type screenCaptureType = Type.GetType("UnityEngine.ScreenCapture, UnityEngine.ScreenCaptureModule", false);
+            if (screenCaptureType == null)
+            {
+                failure = "UnityEngine.ScreenCaptureModule is not available in this player";
+                return false;
+            }
+
+            MethodInfo captureScreenshot = screenCaptureType.GetMethod(
+                "CaptureScreenshot",
+                BindingFlags.Public | BindingFlags.Static,
+                null,
+                new[] { typeof(string) },
+                null);
+            if (captureScreenshot == null)
+            {
+                failure = "CaptureScreenshot(string) was not found";
+                return false;
+            }
+
+            try
+            {
+                captureScreenshot.Invoke(null, new object[] { absolutePath });
+                failure = string.Empty;
+                return true;
+            }
+            catch (TargetInvocationException ex)
+            {
+                failure = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                failure = ex.Message;
+                return false;
             }
         }
 
