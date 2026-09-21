@@ -16,6 +16,7 @@ ATTRIBUTION_NAME = "V142_FULL_PLAY_BUILD.txt"
 SHA_NAME = "V142_FULL_PLAY_SHA256.txt"
 PROVENANCE_NAME = "V142_FULL_PLAY_PROVENANCE.json"
 TREE_NAME = "V142_FULL_PLAY_BUILD_TREE.txt"
+NOTICES_NAME = "THIRD_PARTY_NOTICES.txt"
 DEFAULT_ZIP = "TankRevivalOverdrive-v14.2.0-Windows-x64.zip"
 ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 
@@ -111,6 +112,14 @@ def package_candidate(build_root: Path, output_dir: Path, candidate_sha: str, co
         "- Diagnostic/CI command-line probes are not part of the normal player HUD.\n",
         encoding="utf-8",
     )
+    (stage / NOTICES_NAME).write_text(
+        "TANK REVIVAL: ORZEL OVERDRIVE v14.2.0 — THIRD-PARTY NOTICES\n\n"
+        "This Windows package contains a player built with Unity. Unity engine/runtime components are distributed "
+        "under the applicable Unity licensing terms; see https://unity.com/legal for current terms.\n\n"
+        "The deterministic packaging step does not download or inject additional third-party binary payloads. "
+        "Project-specific credits and source history are maintained in the project repository.\n",
+        encoding="utf-8",
+    )
 
     files = sorted((p for p in stage.rglob("*") if p.is_file()), key=lambda p: p.as_posix().lower())
     if not files:
@@ -144,6 +153,7 @@ def package_candidate(build_root: Path, output_dir: Path, candidate_sha: str, co
         "file_count": len(files),
         "fullscreen_default": True,
         "clean_gameplay_shell": True,
+        "third_party_notices": NOTICES_NAME,
     }
     (output_dir / PROVENANCE_NAME).write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return provenance
