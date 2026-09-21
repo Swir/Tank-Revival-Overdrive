@@ -195,6 +195,8 @@ jobs:
     needs: [source-contracts, build-candidate, packaged-runtime]
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      release_target: ${{ steps.publish.outputs.release_target }}
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -208,6 +210,7 @@ jobs:
           name: TankRevival-v14.3.0-full-play-evidence
           path: evidence
       - name: Verify publish payload and create public prerelease
+        id: publish
         shell: bash
         run: |
           set -euo pipefail
@@ -236,11 +239,23 @@ jobs:
           Rozpakuj cały ZIP do osobnego folderu i uruchom \`TankRevivalOverdrive.exe\`. Nie przenoś samego EXE bez folderu \`TankRevivalOverdrive_Data\`.
           EOF
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            target="$(gh release view "$RELEASE_TAG" --json targetCommitish --jq '.targetCommitish')"; test "$target" = "$GITHUB_SHA"
+            target="$(gh release view "$RELEASE_TAG" --json targetCommitish --jq '.targetCommitish')"
+            echo "release_target=$target" >> "$GITHUB_OUTPUT"
+            if [ "$target" != "$GITHUB_SHA" ]; then
+              changed="$(gh api "repos/${GH_REPO}/compare/${target}...${GITHUB_SHA}" --jq '.files[].filename')"
+              if printf '%s\n' "$changed" | grep -Ev '^(docs/qualification/|\.github/workflows/v143-full-play-release\.yml$)' | grep -q .; then
+                echo "Existing ${RELEASE_TAG} targets ${target}, but current head ${GITHUB_SHA} contains release-relevant changes:" >&2
+                printf '%s\n' "$changed" >&2
+                exit 1
+              fi
+              echo "${RELEASE_TAG} is already pinned to exact-qualified ${target}; current head only changes post-release metadata/workflow. Keeping published assets immutable."
+              exit 0
+            fi
             gh release upload "$RELEASE_TAG" "$zip_path" "$sha_file" "$provenance_path" "$screenshot_path" --clobber
             gh release edit "$RELEASE_TAG" --title 'Tank Revival: Orzeł Overdrive v14.3.0 — Full-Play Beta' --notes-file release-notes.md --prerelease
           else
             gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --title 'Tank Revival: Orzeł Overdrive v14.3.0 — Full-Play Beta' --notes-file release-notes.md --prerelease "$zip_path" "$sha_file" "$provenance_path" "$screenshot_path"
+            echo "release_target=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
           fi
 
   post-release:
@@ -261,11 +276,12 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'; Set-Location public
+          $releaseTarget='${{ needs.publish-release.outputs.release_target }}'; if([string]::IsNullOrWhiteSpace($releaseTarget)){throw 'release target output missing'}
           $expected=((Get-Content V143_FULL_PLAY_SHA256.txt -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
           $actual=(Get-FileHash '${{ env.CANDIDATE_ZIP }}' -Algorithm SHA256).Hash.ToLowerInvariant(); if($actual -ne $expected){throw 'public release checksum mismatch'}
           $p=Get-Content V143_FULL_PLAY_PROVENANCE.json -Raw|ConvertFrom-Json
-          if($p.candidate_sha -ne '${{ github.sha }}' -or $p.commit_sha -ne '${{ github.sha }}' -or $p.sha256 -ne $actual -or $p.version -ne 'v14.3.0'){throw 'public provenance mismatch'}
-          $target=gh release view '${{ env.RELEASE_TAG }}' --repo '${{ github.repository }}' --json targetCommitish --jq '.targetCommitish'; if($target -ne '${{ github.sha }}'){throw "release target mismatch: $target"}
+          if($p.candidate_sha -ne $releaseTarget -or $p.commit_sha -ne $releaseTarget -or $p.sha256 -ne $actual -or $p.version -ne 'v14.3.0'){throw 'public provenance mismatch'}
+          $target=gh release view '${{ env.RELEASE_TAG }}' --repo '${{ github.repository }}' --json targetCommitish --jq '.targetCommitish'; if($target -ne $releaseTarget){throw "release target mismatch: $target"}
           Expand-Archive '${{ env.CANDIDATE_ZIP }}' -DestinationPath runtime -Force
       - name: Run public-artifact post-release full-play smoke
         shell: pwsh
