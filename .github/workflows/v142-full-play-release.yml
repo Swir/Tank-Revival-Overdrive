@@ -121,14 +121,22 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'; Set-Location candidate
-          $zip='${{ env.CANDIDATE_ZIP }}'
-          $expected=((Get-Content V142_FULL_PLAY_SHA256.txt -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
-          $actual=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $artifactRoot=(Get-Location).Path
+          $shaFiles=@(Get-ChildItem -Path $artifactRoot -Recurse -File -Filter 'V142_FULL_PLAY_SHA256.txt')
+          if($shaFiles.Count -ne 1){throw "expected exactly one V142_FULL_PLAY_SHA256.txt, found $($shaFiles.Count)"}
+          $packageDir=$shaFiles[0].Directory.FullName
+          $zipPath=Join-Path $packageDir '${{ env.CANDIDATE_ZIP }}'
+          $provenancePath=Join-Path $packageDir 'V142_FULL_PLAY_PROVENANCE.json'
+          if(!(Test-Path $zipPath)){throw "candidate ZIP missing beside checksum: $zipPath"}
+          if(!(Test-Path $provenancePath)){throw "candidate provenance missing beside checksum: $provenancePath"}
+          $expected=((Get-Content $shaFiles[0].FullName -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
+          $actual=(Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
           if($actual -ne $expected){throw 'candidate ZIP digest mismatch'}
-          $p=Get-Content V142_FULL_PLAY_PROVENANCE.json -Raw|ConvertFrom-Json
+          $p=Get-Content $provenancePath -Raw|ConvertFrom-Json
           if($p.candidate_sha -ne '${{ github.sha }}' -or $p.commit_sha -ne '${{ github.sha }}' -or $p.sha256 -ne $actual -or $p.version -ne 'v14.2.0'){throw 'candidate provenance mismatch'}
-          Expand-Archive $zip -DestinationPath runtime -Force
-          foreach($required in @('TankRevivalOverdrive.exe','TankRevivalOverdrive_Data','BUILD_INFO.txt','DEMO_MANIFEST.txt','README_DEMO.txt','RELEASE_NOTES.txt','KNOWN_ISSUES.txt','V142_FULL_PLAY_BUILD.txt')){if(!(Test-Path "runtime/$required")){throw "missing $required"}}
+          $runtime=Join-Path $artifactRoot 'runtime'
+          Expand-Archive $zipPath -DestinationPath $runtime -Force
+          foreach($required in @('TankRevivalOverdrive.exe','TankRevivalOverdrive_Data','BUILD_INFO.txt','DEMO_MANIFEST.txt','README_DEMO.txt','RELEASE_NOTES.txt','KNOWN_ISSUES.txt','V142_FULL_PLAY_BUILD.txt')){if(!(Test-Path (Join-Path $runtime $required))){throw "missing $required"}}
           Write-Host "Verified exact full-play candidate SHA256: $actual"
       - name: Run exact single-binary qualification matrix
         shell: pwsh
