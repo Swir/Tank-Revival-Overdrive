@@ -1,0 +1,212 @@
+name: v14.3 Recovery and Roadmap Sync Stager
+
+on:
+  push:
+    branches: [dev-v14-3]
+    paths:
+      - '.github/workflows/v143-feature-stager.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  stage:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Stage suppression-aware recovery and active README truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              if new in text:
+                  return text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected one source token, found {count}')
+              return text.replace(old, new, 1)
+
+          # v14.3: smoke grants only a finite, bounded suppression-recovery opportunity.
+          smoke_path = Path('Assets/Scripts/BattlefieldSmokeScreenV143.cs')
+          smoke = smoke_path.read_text(encoding='utf-8')
+          smoke = replace_once(
+              smoke,
+              '        public const float MaxContextStrength01 = 0.88f;',
+              '        public const float MaxContextStrength01 = 0.88f;\n'
+              '        public const float MaxSuppressionRecoveryScale = 1.30f;\n'
+              '        public const float BossSuppressionRecoveryScale = 1.15f;',
+              'smoke recovery constants')
+          smoke = replace_once(
+              smoke,
+              '            MinBreakContactDistanceScale < MaxBreakContactDistanceScale &&\n'
+              '            MinContextStrength01 > 0f && MaxContextStrength01 < 1f && MinContextStrength01 < MaxContextStrength01;',
+              '            MinBreakContactDistanceScale < MaxBreakContactDistanceScale &&\n'
+              '            MinContextStrength01 > 0f && MaxContextStrength01 < 1f && MinContextStrength01 < MaxContextStrength01 &&\n'
+              '            MaxSuppressionRecoveryScale >= 1.10f && MaxSuppressionRecoveryScale <= 1.35f &&\n'
+              '            BossSuppressionRecoveryScale >= 1.05f && BossSuppressionRecoveryScale <= MaxSuppressionRecoveryScale;',
+              'smoke recovery config')
+          smoke = replace_once(
+              smoke,
+              '        public static float BreakContactScale(float strength01)\n'
+              '        {\n'
+              '            return Mathf.Clamp(\n'
+              '                Mathf.Lerp(MaxBreakContactDistanceScale, MinBreakContactDistanceScale, Mathf.Clamp01(strength01)),\n'
+              '                MinBreakContactDistanceScale,\n'
+              '                MaxBreakContactDistanceScale);\n'
+              '        }\n',
+              '        public static float BreakContactScale(float strength01)\n'
+              '        {\n'
+              '            return Mathf.Clamp(\n'
+              '                Mathf.Lerp(MaxBreakContactDistanceScale, MinBreakContactDistanceScale, Mathf.Clamp01(strength01)),\n'
+              '                MinBreakContactDistanceScale,\n'
+              '                MaxBreakContactDistanceScale);\n'
+              '        }\n\n'
+              '        public static float SuppressionRecoveryScale(float strength01, EnemyKind kind)\n'
+              '        {\n'
+              '            float cap = kind == EnemyKind.Boss ? BossSuppressionRecoveryScale : MaxSuppressionRecoveryScale;\n'
+              '            return Mathf.Clamp(Mathf.Lerp(1f, cap, Mathf.Clamp01(strength01)), 1f, cap);\n'
+              '        }\n',
+              'smoke recovery model')
+          smoke = replace_once(
+              smoke,
+              '        public static float BreakContactDistanceScale => Instance == null || !Instance.PlayerInsideZone\n'
+              '            ? 1f\n'
+              '            : BattlefieldSmokeScreenModelV143.BreakContactScale(Instance.EffectiveStrength01);\n',
+              '        public static float BreakContactDistanceScale => Instance == null || !Instance.PlayerInsideZone\n'
+              '            ? 1f\n'
+              '            : BattlefieldSmokeScreenModelV143.BreakContactScale(Instance.EffectiveStrength01);\n\n'
+              '        public static float SuppressionRecoveryScaleAt(Vector2 worldPosition, EnemyKind kind)\n'
+              '        {\n'
+              '            if (Instance == null || !Instance.ScreenActive) return 1f;\n'
+              '            float radius = BattlefieldSmokeScreenModelV143.SmokeRadiusWorld;\n'
+              '            if ((worldPosition - Instance._origin).sqrMagnitude > radius * radius) return 1f;\n'
+              '            return BattlefieldSmokeScreenModelV143.SuppressionRecoveryScale(Instance._contextStrength01, kind);\n'
+              '        }\n',
+              'smoke recovery runtime bridge')
+          smoke_path.write_text(smoke, encoding='utf-8')
+
+          # Integrate only into the existing v13.8 suppression decay path: no healing,
+          # no movement authority, no stun and no second morale state machine.
+          morale_path = Path('Assets/Scripts/BattlefieldSuppressionMoraleV138.cs')
+          morale = morale_path.read_text(encoding='utf-8')
+          morale = replace_once(
+              morale,
+              '                float decay = (e.Kind == EnemyKind.Boss ? 11f : 8.5f) * (1f - cohesionStress * 0.35f);\n'
+              '                e.Pressure = Mathf.Max(0f, e.Pressure - decay * BattlefieldSuppressionModelV138.SampleCadenceSeconds);',
+              '                float decay = (e.Kind == EnemyKind.Boss ? 11f : 8.5f) * (1f - cohesionStress * 0.35f);\n'
+              '                if (e.State == BattlefieldMoraleStateV138.Suppressed ||\n'
+              '                    e.State == BattlefieldMoraleStateV138.Broken ||\n'
+              '                    e.State == BattlefieldMoraleStateV138.Recovering)\n'
+              '                {\n'
+              '                    decay *= BattlefieldSmokeScreenDirectorV143.SuppressionRecoveryScaleAt(e.Enemy.transform.position, e.Kind);\n'
+              '                }\n'
+              '                e.Pressure = Mathf.Max(0f, e.Pressure - decay * BattlefieldSuppressionModelV138.SampleCadenceSeconds);',
+              'suppression recovery integration')
+          morale_path.write_text(morale, encoding='utf-8')
+
+          # Strengthen the deterministic source contract for the new recovery bridge.
+          verifier_path = Path('Tools/verify_v143_smoke_screen.py')
+          verifier = verifier_path.read_text(encoding='utf-8')
+          verifier = replace_once(
+              verifier,
+              "counter = Path('Assets/Scripts/CounterBatteryWarfareV140.cs').read_text(encoding='utf-8')\n",
+              "counter = Path('Assets/Scripts/CounterBatteryWarfareV140.cs').read_text(encoding='utf-8')\n"
+              "morale = Path('Assets/Scripts/BattlefieldSuppressionMoraleV138.cs').read_text(encoding='utf-8')\n",
+              'verifier morale source')
+          verifier = replace_once(
+              verifier,
+              "    'ConfigurationValid',\n]",
+              "    'ConfigurationValid',\n"
+              "    'MaxSuppressionRecoveryScale = 1.30f',\n"
+              "    'BossSuppressionRecoveryScale = 1.15f',\n"
+              "    'SuppressionRecoveryScale(float strength01, EnemyKind kind)',\n"
+              "    'SuppressionRecoveryScaleAt(Vector2 worldPosition, EnemyKind kind)',\n]",
+              'verifier smoke recovery tokens')
+          verifier = replace_once(
+              verifier,
+              "assert counter.count('BattlefieldSmokeScreenDirectorV143.BreakContactDistanceScale') == 1\n"
+              "print('v14.3 bounded weather-coupled smoke-screen qualification PASS')\n",
+              "assert counter.count('BattlefieldSmokeScreenDirectorV143.BreakContactDistanceScale') == 1\n\n"
+              "required_recovery = [\n"
+              "    'BattlefieldMoraleStateV138.Suppressed',\n"
+              "    'BattlefieldMoraleStateV138.Broken',\n"
+              "    'BattlefieldMoraleStateV138.Recovering',\n"
+              "    'BattlefieldSmokeScreenDirectorV143.SuppressionRecoveryScaleAt(e.Enemy.transform.position, e.Kind)',\n"
+              "]\n"
+              "for token in required_recovery:\n"
+              "    assert token in morale, f'missing suppression recovery bridge: {token}'\n"
+              "assert morale.count('BattlefieldSmokeScreenDirectorV143.SuppressionRecoveryScaleAt(e.Enemy.transform.position, e.Kind)') == 1\n"
+              "print('v14.3 bounded weather-coupled smoke-screen + suppression recovery qualification PASS')\n",
+              'verifier recovery assertions')
+          verifier_path.write_text(verifier, encoding='utf-8')
+
+          # Synchronize README with the authoritative active v14.3 scope. v14.2 remains
+          # the latest qualified milestone; v14.3 is explicitly still in development.
+          readme_path = Path('README.md')
+          readme = readme_path.read_text(encoding='utf-8')
+          replacements = [
+              (
+                  '[![Roadmap](https://img.shields.io/badge/Roadmap-100.0%25%20V14.2%20Qualified-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)',
+                  '[![Roadmap](https://img.shields.io/badge/Roadmap-98.4%25%20V14.3%20In%20Development-02050A?style=for-the-badge&logo=github&logoColor=62E5FF)](ROADMAP.md)'
+              ),
+              (
+                  '[![v14.2 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/deception-v142-windows.yml/badge.svg?branch=dev-v14-2)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/deception-v142-windows.yml)',
+                  '[![v14.3 Windows Gate](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/smoke-v143-windows.yml/badge.svg?branch=dev-v14-3)](https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/smoke-v143-windows.yml)'
+              ),
+              ('| Development milestone | **V14.2 QUALIFIED** on `dev-v14-2` |', '| Development milestone | **V14.3 IN DEVELOPMENT** on `dev-v14-3` |'),
+              ('| Roadmap | **487 / 487 completed (100.0%)** — authoritative `ROADMAP.md` scope |', '| Roadmap | **487 / 495 completed (98.4%)** — authoritative `ROADMAP.md` scope |'),
+              ('The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **487 / 487 (100.0%) — V14.2 QUALIFIED**. Release readiness is tracked separately by exact-candidate Windows qualification gates.', 'The authoritative roadmap is [`ROADMAP.md`](ROADMAP.md). The current scoped state is **487 / 495 (98.4%) — V14.3 IN DEVELOPMENT**. v14.2 remains the latest qualified milestone; release readiness is tracked separately by exact-candidate Windows qualification gates.'),
+              ('- **Development milestone:** v14.2 is qualified on `dev-v14-2`; this qualified development scope does not automatically create or replace a public release.', '- **Development milestone:** v14.3 is in development on `dev-v14-3`; v14.2 remains the latest qualified milestone and no development scope automatically creates or replaces a public release.'),
+          ]
+          for old, new in replacements:
+              readme = replace_once(readme, old, new, f'README sync: {old[:44]}')
+
+          v142_highlight = '| 🥷 **Counter-recon deception v14.2 — qualified** | Finite false-emission decoys, bounded EMCON relocation and shoot-and-scoot reacquisition timing now misdirect hostile observation with deterministic adaptation, explicit exposure floors and no parallel combat authority. |'
+          v143_highlight = '| 🌫️ **Smoke screening v14.3 — in development** | Finite weather-coupled smoke creates bounded screening and break-contact windows with a sensor tradeoff; suppressed enemies inside active smoke receive only a capped morale-pressure recovery boost, never healing or immunity. |'
+          if v143_highlight not in readme:
+              if readme.count(v142_highlight) != 1:
+                  raise SystemExit('README v14.2 highlight anchor missing or duplicated')
+              readme = readme.replace(v142_highlight, v142_highlight + '\n' + v143_highlight, 1)
+
+          control_anchor = '| **F** | Activate earned v13.9 tactical fire-support when READY and a verified contact opportunity exists |'
+          smoke_control = '| **B** | Deploy a v14.3 smoke screen when a charge is available and cooldown permits |'
+          if smoke_control not in readme:
+              if readme.count(control_anchor) != 1:
+                  raise SystemExit('README controls anchor missing or duplicated')
+              readme = readme.replace(control_anchor, control_anchor + '\n' + smoke_control, 1)
+
+          readme_path.write_text(readme, encoding='utf-8')
+          PY
+
+          python -m py_compile Tools/verify_v143_smoke_screen.py Tools/generate_progress_svgs.py Tools/swir_visual_report_guard.py
+          python Tools/verify_v143_smoke_screen.py
+          python Tools/verify_v143_presentation.py
+          python Tools/verify_v143_runtime_gate.py
+          python Tools/verify_csharp_type_uniqueness.py
+          python Tools/generate_progress_svgs.py --check
+          python Tools/swir_visual_report_guard.py --check
+          git diff --check
+
+      - name: Commit coherent v14.3 checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'No staged gameplay/documentation delta required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            Assets/Scripts/BattlefieldSmokeScreenV143.cs \
+            Assets/Scripts/BattlefieldSuppressionMoraleV138.cs \
+            Tools/verify_v143_smoke_screen.py \
+            README.md
+          git commit -m 'feat(v14.3): add suppression recovery and sync active roadmap'
+          git push origin HEAD:dev-v14-3

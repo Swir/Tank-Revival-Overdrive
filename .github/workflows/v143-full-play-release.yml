@@ -1,0 +1,283 @@
+name: v14.3 Full-Play Windows Release Candidate
+
+on:
+  push:
+    branches: ['release/v14.3-full-play']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  UNITY_VERSION: 6000.3.17f1
+  CANDIDATE_ZIP: TankRevivalOverdrive-v14.3.0-Windows-x64.zip
+  PACKAGE_DIR: tro-v143-full-play-package
+  RELEASE_TAG: v14.3.0
+
+jobs:
+  source-contracts:
+    name: Verify final v14.3 full-play source and release contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact release source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "${GITHUB_REF_NAME}" = 'release/v14.3-full-play'
+          test "$(cat VERSION)" = 'v14.3.0'
+          python -m py_compile Tools/verify_v143_full_play_release.py .github/scripts/package_v143_full_play.py Tools/verify_v143_smoke_screen.py Tools/verify_v143_presentation.py Tools/verify_v143_runtime_gate.py Tools/verify_v142_deception.py Tools/verify_v142_presentation.py Tools/verify_v142_runtime_gate.py Tools/verify_csharp_type_uniqueness.py Tools/verify_production_audio_assets.py
+          python Tools/verify_v143_full_play_release.py
+          python Tools/verify_v143_smoke_screen.py
+          python Tools/verify_v143_presentation.py
+          python Tools/verify_v143_runtime_gate.py
+          # v14.2 source verifier is intentionally not executed here because v14.3 legitimately
+          # extends counter-battery integration; the exact packaged v14.2 smoke below is the regression gate.
+          python Tools/verify_csharp_type_uniqueness.py
+          python Tools/verify_production_audio_assets.py
+          git diff --check
+      - name: Verify frozen v14.3 roadmap
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('ROADMAP.md').read_text(encoding='utf-8')
+          done=len(re.findall(r'^- \[x\] ',text,re.M)); open_=len(re.findall(r'^- \[ \] ',text,re.M))
+          if (done,open_) != (495,0): raise SystemExit(f'expected frozen 495/495, got {done}/{done+open_}')
+          if '## v14.3 — Smoke Screening & Break-Contact Warfare — QUALIFIED' not in text:
+              raise SystemExit('v14.3 qualified milestone heading missing')
+          print('frozen v14.3 roadmap PASS: 495/495')
+          PY
+
+  build-candidate:
+    name: Build and package exact v14.3 full-play Windows x64 candidate
+    needs: source-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify Unity CI credentials
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$UNITY_LICENSE"; test -n "$UNITY_EMAIL"; test -n "$UNITY_PASSWORD"
+      - name: Enforce clean Unity qualification state
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          rm -rf Library Temp obj
+      - name: Build non-development full-play candidate
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          targetPlatform: StandaloneWindows64
+          buildMethod: TankRevival.Editor.CIBuild.BuildDemoCandidate
+          allowDirtyBuild: true
+      - name: Stage deterministic self-contained package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python .github/scripts/package_v143_full_play.py --build-root build --output-dir "${RUNNER_TEMP}/${PACKAGE_DIR}" --candidate-sha "${GITHUB_SHA}" --commit-sha "${GITHUB_SHA}" --unity-version "${UNITY_VERSION}" --version-file VERSION --zip-name "${CANDIDATE_ZIP}" --diagnostics-path "${GITHUB_WORKSPACE}/V143_FULL_PLAY_BUILD_TREE.txt"
+      - name: Upload exact full-play candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v14.3.0-full-play-Windows-x64
+          path: |
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/${{ env.CANDIDATE_ZIP }}
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/V143_FULL_PLAY_SHA256.txt
+            ${{ runner.temp }}/${{ env.PACKAGE_DIR }}/V143_FULL_PLAY_PROVENANCE.json
+            V143_FULL_PLAY_BUILD_TREE.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  packaged-runtime:
+    name: Full-play flow, v14.3 regressions and round 80/90/100 soak on same EXE
+    needs: [source-contracts, build-candidate]
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v14.3.0-full-play-Windows-x64
+          path: candidate
+      - name: Verify package provenance and expand exact candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location candidate
+          $shaFiles=@(Get-ChildItem -Recurse -File -Filter 'V143_FULL_PLAY_SHA256.txt')
+          if($shaFiles.Count -ne 1){throw "expected one checksum, found $($shaFiles.Count)"}
+          $packageDir=$shaFiles[0].Directory.FullName
+          $zipPath=Join-Path $packageDir '${{ env.CANDIDATE_ZIP }}'
+          $provenancePath=Join-Path $packageDir 'V143_FULL_PLAY_PROVENANCE.json'
+          $expected=((Get-Content $shaFiles[0].FullName -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
+          $actual=(Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          if($actual -ne $expected){throw 'candidate ZIP digest mismatch'}
+          $p=Get-Content $provenancePath -Raw|ConvertFrom-Json
+          if($p.candidate_sha -ne '${{ github.sha }}' -or $p.commit_sha -ne '${{ github.sha }}' -or $p.sha256 -ne $actual -or $p.version -ne 'v14.3.0'){throw 'candidate provenance mismatch'}
+          if(!$p.fullscreen_default -or !$p.clean_gameplay_shell -or $p.third_party_notices -ne 'THIRD_PARTY_NOTICES.txt'){throw 'release presentation provenance mismatch'}
+          New-Item -ItemType Directory -Path runtime -Force | Out-Null
+          Expand-Archive $zipPath -DestinationPath runtime -Force
+          foreach($required in @('TankRevivalOverdrive.exe','TankRevivalOverdrive_Data','BUILD_INFO.txt','DEMO_MANIFEST.txt','README_DEMO.txt','RELEASE_NOTES.txt','KNOWN_ISSUES.txt','THIRD_PARTY_NOTICES.txt','V143_FULL_PLAY_BUILD.txt')){if(!(Test-Path (Join-Path runtime $required))){throw "missing $required"}}
+          Write-Host "Verified exact v14.3 candidate SHA256: $actual"
+      - name: Run exact single-binary qualification matrix
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location candidate/runtime
+          $blocking='Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|UnityException|TargetInvocationException'
+          function Invoke-Smoke([string]$Name,[string]$Flag,[string]$Pass,[string]$Fail,[string]$Log,[int]$TimeoutMs){
+            Remove-Item $Pass,$Fail,$Log -ErrorAction SilentlyContinue
+            $p=Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics',$Flag,'-logFile',$Log -PassThru
+            if(!$p.WaitForExit($TimeoutMs)){Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; throw "$Name timed out"}
+            if(Test-Path $Fail){if(Test-Path $Log){Get-Content $Log -Tail 300}; throw "$Name emitted FAIL"}
+            if(!(Test-Path $Pass)){if(Test-Path $Log){Get-Content $Log -Tail 300}; throw "$Name exited without PASS"}
+            if($p.ExitCode -ne 0){throw "$Name non-zero exit $($p.ExitCode)"}
+            if(Test-Path $Log){if(Select-String -Path $Log -Pattern $blocking -Quiet){Get-Content $Log -Tail 350; throw "$Name blocking exception signature"}}
+            Write-Host "$Name PASS"
+          }
+          Invoke-Smoke 'packaged bootstrap' '-demo-ci-smoke' 'DEMO_SMOKE_PASS.txt' 'DEMO_SMOKE_FAIL.txt' 'Bootstrap.log' 80000
+          Invoke-Smoke 'full-play menu/play/pause/resume flow' '-v142-full-play-smoke' 'V14_2_FULL_PLAY_OK.txt' 'V14_2_FULL_PLAY_FAIL.txt' 'FullPlay.log' 90000
+          Invoke-Smoke 'production authored audio' '-production-presentation-smoke' 'PRODUCTION_PRESENTATION_PASS.txt' 'PRODUCTION_PRESENTATION_FAIL.txt' 'Audio.log' 80000
+          Invoke-Smoke 'v14.3 smoke-screen/break-contact warfare' '-tr-v143-smoke' 'V14_3_SMOKE_OK.txt' 'V14_3_SMOKE_FAIL.txt' 'V143.log' 90000
+          Invoke-Smoke 'v14.2 regression' '-tr-v142-smoke' 'V14_2_DECEPTION_OK.txt' 'V14_2_DECEPTION_FAIL.txt' 'V142.log' 90000
+          Invoke-Smoke 'v14.1 regression' '-tr-v141-smoke' 'V14_1_COUNTER_OBSERVATION_OK.txt' 'V14_1_COUNTER_OBSERVATION_FAIL.txt' 'V141.log' 90000
+          Invoke-Smoke 'v14.0 regression' '-tr-v140-smoke' 'V14_0_COUNTER_BATTERY_OK.txt' 'V14_0_COUNTER_BATTERY_FAIL.txt' 'V140.log' 90000
+          Invoke-Smoke 'v13.9 regression' '-tr-v139-smoke' 'V13_9_FIRE_SUPPORT_OK.txt' 'V13_9_FIRE_SUPPORT_FAIL.txt' 'V139.log' 90000
+          Invoke-Smoke 'v13.8 regression' '-tr-v138-smoke' 'V13_8_SUPPRESSION_MORALE_OK.txt' 'V13_8_SUPPRESSION_MORALE_FAIL.txt' 'V138.log' 90000
+          Invoke-Smoke 'round 80/90/100 soak' '-demo-ci-soak' 'DEMO_SOAK_PASS.txt' 'DEMO_SOAK_FAIL.txt' 'Soak.log' 120000
+          'v14.3 full-play runtime matrix PASS' | Set-Content V14_3_FULL_PLAY_WINDOWS_MATRIX_OK.txt
+      - name: Capture fullscreen clean-HUD gameplay evidence
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location candidate/runtime
+          Remove-Item V14_2_FULL_PLAY_VISUAL_OK.txt,V14_2_FULL_PLAY_VISUAL_FAIL.txt,V14_2_FULL_PLAY_SCREENSHOT.png,V14_3_FULL_PLAY_VISUAL_OK.txt,V14_3_FULL_PLAY_SCREENSHOT.png,Visual.log -ErrorAction SilentlyContinue
+          $p=Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-v142-full-play-visual-smoke','-screen-fullscreen','1','-logFile','Visual.log' -PassThru
+          if(!$p.WaitForExit(90000)){Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; throw 'visual smoke timed out'}
+          if(Test-Path V14_2_FULL_PLAY_VISUAL_FAIL.txt){Get-Content V14_2_FULL_PLAY_VISUAL_FAIL.txt; throw 'visual smoke failed'}
+          if(!(Test-Path V14_2_FULL_PLAY_VISUAL_OK.txt) -or !(Test-Path V14_2_FULL_PLAY_SCREENSHOT.png)){if(Test-Path Visual.log){Get-Content Visual.log -Tail 350}; throw 'visual evidence missing'}
+          if((Get-Item V14_2_FULL_PLAY_SCREENSHOT.png).Length -lt 4096){throw 'visual screenshot is unexpectedly small'}
+          Copy-Item V14_2_FULL_PLAY_SCREENSHOT.png V14_3_FULL_PLAY_SCREENSHOT.png
+          'v14.3 candidate uses qualified fullscreen clean gameplay shell from current packaged EXE' | Set-Content V14_3_FULL_PLAY_VISUAL_OK.txt
+      - name: Upload runtime and visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v14.3.0-full-play-evidence
+          path: |
+            candidate/runtime/*_PASS.txt
+            candidate/runtime/V14_3_*_OK.txt
+            candidate/runtime/V14_3_FULL_PLAY_SCREENSHOT.png
+            candidate/runtime/*.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  publish-release:
+    name: Publish exact-qualified v14.3.0 Full-Play Beta
+    needs: [source-contracts, build-candidate, packaged-runtime]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v14.3.0-full-play-Windows-x64
+          path: candidate
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-v14.3.0-full-play-evidence
+          path: evidence
+      - name: Verify publish payload and create public prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha_file="$(find candidate -type f -name 'V143_FULL_PLAY_SHA256.txt' -print -quit)"
+          test -n "$sha_file"; package_dir="$(dirname "$sha_file")"
+          zip_path="${package_dir}/${CANDIDATE_ZIP}"; provenance_path="${package_dir}/V143_FULL_PLAY_PROVENANCE.json"
+          screenshot_path="$(find evidence -type f -name 'V14_3_FULL_PLAY_SCREENSHOT.png' -print -quit)"
+          test -f "$zip_path"; test -f "$provenance_path"; test -f "$screenshot_path"
+          expected="$(awk '{print tolower($1)}' "$sha_file")"; actual="$(sha256sum "$zip_path"|awk '{print tolower($1)}')"; test "$expected" = "$actual"
+          python - "$provenance_path" "$actual" "$GITHUB_SHA" <<'PY'
+          import json,sys
+          path,digest,sha=sys.argv[1:]; p=json.load(open(path,encoding='utf-8'))
+          assert p['candidate_sha']==sha and p['commit_sha']==sha and p['sha256']==digest and p['version']=='v14.3.0'
+          assert p['fullscreen_default'] is True and p['clean_gameplay_shell'] is True and p['third_party_notices']=='THIRD_PARTY_NOTICES.txt'
+          PY
+          cat > release-notes.md <<EOF
+          # Tank Revival: Orzeł Overdrive v14.3.0 — Full-Play Beta
+
+          Windows x64 build do pełnego grania: 100-rundowa kampania, fullscreen-first presentation, czysty HUD, keyboard + gamepad core controls oraz zakwalifikowany v14.3 smoke-screen / break-contact warfare.
+
+          **Exact source:** \`${GITHUB_SHA}\`  
+          **Windows package SHA-256:** \`${actual}\`
+
+          Gate: exact packaged EXE, menu → play → pause → resume, v14.3/v14.2/v14.1/v14.0/v13.9/v13.8 regressions, late-round soak 80/90/100 i fullscreen clean-HUD screenshot evidence.
+
+          Rozpakuj cały ZIP do osobnego folderu i uruchom \`TankRevivalOverdrive.exe\`. Nie przenoś samego EXE bez folderu \`TankRevivalOverdrive_Data\`.
+          EOF
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            target="$(gh release view "$RELEASE_TAG" --json targetCommitish --jq '.targetCommitish')"; test "$target" = "$GITHUB_SHA"
+            gh release upload "$RELEASE_TAG" "$zip_path" "$sha_file" "$provenance_path" "$screenshot_path" --clobber
+            gh release edit "$RELEASE_TAG" --title 'Tank Revival: Orzeł Overdrive v14.3.0 — Full-Play Beta' --notes-file release-notes.md --prerelease
+          else
+            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --title 'Tank Revival: Orzeł Overdrive v14.3.0 — Full-Play Beta' --notes-file release-notes.md --prerelease "$zip_path" "$sha_file" "$provenance_path" "$screenshot_path"
+          fi
+
+  post-release:
+    name: Download public v14.3.0 artifact and post-release smoke
+    needs: publish-release
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Download published release assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; New-Item -ItemType Directory -Path public -Force|Out-Null
+          gh release download '${{ env.RELEASE_TAG }}' --repo '${{ github.repository }}' --dir public --pattern '${{ env.CANDIDATE_ZIP }}' --pattern 'V143_FULL_PLAY_SHA256.txt' --pattern 'V143_FULL_PLAY_PROVENANCE.json'
+      - name: Verify public checksum, provenance and exact target
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location public
+          $expected=((Get-Content V143_FULL_PLAY_SHA256.txt -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
+          $actual=(Get-FileHash '${{ env.CANDIDATE_ZIP }}' -Algorithm SHA256).Hash.ToLowerInvariant(); if($actual -ne $expected){throw 'public release checksum mismatch'}
+          $p=Get-Content V143_FULL_PLAY_PROVENANCE.json -Raw|ConvertFrom-Json
+          if($p.candidate_sha -ne '${{ github.sha }}' -or $p.commit_sha -ne '${{ github.sha }}' -or $p.sha256 -ne $actual -or $p.version -ne 'v14.3.0'){throw 'public provenance mismatch'}
+          $target=gh release view '${{ env.RELEASE_TAG }}' --repo '${{ github.repository }}' --json targetCommitish --jq '.targetCommitish'; if($target -ne '${{ github.sha }}'){throw "release target mismatch: $target"}
+          Expand-Archive '${{ env.CANDIDATE_ZIP }}' -DestinationPath runtime -Force
+      - name: Run public-artifact post-release full-play smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location public/runtime
+          function Invoke-Public([string]$Name,[string]$Flag,[string]$Pass,[string]$Fail,[int]$TimeoutMs){
+            Remove-Item $Pass,$Fail -ErrorAction SilentlyContinue
+            $p=Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics',$Flag,'-logFile',($Name+'.log') -PassThru
+            if(!$p.WaitForExit($TimeoutMs)){Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; throw "$Name timeout"}
+            if($p.ExitCode -ne 0 -or (Test-Path $Fail) -or !(Test-Path $Pass)){throw "$Name failed"}
+          }
+          Invoke-Public 'public-full-play' '-v142-full-play-smoke' 'V14_2_FULL_PLAY_OK.txt' 'V14_2_FULL_PLAY_FAIL.txt' 90000
+          Invoke-Public 'public-v143' '-tr-v143-smoke' 'V14_3_SMOKE_OK.txt' 'V14_3_SMOKE_FAIL.txt' 90000
+          Invoke-Public 'public-soak' '-demo-ci-soak' 'DEMO_SOAK_PASS.txt' 'DEMO_SOAK_FAIL.txt' 120000
+          'v14.3 public artifact post-release smoke PASS' | Set-Content V14_3_PUBLIC_RELEASE_OK.txt

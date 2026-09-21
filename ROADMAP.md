@@ -3,10 +3,10 @@
 <!-- SWIR-ROADMAP-STANDARD:v1 -->
 <!-- ROADMAP-PROGRESS:START -->
 <p align="center">
-  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v14-2"></a>
+  <a href="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml"><img alt="CI" src="https://github.com/Swir/Tank-Revival-Overdrive/actions/workflows/dev-windows-build.yml/badge.svg?branch=dev-v14-3"></a>
   <img alt="Roadmap progress" src="https://img.shields.io/badge/ROADMAP-100.0%25-brightgreen?style=for-the-badge">
-  <img alt="Completed" src="https://img.shields.io/badge/DONE-487%2F487-brightgreen?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/STATUS-V14.2%20QUALIFIED-brightgreen?style=for-the-badge">
+  <img alt="Completed" src="https://img.shields.io/badge/DONE-495%2F495-brightgreen?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/STATUS-V14.3%20QUALIFIED-brightgreen?style=for-the-badge">
 </p>
 
 
@@ -18,7 +18,7 @@
 
 | ✅ Completed | ⏳ Remaining | 📦 Total | 🎯 Progress |
 |---:|---:|---:|---:|
-| **487** | **0** | **487** | **100.0%** |
+| **495** | **0** | **495** | **100.0%** |
 
 > **Progress rule:** calculate progress from explicit roadmap deliverables only: `[x] / ([x] + [ ])`. Update the checklist first, then badges, numeric table, percentage and generated Progress SVG. Never estimate progress from version numbers, commit count, elapsed time or activity.
 <!-- ROADMAP-PROGRESS:END -->
@@ -723,5 +723,12 @@ When this gate is fully reached, release reporting must explicitly state:
 - [x] **Terrain, cohesion and command resilience integration** — scale decoy credibility, silent-move exposure and reacquisition timing from qualified terrain, cohesion and command posture without parallel movement/AI authority.
 - [x] **Readable budgeted deception presentation** — expose DECOY / EMCON / RELOCATING / REACQUIRING cues through fixed-cap HUD/world/audio feedback under existing mass-battle FX budgets.
 - [x] **Deterministic runtime, authority and performance contracts** — verify fixed decoy caps, finite cooldowns, deterministic adaptation, no hot-path scene scans and unchanged Health/Projectile/TankGame/EnemyTank ownership.
-- [x] **Exact-SHA Windows qualification** — package one Windows x64 candidate, pass v14.2 deception/EMCON smoke, rerun v14.1/v14.0/v13.9/v13.8 regressions plus rounds 80/90/100 soak on the same executable, then finalize checklist/progress SVGs.
-
+- [x] **Exact-SHA Windows qualification** — package one Windows x64 candidate, pass v14.2 deception/EMCON smoke, rerun v14.1/v14.0/v13.9/v13.8 regressions plus rounds 80/90/100 soak on the same executable, then finalize checklist/progress SVGs.## v14.3 — Smoke Screening & Break-Contact Warfare — QUALIFIED
+- [x] **Bounded finite smoke-screen authority** — add deterministic finite-charge smoke screens with fixed lifetime/cooldown/cap that never apply direct damage, spawn/despawn actors or replace Health, Projectile, movement or TankGame authority.
+- [x] **Weather-coupled smoke dispersion and duration** — consume qualified battlefield-weather state as a read-only input that deterministically scales screen lifetime, spread and strength within hard fairness floors/ceilings.
+- [x] **Sensor / counter-battery tradeoff bridge** — let smoke reduce observer/reacquisition pressure while also reducing player sensor/designation throughput, with explicit non-zero floors and no scripted immunity.
+- [x] **Terrain, cohesion and command break-contact integration** — combine qualified cover/exposure plus cohesion/command posture into bounded break-contact timing without parallel movement, targeting or AI authority.
+- [x] **Suppression-aware tactical recovery** — permit finite regroup/recovery opportunities under smoke from existing suppression state while forbidding invulnerability, scripted stun, free healing or permanent crowd-control loops.
+- [x] **Readable budgeted smoke presentation** — expose SCREENING / DISPERSE / BREAK CONTACT / COOLDOWN cues through fixed-cap HUD/world/audio feedback under existing mass-battle FX budgets.
+- [x] **Deterministic runtime, authority and performance contracts** — verify fixed screen caps, deterministic timing/floors, bounded fan-out, zero hot-path scene scans and unchanged Health/Projectile/TankGame/EnemyTank ownership.
+- [x] **Exact-SHA Windows qualification** — package one Windows x64 candidate, pass v14.3 smoke/break-contact smoke, rerun v14.2/v14.1/v14.0/v13.9 regressions plus rounds 80/90/100 soak on the same executable, then finalize checklist/progress SVGs.
