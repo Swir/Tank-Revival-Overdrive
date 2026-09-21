@@ -36,15 +36,15 @@ namespace TankRevival.Editor
             BuildInternal(true);
         }
 
-        private static void BuildInternal(bool demoCandidate)
+        private static void BuildInternal(bool releaseCandidate)
         {
-            Debug.Log("[Tank Revival CI] Preparing " + (demoCandidate ? "DEMO CANDIDATE" : "development") + " Windows build...");
+            Debug.Log("[Tank Revival CI] Preparing " + (releaseCandidate ? "FULL-PLAY RELEASE CANDIDATE" : "development") + " Windows build...");
             if (Directory.Exists(BuildFolder)) Directory.Delete(BuildFolder, true);
             Directory.CreateDirectory(BuildFolder);
 
             string version = ResolveVersion();
-            if (demoCandidate && version.IndexOf("dev", StringComparison.OrdinalIgnoreCase) >= 0)
-                throw new Exception("Demo candidate VERSION must not contain '-dev': " + version);
+            if (releaseCandidate && version.IndexOf("dev", StringComparison.OrdinalIgnoreCase) >= 0)
+                throw new Exception("Release candidate VERSION must not contain '-dev': " + version);
 
             Debug.Log("[Tank Revival CI] Project version=" + version);
             ValidateStaticBootstrapScene();
@@ -53,9 +53,9 @@ namespace TankRevival.Editor
             PlayerSettings.companyName = "SWIR Games";
             PlayerSettings.productName = "Tank Revival Overdrive";
             PlayerSettings.bundleVersion = version;
-            PlayerSettings.defaultScreenWidth = 1280;
-            PlayerSettings.defaultScreenHeight = 720;
-            PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
+            PlayerSettings.defaultScreenWidth = 1920;
+            PlayerSettings.defaultScreenHeight = 1080;
+            PlayerSettings.fullScreenMode = releaseCandidate ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
             PlayerSettings.resizableWindow = true;
             PlayerSettings.runInBackground = false;
 
@@ -68,7 +68,7 @@ namespace TankRevival.Editor
                 scenes = new[] { ScenePath },
                 locationPathName = ExePath,
                 target = BuildTarget.StandaloneWindows64,
-                options = demoCandidate ? BuildOptions.CompressWithLz4HC : BuildOptions.CompressWithLz4HC | BuildOptions.Development
+                options = releaseCandidate ? BuildOptions.CompressWithLz4HC : BuildOptions.CompressWithLz4HC | BuildOptions.Development
             };
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
@@ -77,36 +77,40 @@ namespace TankRevival.Editor
             if (summary.result != BuildResult.Succeeded)
                 throw new Exception("Tank Revival Windows build failed: " + summary.result);
 
-            string channel = demoCandidate ? "PUBLIC DEMO 2 RELEASE CANDIDATE" : "DEVELOPMENT";
+            string channel = releaseCandidate ? "V14.2 FULL-PLAY RELEASE CANDIDATE" : "DEVELOPMENT";
             string info =
                 "TANK REVIVAL: ORZEL OVERDRIVE\n" +
                 "Channel: " + channel + "\n" +
                 "Build: " + version + "\n" +
                 "Unity: " + Application.unityVersion + "\n" +
                 "Target: Windows x64\n" +
-                "Controls: WASD/Arrows move, Mouse aim, LMB/Space/LeftCtrl fire, Q/E ammo, 1-7 ammo, R smoke, C ECM, V decoy, G SIGINT, H recon, P/Esc pause\n" +
+                "Display default: borderless fullscreen at the current monitor resolution\n" +
+                "Controls: WASD/Arrows or gamepad left stick move, Mouse/facing aim, LMB/Space/LeftCtrl or gamepad A fire, Q/E or LB/RB ammo, 1-7 ammo, R smoke, C ECM, V decoy, G SIGINT, H recon, P/Esc or Start pause\n" +
                 "Campaign: 100 rounds, Orzelek defense, objectives, convoys, bosses, EW command network and Mobile HQ operations\n";
             File.WriteAllText(Path.Combine(BuildFolder, "BUILD_INFO.txt"), info);
 
-            if (demoCandidate)
+            if (releaseCandidate)
             {
                 string sha = Environment.GetEnvironmentVariable("GITHUB_SHA") ?? "local-build";
                 string manifest =
                     "Tank Revival: Orzel Overdrive\n" +
-                    "Demo candidate: " + version + "\n" +
+                    "Full-play release candidate: " + version + "\n" +
                     "Commit: " + sha + "\n" +
                     "Target: Windows x64\n" +
                     "Executable: TankRevivalOverdrive.exe\n" +
                     "Runtime data: TankRevivalOverdrive_Data\n" +
-                    "Campaign qualification: rounds 36/50/80/90/100\n";
+                    "Default display: fullscreen\n" +
+                    "Qualification: full-play flow + v14.2/v14.1/v14.0/v13.9/v13.8 + rounds 80/90/100\n";
                 File.WriteAllText(Path.Combine(BuildFolder, "DEMO_MANIFEST.txt"), manifest);
 
                 string readme =
-                    "TANK REVIVAL: ORZEL OVERDRIVE — DEMO 2 RELEASE CANDIDATE\n\n" +
+                    "TANK REVIVAL: ORZEL OVERDRIVE — V14.2 FULL-PLAY RELEASE CANDIDATE\n\n" +
                     "1. Rozpakuj caly ZIP do osobnego folderu.\n" +
                     "2. Uruchom TankRevivalOverdrive.exe.\n" +
-                    "3. Nie przenos samego EXE bez folderu TankRevivalOverdrive_Data.\n\n" +
-                    "Sterowanie podstawowe: WASD/strzalki ruch, mysz celowanie, LPM/Spacja/Lewy Ctrl ogien, Q/E lub 1-7 amunicja, ESC/P pauza.\n" +
+                    "3. Gra startuje domyslnie na pelnym ekranie; tryb ekranu i rozdzielczosc zmienisz w Ustawieniach.\n" +
+                    "4. Nie przenos samego EXE bez folderu TankRevivalOverdrive_Data.\n\n" +
+                    "Klawiatura: WASD/strzalki ruch, mysz celowanie, LPM/Spacja/Lewy Ctrl ogien, Q/E lub 1-7 amunicja, ESC/P pauza.\n" +
+                    "Gamepad: lewy stick ruch, A ogien w kierunku jazdy/celowania, LB/RB amunicja, Start pauza.\n" +
                     "Kontry taktyczne: R dym, C ECM, V wabik, G SIGINT, H dron rozpoznawczy.\n" +
                     "Cel: obron Orzelka przez 100 rund, niszcz siec dowodzenia i przetrwaj operacje Mobile HQ.\n";
                 File.WriteAllText(Path.Combine(BuildFolder, "README_DEMO.txt"), readme);
