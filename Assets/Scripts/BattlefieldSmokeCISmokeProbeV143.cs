@@ -24,7 +24,7 @@ namespace TankRevival
                 RunContracts();
                 WriteMarker(
                     true,
-                    "bounds=PASS weather=PASS tradeoff=PASS break-contact=PASS presentation=PASS authority=PASS installation=PASS");
+                    "bounds=PASS weather=PASS tradeoff=PASS break-contact=PASS presentation=PASS input=PASS authority=PASS installation=PASS");
                 Application.Quit(0);
             }
             catch (Exception ex)
@@ -42,6 +42,8 @@ namespace TankRevival
             Require(BattlefieldSmokeScreenModelV143.PlannedRounds == 100, "100 round contract");
             Require(BattlefieldSmokeScreenModelV143.MaxActiveSmokeZones == 1, "single active smoke zone");
             Require(BattlefieldSmokeScreenModelV143.MaxSmokeChargesPerRound == 2, "finite smoke charges");
+            Require(BattlefieldSmokeScreenModelV143.KeyboardDeployKey == KeyCode.B, "keyboard smoke binding");
+            Require(BattlefieldSmokeScreenModelV143.GamepadDeployKey == KeyCode.JoystickButton3, "gamepad smoke binding");
 
             float storm = BattlefieldSmokeScreenModelV143.WeatherPersistenceScale(BattlefieldWeatherKindV135.Storm);
             float rain = BattlefieldSmokeScreenModelV143.WeatherPersistenceScale(BattlefieldWeatherKindV135.Rain);

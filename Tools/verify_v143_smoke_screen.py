@@ -1,6 +1,7 @@
 from pathlib import Path
 
 smoke = Path('Assets/Scripts/BattlefieldSmokeScreenV143.cs').read_text(encoding='utf-8')
+probe = Path('Assets/Scripts/BattlefieldSmokeCISmokeProbeV143.cs').read_text(encoding='utf-8')
 counter = Path('Assets/Scripts/CounterBatteryWarfareV140.cs').read_text(encoding='utf-8')
 morale = Path('Assets/Scripts/BattlefieldSuppressionMoraleV138.cs').read_text(encoding='utf-8')
 
@@ -24,9 +25,13 @@ required_smoke = [
     'snapshot.Resilience01',
     'RuntimeBattleRegistry.Player',
     'PlayerInsideZone',
-    'Input.GetKeyDown(KeyCode.B)',
+    'KeyboardDeployKey = KeyCode.B',
+    'GamepadDeployKey = KeyCode.JoystickButton3',
+    'Input.GetKeyDown(BattlefieldSmokeScreenModelV143.KeyboardDeployKey)',
+    'Input.GetKeyDown(BattlefieldSmokeScreenModelV143.GamepadDeployKey)',
     'TryDeploy(Vector2 playerPosition)',
     'ConfigurationValid',
+    'KeyboardDeployKey == KeyCode.B && GamepadDeployKey == KeyCode.JoystickButton3',
     'MaxSuppressionRecoveryScale = 1.30f',
     'BossSuppressionRecoveryScale = 1.15f',
     'SuppressionRecoveryScale(float strength01, EnemyKind kind)',
@@ -36,6 +41,14 @@ required_smoke = [
 ]
 for token in required_smoke:
     assert token in smoke, f'missing smoke contract: {token}'
+
+required_probe = [
+    'Require(BattlefieldSmokeScreenModelV143.KeyboardDeployKey == KeyCode.B, "keyboard smoke binding")',
+    'Require(BattlefieldSmokeScreenModelV143.GamepadDeployKey == KeyCode.JoystickButton3, "gamepad smoke binding")',
+    'input=PASS',
+]
+for token in required_probe:
+    assert token in probe, f'missing runtime input contract: {token}'
 
 forbidden_smoke = [
     'FindObjectsOfType',
@@ -75,4 +88,4 @@ for token in required_recovery:
     assert token in morale, f'missing suppression recovery bridge: {token}'
 assert morale.count('BattlefieldSmokeScreenDirectorV143.SuppressionRecoveryScaleAt(e.Enemy.transform.position, e.Kind)') == 1
 assert 'e.Pressure = Mathf.Max(0f, e.Pressure - decay * BattlefieldSuppressionModelV138.SampleCadenceSeconds);' in morale
-print('v14.3 bounded weather-coupled smoke-screen + finite suppression recovery qualification PASS')
+print('v14.3 bounded weather-coupled smoke-screen + dual-input + finite suppression recovery qualification PASS')
