@@ -10,6 +10,9 @@ CO=Path('Assets/Scripts/CounterObservationWarfareV141.cs')
 def require(text, token, label):
     if token not in text: raise SystemExit('v14.2 source FAIL: missing '+label)
 
+def require_pattern(text, pattern, label):
+    if re.search(pattern, text) is None: raise SystemExit('v14.2 source FAIL: missing '+label)
+
 def main():
     v=V142.read_text(encoding='utf-8'); cb=CB.read_text(encoding='utf-8'); co=CO.read_text(encoding='utf-8')
     for token,label in (
@@ -48,7 +51,11 @@ def main():
     require(cb,'CounterReconDeceptionDirectorV142.EnsureInstalled();','installation bridge')
     require(cb,'ResolveSupportSignaturePosition(position)','counter-battery false-emission bridge')
     require(cb,'CounterBatteryExposureScale','counter-battery exposure scale')
-    require(cb,'CounterBatteryAcquisitionScale * dt','counter-battery acquisition scale')
+    require_pattern(
+        cb,
+        r'_acquisition\s*=\s*Mathf\.Clamp01\([^;\n]*CounterReconDeceptionDirectorV142\.CounterBatteryAcquisitionScale[^;\n]*\*\s*dt\)',
+        'counter-battery acquisition scale',
+    )
     require(cb,'ResolveLockPosition(playerPosition, _lastSignaturePosition)','decoy lock bridge')
     require(co,'EffectiveDesignationHoldSeconds(_profile, _candidateResilience) * CounterReconDeceptionDirectorV142.DesignationHoldScale','EMCON designation cost')
     require(co,'return Mathf.Clamp01(terrainResilience * 0.38f + cohesion * 0.36f + command * 0.26f);','terrain/cohesion/command resilience composition')
