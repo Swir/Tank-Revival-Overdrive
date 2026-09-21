@@ -2,7 +2,7 @@ name: v14.2 Deception Integration
 
 on:
   push:
-    branches: ['dev-v14-2']
+    branches: ['release/v14.2-full-play']
     paths:
       - 'Assets/Scripts/CounterReconDeceptionV142.cs'
       - 'Tools/integrate_v142_deception.py'
