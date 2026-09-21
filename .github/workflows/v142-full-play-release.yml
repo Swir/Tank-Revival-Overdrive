@@ -134,9 +134,10 @@ jobs:
           if($actual -ne $expected){throw 'candidate ZIP digest mismatch'}
           $p=Get-Content $provenancePath -Raw|ConvertFrom-Json
           if($p.candidate_sha -ne '${{ github.sha }}' -or $p.commit_sha -ne '${{ github.sha }}' -or $p.sha256 -ne $actual -or $p.version -ne 'v14.2.0'){throw 'candidate provenance mismatch'}
+          if($p.third_party_notices -ne 'THIRD_PARTY_NOTICES.txt'){throw 'candidate notices provenance mismatch'}
           $runtime=Join-Path $artifactRoot 'runtime'
           Expand-Archive $zipPath -DestinationPath $runtime -Force
-          foreach($required in @('TankRevivalOverdrive.exe','TankRevivalOverdrive_Data','BUILD_INFO.txt','DEMO_MANIFEST.txt','README_DEMO.txt','RELEASE_NOTES.txt','KNOWN_ISSUES.txt','V142_FULL_PLAY_BUILD.txt')){if(!(Test-Path (Join-Path $runtime $required))){throw "missing $required"}}
+          foreach($required in @('TankRevivalOverdrive.exe','TankRevivalOverdrive_Data','BUILD_INFO.txt','DEMO_MANIFEST.txt','README_DEMO.txt','RELEASE_NOTES.txt','KNOWN_ISSUES.txt','THIRD_PARTY_NOTICES.txt','V142_FULL_PLAY_BUILD.txt')){if(!(Test-Path (Join-Path $runtime $required))){throw "missing $required"}}
           Write-Host "Verified exact full-play candidate SHA256: $actual"
       - name: Run exact single-binary qualification matrix
         shell: pwsh
