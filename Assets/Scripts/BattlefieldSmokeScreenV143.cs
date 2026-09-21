@@ -31,6 +31,8 @@ namespace TankRevival
         public const float MaxContextStrength01 = 0.88f;
         public const float MaxSuppressionRecoveryScale = 1.30f;
         public const float BossSuppressionRecoveryScale = 1.15f;
+        public const KeyCode KeyboardDeployKey = KeyCode.B;
+        public const KeyCode GamepadDeployKey = KeyCode.JoystickButton3;
 
         public static bool ConfigurationValid =>
             PlannedRounds == CounterBatteryModelV140.PlannedRounds &&
@@ -50,7 +52,8 @@ namespace TankRevival
             MinBreakContactDistanceScale < MaxBreakContactDistanceScale &&
             MinContextStrength01 > 0f && MaxContextStrength01 < 1f && MinContextStrength01 < MaxContextStrength01 &&
             MaxSuppressionRecoveryScale >= 1.10f && MaxSuppressionRecoveryScale <= 1.35f &&
-            BossSuppressionRecoveryScale >= 1.05f && BossSuppressionRecoveryScale <= MaxSuppressionRecoveryScale;
+            BossSuppressionRecoveryScale >= 1.05f && BossSuppressionRecoveryScale <= MaxSuppressionRecoveryScale &&
+            KeyboardDeployKey == KeyCode.B && GamepadDeployKey == KeyCode.JoystickButton3;
 
         public static float WeatherPersistenceScale(BattlefieldWeatherKindV135 kind)
         {
@@ -259,7 +262,9 @@ namespace TankRevival
             EnsureRound(_game.CurrentRound);
             PlayerTank player = RuntimeBattleRegistry.Player;
             if (player == null) return;
-            if (Input.GetKeyDown(KeyCode.B)) TryDeploy(player.transform.position);
+            if (Input.GetKeyDown(BattlefieldSmokeScreenModelV143.KeyboardDeployKey) ||
+                Input.GetKeyDown(BattlefieldSmokeScreenModelV143.GamepadDeployKey))
+                TryDeploy(player.transform.position);
         }
 
         private void EnsureRound(int requestedRound)
