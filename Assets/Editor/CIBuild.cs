@@ -77,7 +77,7 @@ namespace TankRevival.Editor
             if (summary.result != BuildResult.Succeeded)
                 throw new Exception("Tank Revival Windows build failed: " + summary.result);
 
-            string channel = releaseCandidate ? "V14.2 FULL-PLAY RELEASE CANDIDATE" : "DEVELOPMENT";
+            string channel = releaseCandidate ? version.ToUpperInvariant() + " FULL-PLAY RELEASE CANDIDATE" : "DEVELOPMENT";
             string info =
                 "TANK REVIVAL: ORZEL OVERDRIVE\n" +
                 "Channel: " + channel + "\n" +
@@ -86,7 +86,7 @@ namespace TankRevival.Editor
                 "Target: Windows x64\n" +
                 "Display default: borderless fullscreen at the current monitor resolution\n" +
                 "Controls: WASD/Arrows or gamepad left stick move, Mouse/facing aim, LMB/Space/LeftCtrl or gamepad A fire, Q/E or LB/RB ammo, 1-7 ammo, R smoke, C ECM, V decoy, G SIGINT, H recon, P/Esc or Start pause\n" +
-                "Campaign: 100 rounds, Orzelek defense, objectives, convoys, bosses, EW command network and Mobile HQ operations\n";
+                "Campaign: 100 rounds, Orzelek defense, objectives, convoys, bosses, EW command network, smoke screening and Mobile HQ operations\n";
             File.WriteAllText(Path.Combine(BuildFolder, "BUILD_INFO.txt"), info);
 
             if (releaseCandidate)
@@ -100,11 +100,11 @@ namespace TankRevival.Editor
                     "Executable: TankRevivalOverdrive.exe\n" +
                     "Runtime data: TankRevivalOverdrive_Data\n" +
                     "Default display: fullscreen\n" +
-                    "Qualification: full-play flow + v14.2/v14.1/v14.0/v13.9/v13.8 + rounds 80/90/100\n";
+                    "Qualification: full-play flow + v14.3/v14.2/v14.1/v14.0/v13.9/v13.8 + rounds 80/90/100\n";
                 File.WriteAllText(Path.Combine(BuildFolder, "DEMO_MANIFEST.txt"), manifest);
 
                 string readme =
-                    "TANK REVIVAL: ORZEL OVERDRIVE — V14.2 FULL-PLAY RELEASE CANDIDATE\n\n" +
+                    "TANK REVIVAL: ORZEL OVERDRIVE — " + version.ToUpperInvariant() + " FULL-PLAY RELEASE CANDIDATE\n\n" +
                     "1. Rozpakuj caly ZIP do osobnego folderu.\n" +
                     "2. Uruchom TankRevivalOverdrive.exe.\n" +
                     "3. Gra startuje domyslnie na pelnym ekranie; tryb ekranu i rozdzielczosc zmienisz w Ustawieniach.\n" +
@@ -112,7 +112,7 @@ namespace TankRevival.Editor
                     "Klawiatura: WASD/strzalki ruch, mysz celowanie, LPM/Spacja/Lewy Ctrl ogien, Q/E lub 1-7 amunicja, ESC/P pauza.\n" +
                     "Gamepad: lewy stick ruch, A ogien w kierunku jazdy/celowania, LB/RB amunicja, Start pauza.\n" +
                     "Kontry taktyczne: R dym, C ECM, V wabik, G SIGINT, H dron rozpoznawczy.\n" +
-                    "Cel: obron Orzelka przez 100 rund, niszcz siec dowodzenia i przetrwaj operacje Mobile HQ.\n";
+                    "Cel: obron Orzelka przez 100 rund, wykorzystuj smoke/break-contact counterplay, niszcz siec dowodzenia i przetrwaj operacje Mobile HQ.\n";
                 File.WriteAllText(Path.Combine(BuildFolder, "README_DEMO.txt"), readme);
             }
 
