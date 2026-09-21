@@ -26,7 +26,7 @@ def main():
         cb=once(cb,old,new,'false-emission signature bridge')
     old='_acquisition = Mathf.Clamp01(_acquisition + CounterBatteryModelV140.AcquisitionGainPerSecond(_exposure * _terrainExposure, _observerStrength, _profile) * dt);'
     new='_acquisition = Mathf.Clamp01(_acquisition + CounterBatteryModelV140.AcquisitionGainPerSecond(_exposure * _terrainExposure, _observerStrength, _profile) * CounterReconDeceptionDirectorV142.CounterBatteryAcquisitionScale * dt);'
-    if 'CounterReconDeceptionDirectorV142.CounterBatteryAcquisitionScale * dt' not in cb:
+    if 'CounterReconDeceptionDirectorV142.CounterBatteryAcquisitionScale' not in cb:
         cb=once(cb,old,new,'EMCON acquisition bridge')
     old='if (_acquisition >= _profile.LockThreshold) { _state = CounterBatteryStateV140.Locked; _lockedPosition = playerPosition; _lockOrigin = playerPosition; _stateUntil = now + CounterBatteryModelV140.LockWarningSeconds; }'
     new='if (_acquisition >= _profile.LockThreshold) { _state = CounterBatteryStateV140.Locked; _lockedPosition = CounterReconDeceptionDirectorV142.ResolveLockPosition(playerPosition, _lastSignaturePosition); _lockOrigin = playerPosition; _stateUntil = now + CounterBatteryModelV140.LockWarningSeconds; }'
