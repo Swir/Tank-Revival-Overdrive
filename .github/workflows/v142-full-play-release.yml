@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   UNITY_VERSION: 6000.3.17f1
@@ -183,5 +183,142 @@ jobs:
             candidate/runtime/V14_2_*_OK.txt
             candidate/runtime/V14_2_FULL_PLAY_SCREENSHOT.png
             candidate/runtime/*.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  publish-release:
+    name: Publish exact-qualified v14.2.0 Full-Play Beta
+    needs: [source-contracts, build-candidate, packaged-runtime]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: v14.2.0
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevivalOverdrive-v14.2.0-full-play-Windows-x64
+          path: candidate
+      - uses: actions/download-artifact@v4
+        with:
+          name: TankRevival-v14.2.0-full-play-evidence
+          path: evidence
+      - name: Verify publish payload and create public prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha_file="$(find candidate -type f -name 'V142_FULL_PLAY_SHA256.txt' -print -quit)"
+          test -n "$sha_file"
+          package_dir="$(dirname "$sha_file")"
+          zip_path="${package_dir}/${CANDIDATE_ZIP}"
+          provenance_path="${package_dir}/V142_FULL_PLAY_PROVENANCE.json"
+          screenshot_path="$(find evidence -type f -name 'V14_2_FULL_PLAY_SCREENSHOT.png' -print -quit)"
+          test -f "$zip_path"; test -f "$provenance_path"; test -f "$screenshot_path"
+          expected="$(awk '{print tolower($1)}' "$sha_file")"
+          actual="$(sha256sum "$zip_path" | awk '{print tolower($1)}')"
+          test "$expected" = "$actual"
+          python - "$provenance_path" "$actual" "$GITHUB_SHA" <<'PY'
+          import json,sys
+          path,digest,sha=sys.argv[1:]
+          p=json.load(open(path,encoding='utf-8'))
+          assert p['candidate_sha']==sha and p['commit_sha']==sha
+          assert p['sha256']==digest and p['version']=='v14.2.0'
+          assert p['fullscreen_default'] is True and p['clean_gameplay_shell'] is True
+          assert p['third_party_notices']=='THIRD_PARTY_NOTICES.txt'
+          PY
+          cat > release-notes.md <<EOF
+          # Tank Revival: Orzeł Overdrive v14.2.0 — Full-Play Beta
+
+          Publiczny Windows x64 build do pełnego grania: 100-rundowa kampania, fullscreen-first presentation, czysty HUD, keyboard + gamepad core controls, audio/VFX/UI i zakwalifikowana linia v14.2 deception/EMCON warfare.
+
+          **Exact source:** \`${GITHUB_SHA}\`  
+          **Windows package SHA-256:** \`${actual}\`
+
+          Release gate: exact packaged EXE, menu → play → pause → resume, v14.2/v14.1/v14.0/v13.9/v13.8 regressions, late-round soak 80/90/100 oraz fullscreen clean-HUD screenshot evidence.
+
+          Rozpakuj cały ZIP do osobnego folderu i uruchom \`TankRevivalOverdrive.exe\`. Nie przenoś samego EXE bez folderu \`TankRevivalOverdrive_Data\`.
+
+          To wydanie jest oznaczone jako **Full-Play Beta**; znane ograniczenia są zawarte w \`KNOWN_ISSUES.txt\` w paczce.
+          EOF
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            target="$(gh release view "$RELEASE_TAG" --json targetCommitish --jq '.targetCommitish')"
+            test "$target" = "$GITHUB_SHA"
+            gh release upload "$RELEASE_TAG" \
+              "$zip_path#Windows x64 full-play package" \
+              "$sha_file#SHA-256 checksum" \
+              "$provenance_path#Exact build provenance" \
+              "$screenshot_path#Qualified fullscreen clean-HUD screenshot" \
+              --clobber
+          else
+            gh release create "$RELEASE_TAG" \
+              "$zip_path#Windows x64 full-play package" \
+              "$sha_file#SHA-256 checksum" \
+              "$provenance_path#Exact build provenance" \
+              "$screenshot_path#Qualified fullscreen clean-HUD screenshot" \
+              --target "$GITHUB_SHA" \
+              --title 'Tank Revival: Orzeł Overdrive v14.2.0 — Full-Play Beta' \
+              --notes-file release-notes.md \
+              --prerelease
+          fi
+
+  post-release-verify:
+    name: Verify downloaded public v14.2.0 release artifact
+    needs: publish-release
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: v14.2.0
+    steps:
+      - name: Verify public release metadata and download assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $meta=gh release view $env:RELEASE_TAG --json targetCommitish,isDraft,isPrerelease,url | ConvertFrom-Json
+          if($meta.targetCommitish -ne '${{ github.sha }}'){throw "release target mismatch: $($meta.targetCommitish)"}
+          if($meta.isDraft){throw 'release unexpectedly draft'}
+          if(-not $meta.isPrerelease){throw 'full-play beta must remain marked prerelease'}
+          New-Item -ItemType Directory -Path public -Force | Out-Null
+          gh release download $env:RELEASE_TAG --dir public --pattern '${{ env.CANDIDATE_ZIP }}' --pattern 'V142_FULL_PLAY_SHA256.txt' --pattern 'V142_FULL_PLAY_PROVENANCE.json' --pattern 'V14_2_FULL_PLAY_SCREENSHOT.png'
+      - name: Verify public checksum/provenance and smoke downloaded EXE
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'; Set-Location public
+          $zip='${{ env.CANDIDATE_ZIP }}'
+          foreach($required in @($zip,'V142_FULL_PLAY_SHA256.txt','V142_FULL_PLAY_PROVENANCE.json','V14_2_FULL_PLAY_SCREENSHOT.png')){if(!(Test-Path $required)){throw "missing public release asset: $required"}}
+          $expected=((Get-Content 'V142_FULL_PLAY_SHA256.txt' -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
+          $actual=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if($actual -ne $expected){throw 'public release ZIP checksum mismatch'}
+          $p=Get-Content 'V142_FULL_PLAY_PROVENANCE.json' -Raw|ConvertFrom-Json
+          if($p.candidate_sha -ne '${{ github.sha }}' -or $p.commit_sha -ne '${{ github.sha }}' -or $p.sha256 -ne $actual){throw 'public release provenance mismatch'}
+          New-Item -ItemType Directory -Path runtime -Force | Out-Null
+          Expand-Archive $zip -DestinationPath runtime -Force
+          Set-Location runtime
+          foreach($required in @('TankRevivalOverdrive.exe','TankRevivalOverdrive_Data','BUILD_INFO.txt','DEMO_MANIFEST.txt','README_DEMO.txt','RELEASE_NOTES.txt','KNOWN_ISSUES.txt','THIRD_PARTY_NOTICES.txt','V142_FULL_PLAY_BUILD.txt')){if(!(Test-Path $required)){throw "public package missing $required"}}
+          $blocking='Crash!!!|NullReferenceException|MissingMethodException|TypeLoadException|IndexOutOfRangeException|UnityException|TargetInvocationException'
+          function Invoke-PublicSmoke([string]$Name,[string]$Flag,[string]$Pass,[string]$Fail,[string]$Log,[int]$TimeoutMs){
+            Remove-Item $Pass,$Fail,$Log -ErrorAction SilentlyContinue
+            $proc=Start-Process -FilePath '.\TankRevivalOverdrive.exe' -ArgumentList '-batchmode','-nographics',$Flag,'-logFile',$Log -PassThru
+            if(!$proc.WaitForExit($TimeoutMs)){Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue; throw "$Name timed out"}
+            if(Test-Path $Fail){if(Test-Path $Log){Get-Content $Log -Tail 250}; throw "$Name emitted FAIL"}
+            if(!(Test-Path $Pass)){if(Test-Path $Log){Get-Content $Log -Tail 250}; throw "$Name exited without PASS"}
+            if($proc.ExitCode -ne 0){throw "$Name non-zero exit $($proc.ExitCode)"}
+            if(Test-Path $Log){if(Select-String -Path $Log -Pattern $blocking -Quiet){Get-Content $Log -Tail 300; throw "$Name blocking exception signature"}}
+            Write-Host "$Name PASS"
+          }
+          Invoke-PublicSmoke 'public full-play flow' '-v142-full-play-smoke' 'V14_2_FULL_PLAY_OK.txt' 'V14_2_FULL_PLAY_FAIL.txt' 'PublicFullPlay.log' 90000
+          Invoke-PublicSmoke 'public authored audio/presentation' '-production-presentation-smoke' 'PRODUCTION_PRESENTATION_PASS.txt' 'PRODUCTION_PRESENTATION_FAIL.txt' 'PublicAudio.log' 80000
+          Invoke-PublicSmoke 'public rounds 80/90/100 soak' '-demo-ci-soak' 'DEMO_SOAK_PASS.txt' 'DEMO_SOAK_FAIL.txt' 'PublicSoak.log' 120000
+          'PASS: downloaded public v14.2.0 release artifact verified and smoke-tested' | Set-Content POST_RELEASE_VERIFIED.txt
+      - name: Upload post-release verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TankRevival-v14.2.0-post-release-verification
+          path: |
+            public/runtime/POST_RELEASE_VERIFIED.txt
+            public/runtime/PublicFullPlay.log
+            public/runtime/PublicAudio.log
+            public/runtime/PublicSoak.log
           if-no-files-found: ignore
           retention-days: 14
