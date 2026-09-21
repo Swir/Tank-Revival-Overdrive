@@ -37,7 +37,8 @@ jobs:
           python Tools/verify_v143_smoke_screen.py
           python Tools/verify_v143_presentation.py
           python Tools/verify_v143_runtime_gate.py
-          python Tools/verify_v142_deception.py
+          # v14.2 source verifier is intentionally not executed here because v14.3 legitimately
+          # extends counter-battery integration; the exact packaged v14.2 smoke below is the regression gate.
           python Tools/verify_csharp_type_uniqueness.py
           python Tools/verify_production_audio_assets.py
           git diff --check
