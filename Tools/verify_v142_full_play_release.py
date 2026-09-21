@@ -33,7 +33,10 @@ def main() -> int:
     require(guard, "GUI.depth = -3000", "development-label cleanup overlay")
 
     require(smoke, "menu->play->pause->resume flow", "packaged player-flow smoke")
-    require(smoke, "ScreenCapture.CaptureScreenshot", "visual evidence capture")
+    require(smoke, "TryCaptureScreenshot", "visual evidence capture entrypoint")
+    require(smoke, "UnityEngine.ScreenCapture, UnityEngine.ScreenCaptureModule", "module-safe screenshot lookup")
+    require(smoke, 'GetMethod(\n                "CaptureScreenshot"', "runtime screenshot capture method")
+    require(smoke, "fullscreen screenshot capture unavailable", "fail-closed screenshot evidence")
     require(smoke, "legacy development shell remained visible during gameplay", "clean-HUD runtime assertion")
 
     print("v14.2 full-play release source qualification PASS")
