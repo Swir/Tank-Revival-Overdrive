@@ -17,6 +17,8 @@ def main() -> int:
     player = Path("Assets/Scripts/PlayerTank.cs").read_text(encoding="utf-8")
     guard = Path("Assets/Scripts/FullPlayReleaseGuardV142.cs").read_text(encoding="utf-8")
     smoke = Path("Assets/Scripts/FullPlayReleaseCISmokeProbeV142.cs").read_text(encoding="utf-8")
+    package = Path(".github/scripts/package_v142_full_play.py").read_text(encoding="utf-8")
+    workflow = Path(".github/workflows/v142-full-play-release.yml").read_text(encoding="utf-8")
 
     require(build, "FullScreenMode.FullScreenWindow", "fullscreen candidate build")
     require(build, "BuildDemoCandidate", "non-development candidate entrypoint")
@@ -30,7 +32,11 @@ def main() -> int:
     require(guard, "Display.main.systemWidth", "native monitor fullscreen")
     require(guard, "state != \"Playing\"", "clean gameplay shell policy")
     require(guard, "KeyCode.JoystickButton7", "gamepad pause bridge")
-    require(guard, "GUI.depth = -3000", "development-label cleanup overlay")
+    require(guard, "CleanPresentationDepth", "release-clean compositor depth")
+    require(guard, "RenderTexture", "release-clean world compositor")
+    require(guard, "DrawReleaseCombatHud", "player-critical release HUD")
+    require(guard, "KeyCode.F9", "explicit debug-presentation toggle")
+    require(guard, "Application.isBatchMode", "headless qualification isolation")
 
     require(smoke, "menu->play->pause->resume flow", "packaged player-flow smoke")
     require(smoke, "TryCaptureScreenshot", "visual evidence capture entrypoint")
@@ -38,6 +44,12 @@ def main() -> int:
     require(smoke, 'GetMethod(\n                "CaptureScreenshot"', "runtime screenshot capture method")
     require(smoke, "fullscreen screenshot capture unavailable", "fail-closed screenshot evidence")
     require(smoke, "legacy development shell remained visible during gameplay", "clean-HUD runtime assertion")
+
+    require(package, 'NOTICES_NAME = "THIRD_PARTY_NOTICES.txt"', "third-party notices filename")
+    require(package, "Unity engine/runtime components", "Unity runtime notice")
+    require(package, '"third_party_notices": NOTICES_NAME', "notices provenance")
+    require(workflow, "THIRD_PARTY_NOTICES.txt", "packaged notices gate")
+    require(workflow, "third_party_notices", "notices provenance gate")
 
     print("v14.2 full-play release source qualification PASS")
     return 0
