@@ -2,7 +2,7 @@ name: Deception v14.2 Windows Qualification Gate
 
 on:
   push:
-    branches: ['dev-v14-2']
+    branches: ['release/v14.2-full-play']
     paths:
       - 'Assets/Scripts/CounterReconDeceptionV142.cs'
       - 'Assets/Scripts/CounterReconDeceptionCISmokeProbeV142.cs'
@@ -58,7 +58,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
-          test "${GITHUB_REF_NAME}" = 'dev-v14-2'
+          test "${GITHUB_REF_NAME}" = 'release/v14.2-full-play'
           test "$(cat VERSION)" = 'v14.2.0-dev'
           python -m py_compile \
             .github/scripts/package_v142_deception.py \
